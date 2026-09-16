@@ -9,12 +9,18 @@
 
 ## 1. Super Administrator
 
+**Status note:** A working MVP scope for the Super Administrator now exists in `SUPER_ADMIN_REQUIREMENTS.md` (tenant overview, competition overview, tenant revocation). The questions below that remain open are captured there and in `project-decisions.md` SA-003.
+
 | # | Question |
 |---|---|
-| SA-1 | What exactly can a Super Administrator do? |
-| SA-2 | What are the Super Administrator's responsibilities and permissions at platform level? |
-| SA-3 | Does the Super Administrator manage tenants (organizations), billing, platform configuration, or something else? |
-| SA-4 | Is there any tenant-level overlap between Super Admin and Organization Admin responsibilities? |
+| SA-1 | What exactly can a Super Administrator do? *(Partially answered — MVP working scope in `SUPER_ADMIN_REQUIREMENTS.md`.)* |
+| SA-2 | What are the Super Administrator's responsibilities and permissions at platform level? *(Partially answered — see `SUPER_ADMIN_REQUIREMENTS.md`.)* |
+| SA-3 | Does the Super Administrator manage tenants (organizations), billing, platform configuration, or something else? *(Tenant overview/revocation: yes. Billing deferred — no payment system. Platform configuration: open.)* |
+| SA-4 | Is there any tenant-level overlap between Super Admin and Organization Admin responsibilities? *(Still open — recorded in `SUPER_ADMIN_REQUIREMENTS.md` §7.)* |
+| SA-5 | Should the Super Administrator be able to view competition results of a particular organization? *(Open.)* |
+| SA-6 | Should the Super Administrator be able to access competition participants? *(Open — current lean: out of scope.)* |
+| SA-7 | What exactly happens when a tenant is revoked/deleted? *(Open — deletion semantics.)* |
+| SA-8 | Should Super Administrator access be read-only except for revocation, or can they edit tenant/competition info? *(Open.)* |
 
 ---
 

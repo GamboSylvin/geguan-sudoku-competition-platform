@@ -115,3 +115,22 @@ Unmade Decisions
 ```
 
 and to make every divergence or unresolved decision visible before documentation is changed.
+
+## Decision Tracking
+
+Treat `decisions/` as a **live decision-tracking system**.
+
+**Every time a new requirement, proposal, constraint, or other project information is added or modified, check whether it creates, changes, confirms, reopens, or invalidates any project decision. Update the decision files accordingly.**
+
+When a decision changes:
+
+* Update its status appropriately.
+* If an open/unmade decision becomes confirmed, remove it from `unmade-decisions.md` and record/update it in `project-decisions.md`.
+* If a confirmed decision becomes open, deferred, or otherwise unconfirmed, update `project-decisions.md` and add it to `unmade-decisions.md` when appropriate.
+* If a new requirement introduces a decision that did not previously exist, add that decision to the appropriate decision-tracking file.
+* If a new or modified requirement makes an existing decision obsolete or changes its scope, update the affected decision and its status.
+* Keep `project-decisions.md` and `unmade-decisions.md` consistent at all times.
+
+**Do not treat updating the requirement document as sufficient when the change also affects a project decision. The corresponding decision-tracking files must also be updated.**
+
+Do not silently change the status of a decision.

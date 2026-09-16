@@ -7,6 +7,7 @@
 - `PROJECT_ANALYSIS_UPDATED.md` — overall project analysis (confirmed items listed in §6)
 - `PLAYER_REQUIREMENTS.md` — player role requirements (working draft)
 - `ORGANIZATION_ADMIN_REQUIREMENTS.md` — organization admin requirements (working draft, MVP scope)
+- `SUPER_ADMIN_REQUIREMENTS.md` — super administrator requirements (working draft, MVP scope)
 - `JUDGE_REQUIREMENTS_PROPOSAL.md` — judge role proposal (explicitly **not** final)
 
 ---
@@ -92,7 +93,7 @@ The platform should **digitize and automate**, wherever appropriate:
 |---|---|---|
 | SA-001 | Represents the **owner/operator of the SaaS platform**. | Confirmed |
 | SA-002 | Operates at the **platform level**, not within a single tenant. | Confirmed |
-| SA-003 | Exact responsibilities and permissions are **not yet defined**. | Open |
+| SA-003 | Exact responsibilities and permissions are **not yet fully defined**; a working MVP scope now exists in `SUPER_ADMIN_REQUIREMENTS.md` (tenant overview, competition overview, tenant revocation). Remaining details (participant/result access, billing, deletion semantics) stay open. | Working Position |
 
 ### 4.3 Organization Administrator
 
@@ -315,9 +316,9 @@ The following are **deliberately deferred** to later project phases and must **n
 
 | Area | Confirmed | Working Position / Proposed | Open / Not Decided |
 |---|---|---|---|
-| Product model | Multi-tenant SaaS; not an online game; digitalize operations | — | Super Admin scope |
+| Product model | Multi-tenant SaaS; not an online game; digitalize operations; Super Admin tenant overview + revocation (MVP working scope) | — | Super Admin participant/result access, billing, deletion semantics |
 | Environment | Physical venue; org-provided devices; no remote proctoring | Backend authoritative (principle) | Anti-cheating details in venue |
-| Roles | 4 actors; system calculates results/rankings; Judge controls display | 1 admin/tenant (MVP); Judge operations (proposed) | Multiple admins/judges; admin live access |
+| Roles | 4 actors; system calculates results/rankings; Judge controls display; Super Admin: tenant overview + revocation (MVP working scope) | 1 admin/tenant (MVP); Judge operations (proposed) | Multiple admins/judges; admin live access; Super Admin participant/result access |
 | Competition structure | Competition → Stages → Rounds | Stage types Individual/Team/PK; no competition-level duration | Stage/round type definitions; category placement |
 | Player flow | Access → wait → rules+countdown → play → auto-save → submit/auto-submit → next | — | Access mechanism; session/device behavior; post-submit UI |
 | Results | Auto validation/scoring/ranking; idempotent submission | Admin can view/export results | Scoring formulas; publication semantics; analytics specifics |
