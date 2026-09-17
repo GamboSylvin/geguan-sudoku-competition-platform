@@ -5,6 +5,8 @@
 **Purpose:** Collect every requirement question that has been raised but not yet answered, organized by topic for client/developer discussion. This is the companion to [`project-decision.md`](./project-decision.md), which records the decisions that *have* been settled.  
 **Guidance:** All questions below must be resolved against the client before the domain model and architecture are finalized. The source documents explicitly warn against making architecture or technology decisions while requirements are still unstable.
 
+> **Note on Flow requirements:** `requirements/FLOW_REQUIREMENTS.md` captures the client's vision of the competition flow and system mechanics. Nothing there is confirmed; divergences are recorded in the section "13. Flow Requirements — Client Vision (To Check with Client)" below.
+
 ---
 
 ## 1. Super Administrator
@@ -368,3 +370,29 @@ The following questions most directly block the domain model and should be resol
 8. What is the exact scoring/ranking calculation model (partial credit, tie-breaks, timing effects)?
 9. What are the requirements for network/server failure recovery during a live competition?
 10. What exactly must be persisted and what must be real-time, at what granularity?
+
+---
+
+## 13. Flow Requirements — Client Vision (To Check with Client)
+
+**Status note:** `requirements/FLOW_REQUIREMENTS.md` captures the client's vision of the competition flow and system mechanics. Nothing there is confirmed. Items marked **[Check with client]** in that document are consolidated here so they are tracked as open points. Some overlap with earlier questions in this register; the FLW-* entries below are the flow-specific formulations.
+
+| # | Question | Related existing |
+|---|---|---|
+| FLW-Q1 | What exactly does "publishing" generate? Does it auto-generate player/judge links? | CMP-2 |
+| FLW-Q2 | Are player and judge access the same link, or separate? Does the link identify the user or require additional auth? | PL-1, JD-8 |
+| FLW-Q3 | What happens when an unregistered/unauthorized player attempts entry? | PL-6 |
+| FLW-Q4 | Which competition transitions are Judge-controlled vs automatic? | SR-7, J-003/4/5 |
+| FLW-Q5 | Is PK in scope for MVP, or reserved for later? | SR-3 |
+| FLW-Q6 | **Scoring model:** is scoring per-cell proportional, all-or-nothing per puzzle, or hybrid? How do time bonuses and difficulty weighting fit? | SC-1…SC-7 |
+| FLW-Q7 | Per-question points: assigned individually or per-type? | SC-3 |
+| FLW-Q8 | Round duration: driven by question type or set manually? | CS-005 |
+| FLW-Q9 | **Lifecycle:** is publication = lock? Is there any post-publication edit path? | CMP-3, CMP-7, CMP-8 |
+| FLW-Q10 | Question document: what exactly is in the PDF? Are solutions required at upload? | OA-9, OA-11 |
+| FLW-Q11 | Participant fields: which are required? How exactly is team membership detected from the file? | PT-1, OA-1 |
+
+**Primary divergences to reconcile with the client (from FLOW_REQUIREMENTS.md §9):**
+
+- **Scoring model:** the client's described "recognition-based / percentage of correct cells" proportional model vs the existing client-view.md rules (rounds worth 100 points, all-or-nothing, +3/min early bonus). These are two different scoring philosophies and must be reconciled.
+- **Lifecycle / lock point:** the client's vision implies publication = immutable lock, whereas the existing decision register leaves the lock point unresolved (publication vs first access vs start).
+- **PK stage:** the client lists PK as a stage type, but the referenced competition regulations use only Individual + Team, with PK reserved. Confirm PK scope for MVP.
