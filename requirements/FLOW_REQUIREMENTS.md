@@ -93,6 +93,8 @@ Each **round** has:
 
 *(Matches CS-003 stage types — unconfirmed. Note: the current working position lists these three types but the actual competition regulations referenced in client-view only use Individual + Team, with PK as a reserved capability.)*
 
+**Resolved for MVP:** PK is **deferred**; the MVP realizes **Individual + Team** only. See CS-010 / CS-016 in `decisions/project-decisions.md` and `STAGE_REQUIREMENTS.md` §1, §5.
+
 **[Check with client]** — Is PK in scope for the MVP, or reserved for later?
 
 ### FLW-012 — Round fields

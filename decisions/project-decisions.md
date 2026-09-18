@@ -9,6 +9,8 @@
 - `ORGANIZATION_ADMIN_REQUIREMENTS.md` — organization admin requirements (working draft, MVP scope)
 - `SUPER_ADMIN_REQUIREMENTS.md` — super administrator requirements (working draft, MVP scope)
 - `JUDGE_REQUIREMENTS_PROPOSAL.md` — judge role proposal (explicitly **not** final)
+- `STAGE_REQUIREMENTS.md` — stage definitions, starting with the Individual stage (working draft)
+- `ARCHITECTURE_REQUIREMENTS.md` — architectural style (modular monolith + game-subsystem event-driven), recorded as a team decision (working draft)
 
 ---
 
@@ -155,7 +157,14 @@ The platform should **digitize and automate**, wherever appropriate:
 |---|---|---|
 | CS-001 | A competition consists of **one or more stages**; each stage consists of **one or more rounds**. | Confirmed |
 | CS-002 | Structure model: `Competition → Stage(s) → Round(s)`. | Confirmed |
-| CS-003 | **Stage types** currently identified: **Individual, Team, PK**. These may be refined during requirements analysis. | Working Position |
+| CS-003 | **Stage types** identified: **Individual, Team, PK**. For the MVP, only **Individual and Team** are realized; **PK is deferred**. | Working Position (PK deferred — see CS-016) |
+| CS-010 | **MVP stage set:** the competition realizes **Individual + Team** stages. | Confirmed |
+| CS-016 | **PK stage deferred:** PK is **not realized in the MVP**; the PK algorithm and mechanics are not designed for now, because the client states PK is not needed in the competition for now. `client-view.md` §2.1 ("only Individual + Team, no PK") and §2.5 ("reserved capability, not enabled") support this. | Confirmed |
+| CS-011 | **Each stage produces its own final ranking.** | Working Position |
+| CS-012 | **There is no combined cross-stage final ranking.** Rankings are per-stage only. | Working Position |
+| CS-013 | **Individual stage:** each player receives questions and is scored **individually**, independently of team membership; scores are stored **per player**. | Working Position |
+| CS-014 | **Team stage — emphasized round:** the **rotation round** (questions rotate among 2–6 players, generally 4; a finished puzzle is replaced with a new one until all puzzles are solved or total time is reached). | Working Position |
+| CS-015 | **Team stage — other round types:** 分区协作 (partition collaboration) and 抢答夺分 (quick-answer scoring) are listed in `client-view.md` §2.4 with one-line descriptions only; detailed rules are **not defined** and MVP scope is **open**. | Open |
 | CS-004 | No fixed MVP number of stages/rounds; the admin adds stages and rounds until the desired structure is defined. | Working Position |
 | CS-005 | Per-round configuration includes at minimum: **round name, round duration, round type information, questions assigned to the round**, plus category-related configuration pending clarification. | Working Position |
 | CS-006 | **Competition-level overall duration is not manually configured**; total duration emerges from configured stages, rounds, round durations, progression, and judge-controlled operations. A competition-level duration should be introduced only if a concrete business requirement exists. | Working Position |
@@ -234,6 +243,8 @@ The following automatic behaviors are settled as **system responsibilities** (no
 | EX-007 | **Automatic puzzle assignment/replenishment** for team rounds is a system responsibility. | Proposed |
 | EX-008 | **Automatic team scoring** is a system responsibility. | Proposed |
 | EX-009 | **Automatic saving of player moves** during an active round is a confirmed behavior; the persistence mechanism is not yet decided. | Confirmed behavior, open mechanism |
+| EX-010 | **Individual-stage answer validation** (initial developer vision): use a **recognizer** + **solution grid** (initial state + solution state) and validate by a **completion algorithm**. If confirmed, the system does not need to determine question type. | Proposed |
+| EX-011 | If the completion algorithm is **not** used, a **per-question-type scoring system** must be defined for the Individual stage and all its rounds. | Open |
 
 ---
 
@@ -249,7 +260,7 @@ The following system characteristics have emerged from the problem description a
 | NF-004 | **State-driven** | A competition progresses through defined stages and rounds; the system coordinates transitions. | Confirmed |
 | NF-005 | **Data isolation** | Tenant data must be strongly isolated. | Confirmed |
 | NF-006 | **Automated processing** | The system automatically validates answers and calculates results. | Confirmed |
-| NF-007 | **Event-oriented behavior** | Actions by participants/judges cause changes that must propagate to other users. Identified as a characteristic; **no architectural decision made yet**. | Identified / Open |
+| NF-007 | **Event-oriented behavior** | Actions by participants/judges cause changes that must propagate to other users. **Now realized architecturally at the competition/game-subsystem level** (see §8.1, ARC-020). | Working Position (was Identified / Open) |
 | NF-008 | **Automatic player state persistence** | Player moves auto-save during active rounds. Mechanism not decided. | Confirmed behavior / Open mechanism |
 | NF-009 | **Timed round execution** | Rounds have a time limit; early manual submission and automatic submission at expiry are both supported; repeated submission does not alter results. | Confirmed |
 | NF-010 | **Sequential round/stage flow** | Player participation proceeds sequentially through round waiting, execution, and next-round waiting; exact lifecycle and transition authority are open at the domain level. | Confirmed behavior / Open lifecycle |
@@ -258,12 +269,43 @@ The following system characteristics have emerged from the problem description a
 
 ## 8. Architecture Decisions
 
-**Status: No architecture decisions have been made.**
+**Status: The architectural *style* has been decided. Technology, database, and deployment remain undecided.**
 
-- The following are explicitly **not yet decided**: system architecture, backend technology, frontend technology, database technology, real-time communication technology, caching/state-management technology, authentication and authorization implementation, deployment architecture, infrastructure, external dependencies and libraries, and the detailed competition domain model. *(Confirmed as undecided)*
-- These decisions **must be derived from the requirements and system characteristics**, not selected in advance. *(Confirmed as a process rule)*
-- The client's proposed **"unified configuration distribution engine"** and **"dynamic/marketplace-style logic (Steam-like) upload"** concepts are **not accepted as architecture decisions** until the actual business variation is understood. *(Working Position)*
-- The **"backend is authoritative"** principle (§3, ENV-006) is a conceptual principle, not yet an architecture/event-model/synchronization decision. *(Working Position)*
+Full detail lives in [`ARCHITECTURE_REQUIREMENTS.md`](../requirements/ARCHITECTURE_REQUIREMENTS.md). The decisions below are recorded here for register consistency.
+
+### 8.0 Divergence Notice — Architecture Decided Ahead of Requirements
+
+The existing process rule in this section previously required architecture to be **derived from the requirements and system characteristics**, not selected in advance. The style decisions in §8.1 were instead made by **development-team preference**, driven by team size and delivery simplicity, while the requirements remain unstable (see `unmade-decisions.md`).
+
+This is an **explicit, acknowledged deviation** from the previously stated process rule. It is recorded rather than silently applied. The style remains revisable if requirements contradict it.
+
+### 8.1 Architecture Style Decisions (Working Position — Team-Decided)
+
+| ID | Decision | Status |
+|---|---|---|
+| ARC-001 | The platform is built as a **single deployable system** — one deployment unit, no separately deployed services, no distributed runtime for the MVP. | Working Position (team decision) |
+| ARC-002 | The architecture is a **modular monolith** — explicit modules with defined boundaries, not a flat monolith. | Working Position (team decision) |
+| ARC-003 | **Modularity is a first-class requirement.** Boundaries are explicit and enforced by convention and code structure; internals are not reachable except through a module's public interface. | Working Position |
+| ARC-004 | **Rationale:** two-developer team; deployment simplicity; maintainability; future growth without premature distribution. | Working Position |
+| ARC-005 | **Scaling is a later concern.** The modular structure must not prevent scaling, but the MVP is not designed around speculative scale. Module extraction into a service is **not** an MVP goal. | Working Position |
+| ARC-006 | This fixes the **style only**; backend/frontend/database/real-time/caching/auth/deployment technologies remain **Open**. | Working Position |
+| ARC-011 | **Tenant isolation is enforced structurally at module level**, not by per-developer discipline. | Derived from ENV-002 / NF-005 (Confirmed requirement) |
+| ARC-020 | **Event-driven communication applies to the competition/game subsystem** (stage/round lifecycle, player actions, validation, scoring, team rotation). Modules outside it may use direct in-process calls. | Working Position (team decision) |
+| ARC-021 | **Events are in-process.** No external broker, queue, or event-streaming infrastructure in the MVP. | Working Position (team decision) |
+| ARC-023 | Events express **domain facts** (something that happened), not commands. | Working Position |
+| ARC-024 | Events carry tenant context; no subscriber processes an event across a tenant boundary. | Derived from ENV-002 / NF-005 (Confirmed requirement) |
+| ARC-025 | Events do not change the **backend-authoritative** principle (ENV-006); no client becomes authoritative. | Consistent with ENV-006 |
+
+### 8.2 Still Undecided
+
+- The following remain **not decided**: backend technology, frontend technology, database technology, real-time communication technology, caching/state-management technology, authentication and authorization implementation, deployment architecture, infrastructure, external dependencies and libraries, and the detailed competition domain model. *(Confirmed as undecided)*
+- These decisions **must still be derived from the requirements and system characteristics**. *(Process rule retained for the remaining decisions)*
+- The client's proposed **"unified configuration distribution engine"** and **"dynamic/marketplace-style logic (Steam-like) upload"** concepts remain **not accepted as architecture decisions**. *(Working Position)*
+- The **"backend is authoritative"** principle (§3, ENV-006) remains a conceptual principle, not an event-model/synchronization decision. *(Working Position)*
+
+### 8.3 Proposed, Not Settled
+
+- **Module decomposition** (ARC-012) and the **event catalog** (ARC-027) in `ARCHITECTURE_REQUIREMENTS.md` are **proposals derived from the requirements**. They must be validated against the domain model, because several requirements driving the boundaries are themselves unresolved. *(Proposed)*
 
 ## 9. Database Decisions
 
@@ -300,8 +342,6 @@ The following are **deliberately deferred** to later project phases and must **n
 - Authentication technology and OTP implementation.
 - Link/QR code implementation.
 - Big Screen authentication mechanism.
-- Backend architecture.
-- WebSocket/event architecture.
 - Database structure.
 - Redis / caching / infrastructure.
 - PDF/OCR/extraction technology.
@@ -309,6 +349,10 @@ The following are **deliberately deferred** to later project phases and must **n
 - Configuration distribution architecture.
 - Deployment architecture.
 - API design.
+
+**Removed from this list (decided — see §8.1):**
+- ~~Backend architecture~~ → architectural **style** decided: modular monolith (ARC-001 / ARC-002). Backend **technology** remains Open.
+- ~~WebSocket/event architecture~~ → **event-driven scope decided** for the competition/game subsystem, in-process (ARC-020 / ARC-021). Real-time **transport technology** remains Open.
 
 ---
 
@@ -319,8 +363,9 @@ The following are **deliberately deferred** to later project phases and must **n
 | Product model | Multi-tenant SaaS; not an online game; digitalize operations; Super Admin tenant overview + revocation (MVP working scope) | — | Super Admin participant/result access, billing, deletion semantics |
 | Environment | Physical venue; org-provided devices; no remote proctoring | Backend authoritative (principle) | Anti-cheating details in venue |
 | Roles | 4 actors; system calculates results/rankings; Judge controls display; Super Admin: tenant overview + revocation (MVP working scope) | 1 admin/tenant (MVP); Judge operations (proposed) | Multiple admins/judges; admin live access; Super Admin participant/result access |
-| Competition structure | Competition → Stages → Rounds | Stage types Individual/Team/PK; no competition-level duration | Stage/round type definitions; category placement |
+| Competition structure | Competition → Stages → Rounds; MVP stage set = Individual + Team; PK deferred | Stage types Individual/Team/PK (Individual+Team realized); no competition-level duration; per-stage rankings with no combined final ranking; individual stage = individually scored per player; team stage = rotation round emphasized + 2 listed-but-undefined round types | Stage/round type definitions; category placement; validation approach (recognizer vs per-type scoring); grid shapes; other team round types (分区协作 / 抢答夺分) MVP scope |
 | Player flow | Access → wait → rules+countdown → play → auto-save → submit/auto-submit → next | — | Access mechanism; session/device behavior; post-submit UI |
 | Results | Auto validation/scoring/ranking; idempotent submission | Admin can view/export results | Scoring formulas; publication semantics; analytics specifics |
-| Non-functional | Multi-tenant, real-time, interactive, state-driven, isolated, automated, timed rounds | Event-oriented (identified) | Persistence/real-time mechanism details |
-| Architecture / DB | — | — | Everything (explicitly deferred) |
+| Non-functional | Multi-tenant, real-time, interactive, state-driven, isolated, automated, timed rounds | Event-oriented — realized in the game subsystem (ARC-020) | Persistence/real-time mechanism details |
+| Architecture | — | **Modular monolith** (ARC-001/002); **event-driven game subsystem, in-process** (ARC-020/021); structural tenant isolation (ARC-011) — all Working Position, team-decided | Backend/frontend/DB/real-time transport/caching/auth/deployment technology; domain model; module decomposition & event catalog (Proposed) |
+| DB | — | — | Everything (explicitly deferred) |

@@ -62,6 +62,8 @@ Current stage types:
 
 These may be refined during requirements analysis.
 
+**Resolved for MVP:** only **Individual + Team** are realized; **PK is deferred** (CS-010 / CS-016). See `STAGE_REQUIREMENTS.md` §1, §5.
+
 ### OA-023 — Configurable number of stages and rounds
 The admin can add stages and rounds until the desired competition structure is defined. No fixed MVP number is currently established.
 
@@ -201,6 +203,8 @@ The admin should not routinely perform:
 The current conceptual vision is that the backend/server is authoritative for competition state and important operations.
 
 This is a **conceptual principle, not an architecture decision**. The actual architecture, event model, synchronization mechanism, and infrastructure remain to be designed.
+
+> **Update:** the architectural *style* is now decided (modular monolith; in-process events in the game subsystem — see §19 update and `ARCHITECTURE_REQUIREMENTS.md`). The event *scope* is therefore set, but the **event model itself, the synchronization mechanism, and infrastructure remain to be designed**. This principle (ENV-006) is unchanged and is preserved by ARC-025.
 
 ## 11. Live Competition Data
 
@@ -466,8 +470,6 @@ Do not prematurely decide:
 - OTP implementation
 - Link/QR implementation
 - Big Screen authentication
-- Backend architecture
-- WebSocket/event architecture
 - Database structure
 - Redis/infrastructure
 - PDF/OCR/extraction technology
@@ -477,6 +479,10 @@ Do not prematurely decide:
 - API design
 
 These belong to later project phases.
+
+> **Update — architectural style decided (team decision).** Since this document was written, the development team has decided the architectural **style**: a **modular monolith** with **in-process event-driven** communication in the competition/game subsystem. This was a team decision made ahead of requirements validation; it is recorded with its divergence notice in [`decisions/project-decisions.md`](../decisions/project-decisions.md) §8.1 and detailed in [`ARCHITECTURE_REQUIREMENTS.md`](./ARCHITECTURE_REQUIREMENTS.md).
+>
+> Accordingly, **"Backend architecture"** and **"WebSocket/event architecture"** are no longer fully deferred: the *style/scope* is decided, while backend **technology**, real-time **transport technology**, and everything else in the list above remain Open.
 
 ## 20. Current Assumptions / Working Positions
 

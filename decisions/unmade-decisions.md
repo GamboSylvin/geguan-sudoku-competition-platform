@@ -3,9 +3,11 @@
 **Document Status:** Open Questions Register  
 **Date:** 2026-09-16  
 **Purpose:** Collect every requirement question that has been raised but not yet answered, organized by topic for client/developer discussion. This is the companion to [`project-decision.md`](./project-decision.md), which records the decisions that *have* been settled.  
-**Guidance:** All questions below must be resolved against the client before the domain model and architecture are finalized. The source documents explicitly warn against making architecture or technology decisions while requirements are still unstable.
+**Guidance:** All questions below must be resolved against the client before the domain model is finalized. The source documents warn against making architecture or technology decisions while requirements are still unstable. **Note:** the architectural *style* has since been decided by the team (see `project-decisions.md` §8.1) — that deviation is recorded there, and the requirements below still need resolving.
 
 > **Note on Flow requirements:** `requirements/FLOW_REQUIREMENTS.md` captures the client's vision of the competition flow and system mechanics. Nothing there is confirmed; divergences are recorded in the section "13. Flow Requirements — Client Vision (To Check with Client)" below.
+
+> **Note on Stage requirements:** `requirements/STAGE_REQUIREMENTS.md` captures the working definitions of the competition stages. MVP realizes **Individual + Team**; **PK is deferred** (CS-010 / CS-016). Open points are consolidated in section "3.3 Stage Composition & Per-Stage Rankings", "3.4 Individual Stage — Validation & Scoring", and "3.5 Team Stage — Rotation & Other Round Types" below.
 
 ---
 
@@ -78,6 +80,35 @@
 |---|---|
 | CAT-1 | Can one competition contain participants from multiple categories, or is each competition dedicated to a single category? |
 | CAT-2 | Where does category belong in the domain model: competition, stage, round, participant, or another structure? |
+
+### 3.3 Stage Composition & Per-Stage Rankings
+
+| # | Question |
+|---|---|
+| STG-2 | "No combined final ranking" — does it apply to **individual** standings, **team** standings, or **both**? |
+| STG-3 | How does "no combined cross-stage final ranking" relate to the `client-view.md` **team-total formula** (individual-stage scores ×0.6 + team-stage scores)? |
+| STG-4 | Does each stage indeed end with its **own final ranking**, with no cross-stage aggregation? |
+
+*(STG-1 — "is the stage set Individual + Team + PK confirmed, or is PK reserved?" — is now **resolved**: MVP realizes Individual + Team; PK is deferred. Recorded as CS-010 / CS-016 in `project-decisions.md`.)*
+
+### 3.4 Individual Stage — Validation & Scoring
+
+| # | Question |
+|---|---|
+| IND-1 | Is the **recognizer + solution grid + completion-check** approach acceptable for validating answers in the Individual stage? (Proposed by the developer; must be confirmed with the client.) |
+| IND-2 | If completion is **not** used, what is the **per-question-type scoring system** for the Individual stage and all its rounds? |
+| IND-3 | **Question types** for the Individual stage are to be defined. Which types exist, and how are they determined? |
+| IND-4 | What **puzzle shapes** are supported (e.g., 9×9, 9×6)? How does shape relate to question type? |
+
+### 3.5 Team Stage — Rotation & Other Round Types
+
+| # | Question |
+|---|---|
+| TEAM-1 | Is the **rotation round** the only team round type in MVP scope, or are 分区协作 (partition collaboration) and 抢答夺分 (quick-answer scoring) also in scope? |
+| TEAM-2 | What is the **total puzzle count** for the rotation round — the client-view.md example uses 10; a typical discussion mentions 16? |
+| TEAM-3 | What is the exact **rotation interval** (client-view.md default is 60s; "a couple of minutes" was mentioned)? |
+| TEAM-4 | What is the exact **scoring/ranking model** for the rotation round (per-puzzle points, early-completion bonus, penalties, tie-breaks)? |
+| TEAM-5 | What happens when a puzzle is completed — who validates it, and how does replacement from the remaining pool behave (replenish immediately vs at next rotation)? |
 
 ---
 
@@ -278,6 +309,8 @@
 
 ## 7. PK (Head-to-Head) Rounds
 
+**Status: Deferred — out of MVP scope.** The PK stage is not realized in the MVP (see CS-016 in `project-decisions.md`). The questions below are retained for a future version and are **not** active MVP questions.
+
 | # | Question |
 |---|---|
 | PK-1 | Is PK always random pairing? |
@@ -330,13 +363,23 @@
 
 ---
 
-## 11. Architecture, Technology & Infrastructure (Deferred)
+## 11. Architecture, Technology & Infrastructure
 
-**Status: Deliberately deferred — must not be decided prematurely. The source documents state that these must be *derived from* the requirements rather than selected in advance.**
+**Status: Partially resolved. The architectural *style* has been decided (see `project-decisions.md` §8.1 and `requirements/ARCHITECTURE_REQUIREMENTS.md`). Technology, database, and deployment remain Open and must still be *derived from* the requirements.**
+
+> **Divergence notice:** the style decisions were made by **development-team preference** (two-developer team, deployment simplicity), which deviates from the previously stated process rule that architecture be *derived from* requirements. This deviation is recorded, not silent. The requirements remain unstable, so the style stays revisable.
+
+**Resolved (moved to `project-decisions.md` §8.1):**
+
+| ID | Formerly Open Decision | Resolution |
+|---|---|---|
+| ARCH-1 | Overall system architecture (monolith, modular monolith, microservices, event-driven, etc.) | **Partially resolved** — **modular monolith** (ARC-001/002), with **in-process event-driven** communication in the competition/game subsystem (ARC-020/021). Recorded as **Working Position**. |
+| *(deferral list)* | "WebSocket/event architecture" (listed as deferred in `project-decisions.md` §11) | **Partially resolved** — event-driven **scope** decided (game subsystem, in-process). Real-time **transport technology** remains Open (ARCH-5). |
+
+**Still Open:**
 
 | # | Open Decision |
 |---|---|
-| ARCH-1 | Overall system architecture (monolith, modular monolith, microservices, event-driven, etc.). |
 | ARCH-2 | Backend technology / language / framework. |
 | ARCH-3 | Frontend technology / framework. |
 | ARCH-4 | Database technology and data modeling. |
@@ -351,6 +394,10 @@
 | ARCH-13 | Configuration distribution architecture (client's "unified distribution engine" — not accepted yet). |
 | ARCH-14 | API design. |
 | ARCH-15 | The detailed competition domain model. |
+| ARCH-16 | **Module decomposition** — the candidate modules (ARC-012) are a proposal and must be validated against the domain model. |
+| ARCH-17 | **Event catalog** — the candidate events (ARC-027) are a proposal and must be validated against resolved requirements. |
+| ARCH-18 | **Structural tenant-isolation mechanism** — how isolation is enforced without relying on developer discipline (ARC-011 / ARCQ-4). |
+| ARCH-19 | **Event durability** — is in-process delivery sufficient, or must some events survive a restart? (ARCQ-3) |
 
 **Note on the client proposal:** the client's "unified configuration distribution engine" and "dynamic/marketplace-style logic upload" concepts should not be accepted as architecture decisions until the underlying business variation is understood.
 
@@ -360,7 +407,7 @@
 
 The following questions most directly block the domain model and should be resolved first:
 
-1. What exactly defines the stage types Individual / Team / PK, and which round types are valid in each?
+1. What exactly defines the stage types Individual / Team / PK, and which round types are valid in each? *(PK deferred — MVP realizes Individual + Team.)*
 2. Where does category (age group) belong, and can one competition mix categories?
 3. At what point does competition configuration lock (publication, first access, start, stage/round start)?
 4. What exactly does "publish results" mean, and does it finalize/lock results?
@@ -383,7 +430,7 @@ The following questions most directly block the domain model and should be resol
 | FLW-Q2 | Are player and judge access the same link, or separate? Does the link identify the user or require additional auth? | PL-1, JD-8 |
 | FLW-Q3 | What happens when an unregistered/unauthorized player attempts entry? | PL-6 |
 | FLW-Q4 | Which competition transitions are Judge-controlled vs automatic? | SR-7, J-003/4/5 |
-| FLW-Q5 | Is PK in scope for MVP, or reserved for later? | SR-3 |
+| FLW-Q5 | Is PK in scope for MVP, or reserved for later? *(Resolved — PK deferred, out of MVP. See CS-016.)* | SR-3 |
 | FLW-Q6 | **Scoring model:** is scoring per-cell proportional, all-or-nothing per puzzle, or hybrid? How do time bonuses and difficulty weighting fit? | SC-1…SC-7 |
 | FLW-Q7 | Per-question points: assigned individually or per-type? | SC-3 |
 | FLW-Q8 | Round duration: driven by question type or set manually? | CS-005 |
@@ -395,4 +442,4 @@ The following questions most directly block the domain model and should be resol
 
 - **Scoring model:** the client's described "recognition-based / percentage of correct cells" proportional model vs the existing client-view.md rules (rounds worth 100 points, all-or-nothing, +3/min early bonus). These are two different scoring philosophies and must be reconciled.
 - **Lifecycle / lock point:** the client's vision implies publication = immutable lock, whereas the existing decision register leaves the lock point unresolved (publication vs first access vs start).
-- **PK stage:** the client lists PK as a stage type, but the referenced competition regulations use only Individual + Team, with PK reserved. Confirm PK scope for MVP.
+- **PK stage:** the client lists PK as a stage type, but the referenced competition regulations use only Individual + Team, with PK reserved. **Resolved for MVP: PK is deferred** (CS-010 / CS-016).
