@@ -137,8 +137,8 @@ The client describes a **recognition-based scoring system**:
 - When a player submits, the system compares the **number of grids (cells) the player filled correctly** against the solution grid.
 - Points are awarded **according to the percentage of correct cells**.
 
-**[Check with client — Important divergence]**
-This is a **partial-credit / proportional** scoring model. The existing client-view.md competition rules describe a different model: individual rounds worth 100 points, full-correct submissions earn +3/min early bonus, wrong/blank answers score 0. These two models need to be **reconciled**: is scoring per-cell proportional, all-or-nothing per puzzle, or a hybrid? Also, how do time bonuses and puzzle-difficulty weighting fit in?
+**[Check with client — Important divergence, open conflict as of 2026-09-23]**
+This is a **partial-credit / proportional** scoring model. The existing client-view.md competition rules describe a different model: individual rounds worth 100 points, full-correct submissions earn +3/min early bonus, wrong/blank answers score 0. These two models need to be **reconciled**: is scoring per-cell proportional, all-or-nothing per puzzle, or a hybrid? The newer `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` §18 uses the all-or-nothing model, but this has not been confirmed as the final answer — see `decisions/unmade-decisions.md` §14.3 for the open conflict, flagged for direct colleague/client review.
 
 ### FLW-031 — Per-question point value and type
 - Each type of question has a **particular point value**.

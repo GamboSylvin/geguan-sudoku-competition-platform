@@ -181,11 +181,11 @@ A separate mechanism may be required for the Big Screen to access the competitio
 
 ## 9. Big Screen Responsibility
 
-### OA-080 — Admin has no Big Screen control
-The Organization Admin has **no control rights over the Big Screen**. Big Screen operational control is reserved for the Judge.
+### OA-080 — Admin has no Big Screen control — **[Open conflict, 2026-09-23]**
+The Organization Admin has **no control rights over the Big Screen**. Big Screen operational control is reserved for the Judge. **Note:** `client-view.md` §4.1/§4.3 states the client's original design has both Judge and Admin/Management with synchronized Big Screen control — this contradicts OA-080. Not yet resolved; flagged for direct colleague/client review. See `decisions/unmade-decisions.md` §14.6.
 
 ### OA-081 — Admin may facilitate access, not control
-The admin may participate in preparing/generating access information for the Big Screen if required by the final access model. This does not grant display-control authority.
+The admin may participate in preparing/generating access information for the Big Screen if required by the final access model. This does not grant display-control authority. Depends on the OA-080 conflict above.
 
 ## 10. Live Competition Responsibility
 

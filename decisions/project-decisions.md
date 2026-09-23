@@ -2,7 +2,7 @@
 
 **Document Status:** Working Decisions Register  
 **Date:** 2026-09-16  
-**Purpose:** Consolidate every requirement decision that has been settled to date, across product vision, scope, roles, functional behavior, non-functional characteristics, architecture, and database. Open items are intentionally kept out of this document and live in [`unmade-decision.md`](./unmade-decision.md).  
+**Purpose:** Consolidate every requirement decision that has been settled to date, across product vision, scope, roles, functional behavior, non-functional characteristics, architecture, and database. Open items are intentionally kept out of this document and live in [`unmade-decisions.md`](./unmade-decisions.md).  
 **Source Documents:**
 - `PROJECT_ANALYSIS_UPDATED.md` — overall project analysis (confirmed items listed in §6)
 - `PLAYER_REQUIREMENTS.md` — player role requirements (working draft)
@@ -11,6 +11,7 @@
 - `JUDGE_REQUIREMENTS_PROPOSAL.md` — judge role proposal (explicitly **not** final)
 - `STAGE_REQUIREMENTS.md` — stage definitions, starting with the Individual stage (working draft)
 - `ARCHITECTURE_REQUIREMENTS.md` — architectural style (modular monolith + game-subsystem event-driven), recorded as a team decision (working draft)
+- `Sudoku_Arena_Final_MVP_Alignment_Guideline.md`, `Sudoku Arena MVP — Question 2 Decision Summary.md`, `Sudoku_Arena_MVP_Q3_Decision_Summary.md` — later internal engineering-planning documents for the 15-day MVP sprint (added 2026-09-23, at project root). **Not yet reconciled** with this register — several statements conflict with items below marked Confirmed. See §13 and `unmade-decisions.md` §14.
 
 ---
 
@@ -74,12 +75,14 @@ The platform should **digitize and automate**, wherever appropriate:
 
 | ID | Decision | Status |
 |---|---|---|
-| ENV-001 | The platform operates as a **multi-tenant SaaS**; each organization is a tenant. | Confirmed |
-| ENV-002 | **Tenant data isolation is a fundamental requirement.** Each tenant has isolated access to its own users, competitions, participants, competition data, results, and other tenant-owned resources. A tenant must never access another tenant's data. | Confirmed |
+| ENV-001 | The platform operates as a **multi-tenant SaaS**; each organization is a tenant. | Confirmed (long-term vision) — **deferred for MVP**, see ENV-007 |
+| ENV-002 | **Tenant data isolation is a fundamental requirement.** Each tenant has isolated access to its own users, competitions, participants, competition data, results, and other tenant-owned resources. A tenant must never access another tenant's data. | Confirmed (long-term vision) — **deferred for MVP**, see ENV-007 |
 | ENV-003 | The **initial competition environment is a supervised physical venue** (classroom or competition venue). | Confirmed |
 | ENV-004 | Participants use **organization-provided computers and/or tablets**. | Confirmed |
 | ENV-005 | The initial version does **not** solve remote-competition security problems. Out of scope: camera-based supervision, environmental monitoring, camera-based identity verification, remote-proctoring mechanisms, and other anti-cheating mechanisms for unsupervised home environments. | Confirmed |
 | ENV-006 | The **backend/server is authoritative for competition state and important operations.** This is a conceptual principle, **not** an architecture decision. | Working Position |
+| ENV-007 | **MVP scope is single-tenant.** Due to the current time constraint, the team has deliberately decided to build the MVP for **one organization only**, rather than the full multi-tenant SaaS platform. This is an explicit scope decision by the project owner (2026-09-23), **not** an abandonment of the multi-tenant vision: ENV-001/ENV-002 (multi-tenant SaaS, tenant isolation) remain the **confirmed long-term product vision** and are planned for a later growth phase once the MVP ships. The current build (including `Sudoku_Arena_Final_MVP_Alignment_Guideline.md`) intentionally omits tenant/organization isolation. | Confirmed (2026-09-23) — resolves the conflict at §13.1 |
+| ENV-008 | **Client identity clarification (2026-09-23):** the single "organization" for this MVP is a **school or university acting as competition organizer** — not a commercial company. The competition is held **between students**; the client is the organizing institution. This does not change any other decision, but clarifies terminology: "the organization" = the hosting school/university; "participants" = students, who may themselves originate from multiple schools (the client-view.md competition is inter-school, "校际联赛"). The single-tenant MVP (ENV-007) represents this one organizing institution's event. | Confirmed (2026-09-23) |
 
 ---
 
@@ -95,7 +98,8 @@ The platform should **digitize and automate**, wherever appropriate:
 |---|---|---|
 | SA-001 | Represents the **owner/operator of the SaaS platform**. | Confirmed |
 | SA-002 | Operates at the **platform level**, not within a single tenant. | Confirmed |
-| SA-003 | Exact responsibilities and permissions are **not yet fully defined**; a working MVP scope now exists in `SUPER_ADMIN_REQUIREMENTS.md` (tenant overview, competition overview, tenant revocation). Remaining details (participant/result access, billing, deletion semantics) stay open. | Working Position |
+| SA-003 | Exact responsibilities and permissions are **not yet fully defined**; a working MVP scope now exists in `SUPER_ADMIN_REQUIREMENTS.md` (tenant overview, competition overview, tenant revocation). Remaining details (participant/result access, billing, deletion semantics) stay open. | Working Position — **role deferred for the current MVP**, see SA-005 |
+| SA-005 | **The Super Administrator role is deferred for the current MVP**, along with the rest of the multi-tenant platform (ENV-007). Because the MVP serves a single company, there is no platform-level "above all tenants" role to build yet. This does **not** cancel the role — `SUPER_ADMIN_REQUIREMENTS.md` remains the working spec for when the multi-tenant phase is built. | Confirmed (2026-09-23) — resolves the conflict at §13.2 |
 
 ### 4.3 Organization Administrator
 
@@ -107,8 +111,8 @@ The platform should **digitize and automate**, wherever appropriate:
 | OA-004 | Responsible for **competition preparation and post-competition analysis**; a large independent organization-management module is not currently required. | Working Position |
 | OA-005 | Can **create multiple competitions** for the organization. | Confirmed |
 | OA-006 | Can configure competition **name, description**, and other basic information. | Confirmed |
-| OA-007 | The **Organization Admin has no control rights over the Big Screen**; Big Screen control is reserved for the Judge. | Working Position (differs from client proposal — see §10) |
-| OA-008 | Is **not** the routine live competition operator; normal live control belongs to the Judge. The Admin should not routinely perform round-by-round control, player live control, Big Screen control, routine puzzle rotation, or routine scoring/ranking calculation. | Working Position |
+| OA-007 | The **Organization Admin has no control rights over the Big Screen**; Big Screen control is reserved for the Judge. | Working Position — **open conflict, unresolved, see §13.7 / `unmade-decisions.md` §14.6 (for colleague review)** |
+| OA-008 | Is **not** the routine live competition operator; normal live control belongs to the Judge. The Admin should not routinely perform round-by-round control, player live control, Big Screen control, routine puzzle rotation, or routine scoring/ranking calculation. | Working Position — Big Screen control clause depends on §13.7 |
 | OA-009 | Can **view and export post-competition results and analytics**; does not manually calculate rankings. | Confirmed / Working Position |
 | OA-010 | Can **create and remove judges** and **assign judges to competitions**. | Working Position |
 | OA-011 | Can **import participants** (envisioned via Excel). | Working Position |
@@ -190,7 +194,7 @@ The platform should **digitize and automate**, wherever appropriate:
 | PT-002 | Imported participants are **associated with the specific competition** being prepared. | Working Position |
 | PT-003 | The admin does **not** manually form teams as a routine import operation. **Team information is contained in the imported participant data**, and the **system derives/creates teams and groupings** from it. | Working Position |
 | PT-004 | The system should provide **competition-specific participant access credentials** (potentially OTP, one-time credential, or account credential). Exact mechanism is undecided. | Working Position |
-| PT-005 | The category (age group) placement is **unresolved**: whether a competition is single-category or multi-category, and where category belongs in the domain model. | Open |
+| PT-005 | **Resolved (2026-09-23):** one competition represents **one category** (e.g. `U6`–`U20`). Different categories are separate competitions. Category is set at competition-creation time. Source: `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` §4, §6 — reviewed by project owner, no conflicting prior decision found. | Confirmed (2026-09-23) |
 
 ### 5.4 Judge Management (by Organization Admin)
 
@@ -200,6 +204,7 @@ The platform should **digitize and automate**, wherever appropriate:
 | JM-002 | The admin can **remove judges** from the organization; implications for judges already assigned to active/future competitions are open. | Working Position |
 | JM-003 | The admin can **assign a judge to a particular competition**; a judge's authority is **competition-specific**. | Working Position |
 | JM-004 | The system should provide assigned judges with **competition-specific access credentials** (potentially OTP or other one-time credential). Exact mechanism undecided. | Working Position |
+| JM-005 | **Resolved (2026-09-23):** exactly **one judge per competition**. A judge can be reused across competitions over time but cannot be assigned to more than one **ongoing** competition at once; becomes available again once that competition finishes/is cancelled. Source: `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` §8, Q2.10–11 — reviewed by project owner, no conflicting prior decision found. | Confirmed (2026-09-23) |
 
 ### 5.5 Competition Access / Entry Links
 
@@ -207,6 +212,7 @@ The platform should **digitize and automate**, wherever appropriate:
 |---|---|---|
 | CA-001 | After preparation, the admin may generate/obtain access information (a **link and/or QR code** is envisioned) allowing authorized players and judges to enter the competition. | Working Position |
 | CA-002 | The access mechanism should establish the **appropriate competition context** without navigating through unrelated competitions. Exact authentication/authorization is undecided. | Working Position |
+| CA-004 | **Resolved (2026-09-23):** publishing a competition **locks its configuration**; the general rule is no editing after publish, with no exceptional edit path currently described. Publishing also generates the competition entry link/QR. Source: `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` §5, Q2.8 — reviewed by project owner, no conflicting prior decision found (this supersedes CMP-2/CMP-3/FLW-Q9 as previously open). | Confirmed (2026-09-23) |
 | CA-003 | A **separate mechanism for the Big Screen** may be required (a competition-specific link/token was previously considered). Exact mechanism unresolved. | Open |
 
 ### 5.6 Post-Competition Results & Analytics
@@ -216,7 +222,7 @@ The platform should **digitize and automate**, wherever appropriate:
 | RA-001 | After a competition, the admin can **access its results**. | Confirmed |
 | RA-002 | The admin can **view system-generated rankings**; the admin does not manually calculate rankings. | Confirmed |
 | RA-003 | The admin can access **competition reports/statistics**; exact analytics intentionally not finalized. Possible dimensions: overall results, stage-level results, round-level results, individual results, team scoring, rankings, other basic statistics. | Working Position |
-| RA-004 | The admin can access **team scoring information**; the exact team scoring formula must be defined separately. | Working Position |
+| RA-004 | The admin can access **team scoring information**; the exact team scoring formula must be defined separately. `client-view.md` §2.1 has a candidate formula (`team total = individual two-round sum × 0.6 + team two-round sum`), and the Arena documents reference "the agreed team formula" without restating it — **not yet confirmed these are the same formula.** See §13.6 / `unmade-decisions.md` §14.4 (for colleague review). | Working Position — open conflict, unresolved |
 | RA-005 | The admin can **export competition results**; exact formats and fields are open. | Working Position |
 
 ### 5.7 Competition Reuse
@@ -289,7 +295,7 @@ This is an **explicit, acknowledged deviation** from the previously stated proce
 | ARC-004 | **Rationale:** two-developer team; deployment simplicity; maintainability; future growth without premature distribution. | Working Position |
 | ARC-005 | **Scaling is a later concern.** The modular structure must not prevent scaling, but the MVP is not designed around speculative scale. Module extraction into a service is **not** an MVP goal. | Working Position |
 | ARC-006 | This fixes the **style only**; backend/frontend/database/real-time/caching/auth/deployment technologies remain **Open**. | Working Position |
-| ARC-011 | **Tenant isolation is enforced structurally at module level**, not by per-developer discipline. | Derived from ENV-002 / NF-005 (Confirmed requirement) |
+| ARC-011 | **Tenant isolation is enforced structurally at module level**, not by per-developer discipline. | Derived from ENV-002 / NF-005 — **not built in the current MVP** (single-tenant, ENV-007); this remains the design target for the future multi-tenant phase |
 | ARC-020 | **Event-driven communication applies to the competition/game subsystem** (stage/round lifecycle, player actions, validation, scoring, team rotation). Modules outside it may use direct in-process calls. | Working Position (team decision) |
 | ARC-021 | **Events are in-process.** No external broker, queue, or event-streaming infrastructure in the MVP. | Working Position (team decision) |
 | ARC-023 | Events express **domain facts** (something that happened), not commands. | Working Position |
@@ -327,7 +333,7 @@ These are open points of reconciliation; the current project vision diverges fro
 
 | Topic | Client Proposal | Current Project Vision | Status |
 |---|---|---|---|
-| Big Screen control | Management/Admin may potentially control the Big Screen. | Only the Judge controls the Big Screen. | Open — needs client validation |
+| Big Screen control | `client-view.md` §4.1/§4.3 explicitly states Judge **and** Admin/Management have synchronized control ("裁判端控制 / 管理端同步控制"). | `ORGANIZATION_ADMIN_REQUIREMENTS.md` OA-007/OA-080 and `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` §16 both say Judge-only. | **Open — needs a decision by the colleague/client.** Not resolved by document precedence; see `unmade-decisions.md` §14.6. |
 | Group/team formation | Includes grouping/management. | Imported participant data contains team info; system derives teams; admin does not manually form teams routinely. | Working Position |
 | Competition time | Includes a competition time field. | Overall duration is not directly configured; round durations contribute to total duration. | Working Position |
 | Configuration distribution | Emphasizes a unified configuration distribution engine. | Backend is authoritative and central; distribution concept not accepted as architecture yet. | Working Position |
@@ -360,12 +366,32 @@ The following are **deliberately deferred** to later project phases and must **n
 
 | Area | Confirmed | Working Position / Proposed | Open / Not Decided |
 |---|---|---|---|
-| Product model | Multi-tenant SaaS; not an online game; digitalize operations; Super Admin tenant overview + revocation (MVP working scope) | — | Super Admin participant/result access, billing, deletion semantics |
-| Environment | Physical venue; org-provided devices; no remote proctoring | Backend authoritative (principle) | Anti-cheating details in venue |
-| Roles | 4 actors; system calculates results/rankings; Judge controls display; Super Admin: tenant overview + revocation (MVP working scope) | 1 admin/tenant (MVP); Judge operations (proposed) | Multiple admins/judges; admin live access; Super Admin participant/result access |
+| Product model | Multi-tenant SaaS is the confirmed **long-term** vision; not an online game; digitalize operations. **MVP is single-tenant (ENV-007, 2026-09-23) — one company, multi-tenancy deferred, not abandoned.** | — | Super Admin participant/result access, billing, deletion semantics (for the later multi-tenant phase) |
+| Environment | Physical venue; org-provided devices; no remote proctoring; MVP scope = single tenant (ENV-007) | Backend authoritative (principle) | Anti-cheating details in venue |
+| Roles | System calculates results/rankings; Judge controls display. **MVP realizes Admin/Judge/Player only — Super Administrator deferred with multi-tenancy (SA-005).** | Judge operations (proposed) | Multiple admins/judges; admin live access; Super Admin participant/result access (later phase) |
 | Competition structure | Competition → Stages → Rounds; MVP stage set = Individual + Team; PK deferred | Stage types Individual/Team/PK (Individual+Team realized); no competition-level duration; per-stage rankings with no combined final ranking; individual stage = individually scored per player; team stage = rotation round emphasized + 2 listed-but-undefined round types | Stage/round type definitions; category placement; validation approach (recognizer vs per-type scoring); grid shapes; other team round types (分区协作 / 抢答夺分) MVP scope |
 | Player flow | Access → wait → rules+countdown → play → auto-save → submit/auto-submit → next | — | Access mechanism; session/device behavior; post-submit UI |
 | Results | Auto validation/scoring/ranking; idempotent submission | Admin can view/export results | Scoring formulas; publication semantics; analytics specifics |
 | Non-functional | Multi-tenant, real-time, interactive, state-driven, isolated, automated, timed rounds | Event-oriented — realized in the game subsystem (ARC-020) | Persistence/real-time mechanism details |
 | Architecture | — | **Modular monolith** (ARC-001/002); **event-driven game subsystem, in-process** (ARC-020/021); structural tenant isolation (ARC-011) — all Working Position, team-decided | Backend/frontend/DB/real-time transport/caching/auth/deployment technology; domain model; module decomposition & event catalog (Proposed) |
 | DB | — | — | Everything (explicitly deferred) |
+
+---
+
+## 13. Pending Reconciliation — Sudoku Arena MVP Alignment Documents (flagged 2026-09-23, updated 2026-09-23)
+
+Three new documents were added at the project root on 2026-09-23 (`Sudoku_Arena_Final_MVP_Alignment_Guideline.md`, `Sudoku Arena MVP — Question 2 Decision Summary.md`, `Sudoku_Arena_MVP_Q3_Decision_Summary.md`), outside the `requirements/`/`decisions/` structure. They function as a later, more concrete internal engineering plan for a 15-day MVP sprint. Several of their statements conflicted with decisions marked Confirmed elsewhere in this document, or silently proposed answers to items still marked Open.
+
+**Process note (2026-09-23):** the project owner briefly asked for a default "oldest document wins" rule for these conflicts, then retracted it. The current policy is: **genuine conflicts (old document takes a firm position, new document contradicts it) are recorded as open questions in `unmade-decisions.md` §14 for the colleague/client to decide** — not resolved by document precedence. Items where a new document simply answered a previously-open question (no prior firm position to conflict with) are accepted directly.
+
+| # | Confirmed/Open item here | Arena documents say | Status |
+|---|---|---|---|
+| 13.1 | ENV-001/ENV-002 (Confirmed): multi-tenant SaaS, tenant isolation is fundamental. ARC-011 (Confirmed): isolation enforced structurally. | "The MVP is **not** a fully generic SaaS competition engine"; "Generic multi-tenant SaaS features" explicitly out of scope; no Organization/Tenant entity in the domain model or DB schema. | **Resolved (2026-09-23) — direct project-owner decision (time constraint), not a document-precedence default.** Deliberate scope decision: build the MVP single-tenant, for one school/university. Multi-tenant SaaS + Super Admin remain the confirmed long-term vision for a later growth phase — **not abandoned**. See ENV-007, ENV-008, SA-005. **Not part of the colleague review below** — the project owner made this call directly. |
+| 13.2 | SA-001…SA-003 (Confirmed/Working Position): Super Administrator is one of 4 platform actors. | Super Administrator is never mentioned; roles are only "Administrators, Judges, Players, Big-screen display." | **Resolved (2026-09-23)** — same basis as 13.1. See SA-005. |
+| 13.3 | OA-001/OA-002: Organization Admin represents one tenant among potentially many. | "Admin" is used generically; no framing relative to multiple organizations/tenant isolation. | **Resolved (2026-09-23)** — same basis as 13.1. |
+| 13.4 | CS-014/TEAM-010…TEAM-015 (Working Position): detailed live puzzle-rotation mechanic for the Team stage (2–6 players, ~60s rotation, replenishment pool). | Player runtime flow, submission rules, module design, and API/WebSocket contracts describe every round identically (solve own puzzle → submit); no rotation/replenishment mechanic appears anywhere. | **Resolved (2026-09-23) — no conflict, so not part of the colleague review.** `STAGE_REQUIREMENTS.md` §4.3 / `client-view.md` §3 remain authoritative; the Arena Alignment Guideline simply doesn't redescribe it. **Remaining implementation-planning gap (not a requirements question):** the Alignment Guideline's runtime flow, module design, and API/WebSocket contracts (§12, §14, §24, §27–28) still need to be extended to actually cover rotation/replenishment before implementation. |
+| 13.5 | `client-view.md` §2.1: all-or-nothing scoring, 100 pts/0 pts + time bonus. `FLOW_REQUIREMENTS.md` FLW-030 instead attributed a proportional/per-cell model to "the client's vision." | Q3.18 / Alignment §18: all-or-nothing per-question scoring (100 pts / 0 pts) + time bonus — matches `client-view.md`, not FLW-030. | **Open conflict — for colleague review.** See `unmade-decisions.md` §14.3. |
+| 13.6 | RA-004/SC-4 (Open): exact team scoring formula undefined. | References "the agreed team formula" without restating it. | **Open conflict — for colleague review.** See `unmade-decisions.md` §14.4. |
+| 13.7 | `client-view.md` §4.1/§4.3: Judge **and** Admin/Management both control the Big Screen (synchronized). | `ORGANIZATION_ADMIN_REQUIREMENTS.md` OA-007 and `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` §16 both say Judge-only. | **Open conflict — for colleague review.** See `unmade-decisions.md` §14.6 and OA-007/OA-080/OA-081. |
+
+**Summary:** 13.1–13.3 (multi-tenancy) stand as the project owner's direct decision. 13.4 (team-mode description) stands as-is with a noted implementation gap. 13.5–13.7 are genuine, unresolved document conflicts, fully detailed in `unmade-decisions.md` §14.3, §14.4, §14.6 for the colleague to answer.

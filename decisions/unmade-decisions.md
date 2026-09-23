@@ -2,18 +2,20 @@
 
 **Document Status:** Open Questions Register  
 **Date:** 2026-09-16  
-**Purpose:** Collect every requirement question that has been raised but not yet answered, organized by topic for client/developer discussion. This is the companion to [`project-decision.md`](./project-decision.md), which records the decisions that *have* been settled.  
+**Purpose:** Collect every requirement question that has been raised but not yet answered, organized by topic for client/developer discussion. This is the companion to [`project-decisions.md`](./project-decisions.md), which records the decisions that *have* been settled.  
 **Guidance:** All questions below must be resolved against the client before the domain model is finalized. The source documents warn against making architecture or technology decisions while requirements are still unstable. **Note:** the architectural *style* has since been decided by the team (see `project-decisions.md` §8.1) — that deviation is recorded there, and the requirements below still need resolving.
 
 > **Note on Flow requirements:** `requirements/FLOW_REQUIREMENTS.md` captures the client's vision of the competition flow and system mechanics. Nothing there is confirmed; divergences are recorded in the section "13. Flow Requirements — Client Vision (To Check with Client)" below.
 
 > **Note on Stage requirements:** `requirements/STAGE_REQUIREMENTS.md` captures the working definitions of the competition stages. MVP realizes **Individual + Team**; **PK is deferred** (CS-010 / CS-016). Open points are consolidated in section "3.3 Stage Composition & Per-Stage Rankings", "3.4 Individual Stage — Validation & Scoring", and "3.5 Team Stage — Rotation & Other Round Types" below.
 
+> **Note on the new Sudoku Arena MVP documents (flagged 2026-09-23):** Three new documents were added at the project root — `Sudoku_Arena_Final_MVP_Alignment_Guideline.md`, `Sudoku Arena MVP — Question 2 Decision Summary.md`, `Sudoku_Arena_MVP_Q3_Decision_Summary.md` — outside the `requirements/`/`decisions/` structure described in `CLAUDE.md`. They read as a later, more concrete engineering-planning document for a 15-day MVP sprint, and several of their statements conflict with or silently resolve items already tracked here. These are consolidated in the new section "14. Sudoku Arena MVP Alignment Documents — New Conflicts & Open Points" below. **None of that section's items are confirmed** — they are flagged, not resolved.
+
 ---
 
 ## 1. Super Administrator
 
-**Status note:** A working MVP scope for the Super Administrator now exists in `SUPER_ADMIN_REQUIREMENTS.md` (tenant overview, competition overview, tenant revocation). The questions below that remain open are captured there and in `project-decisions.md` SA-003.
+**Status note (updated 2026-09-23):** The Super Administrator role, and multi-tenancy generally, is **deferred for the current single-tenant MVP** — a deliberate, time-driven scope decision, not a cancellation (see `project-decisions.md` SA-005 / ENV-007, and §14.1 above). The questions below are **not active MVP questions**; they are retained for when the multi-tenant phase is built. A working MVP-era scope for the Super Administrator exists in `SUPER_ADMIN_REQUIREMENTS.md` (tenant overview, competition overview, tenant revocation) for that future phase.
 
 | # | Question |
 |---|---|
@@ -29,6 +31,8 @@
 ---
 
 ## 2. Organization / Tenant Model
+
+**Status note (updated 2026-09-23):** Deferred with §1 above — the MVP has exactly one organization, so multi-org questions are not active MVP questions. Retained for the future multi-tenant phase.
 
 | # | Question |
 |---|---|
@@ -48,8 +52,8 @@
 | # | Question |
 |---|---|
 | CMP-1 | What exactly constitutes a "competition" (top-level definition)? |
-| CMP-2 | What exactly does "publish competition" mean? What does publishing generate? |
-| CMP-3 | At what exact point does competition configuration become immutable/locked? |
+| CMP-2 | **Resolved (2026-09-23):** publish generates the entry link/QR and locks configuration. See `project-decisions.md` CA-004. |
+| CMP-3 | **Resolved (2026-09-23):** configuration becomes immutable at publication. See `project-decisions.md` CA-004. |
 | CMP-4 | Is publication sufficient to lock configuration? |
 | CMP-5 | Does first participant/judge access lock configuration? |
 | CMP-6 | Can a published but not-yet-started competition be edited? |
@@ -78,8 +82,8 @@
 
 | # | Question |
 |---|---|
-| CAT-1 | Can one competition contain participants from multiple categories, or is each competition dedicated to a single category? |
-| CAT-2 | Where does category belong in the domain model: competition, stage, round, participant, or another structure? |
+| CAT-1 | **Resolved (2026-09-23):** each competition is dedicated to a single category (e.g. `U6`–`U20`). See `project-decisions.md` PT-005. |
+| CAT-2 | **Resolved (2026-09-23):** category belongs at the competition level. See `project-decisions.md` PT-005. |
 
 ### 3.3 Stage Composition & Per-Stage Rankings
 
@@ -179,8 +183,8 @@
 | JD-1 | Who assigns judges to competitions (confirmed: Organization Admin creates/assigns — but what info is required)? |
 | JD-2 | What information is required to create a Judge? |
 | JD-3 | Is a Judge an organization-level entity before being assigned to a competition? |
-| JD-4 | Can one Judge serve multiple competitions? |
-| JD-5 | Can multiple Judges serve one competition? |
+| JD-4 | **Resolved (2026-09-23):** yes, one Judge may serve multiple competitions over time, but not more than one *ongoing* competition at once. See `project-decisions.md` JM-005. |
+| JD-5 | **Resolved (2026-09-23):** no — exactly one Judge per competition. See `project-decisions.md` JM-005. |
 | JD-6 | What exact Judge authentication mechanism is required? |
 | JD-7 | Who distributes Judge credentials, and how? |
 | JD-8 | What exactly does the competition-specific access link establish? |
@@ -330,7 +334,7 @@
 | SC-1 | How exactly are rankings calculated? |
 | SC-2 | What exactly constitutes a completed/correct Sudoku for each round type (full completion, partial credit, timing tie-breaks)? |
 | SC-3 | How is scoring affected by early submission vs. time expiry? |
-| SC-4 | What is the exact team scoring formula? |
+| SC-4 | What is the exact team scoring formula? *(Arena docs reference "the agreed team formula" without restating it — see §14.4 ARENA-6.)* |
 | SC-5 | How are ties resolved in rankings? |
 | SC-6 | Are round scores aggregated to stage scores and overall scores, and how? |
 | SC-7 | What is the effect of incorrect entries on scoring, if any? |
@@ -443,3 +447,70 @@ The following questions most directly block the domain model and should be resol
 - **Scoring model:** the client's described "recognition-based / percentage of correct cells" proportional model vs the existing client-view.md rules (rounds worth 100 points, all-or-nothing, +3/min early bonus). These are two different scoring philosophies and must be reconciled.
 - **Lifecycle / lock point:** the client's vision implies publication = immutable lock, whereas the existing decision register leaves the lock point unresolved (publication vs first access vs start).
 - **PK stage:** the client lists PK as a stage type, but the referenced competition regulations use only Individual + Team, with PK reserved. **Resolved for MVP: PK is deferred** (CS-010 / CS-016).
+
+---
+
+## 14. Sudoku Arena MVP Alignment Documents — New Conflicts & Open Points (flagged 2026-09-23)
+
+**Status note:** Three new documents were added at the project root — outside the `requirements/`/`decisions/` structure described in `CLAUDE.md` — on 2026-09-23:
+- `Sudoku_Arena_Final_MVP_Alignment_Guideline.md`
+- `Sudoku Arena MVP — Question 2 Decision Summary.md`
+- `Sudoku_Arena_MVP_Q3_Decision_Summary.md`
+
+These read as a later, more concrete internal engineering-planning document for a 15-day implementation sprint. Several of their statements **conflict with, or silently resolve, decisions already marked Confirmed or Open in `project-decisions.md`**. Per `CLAUDE.md`, conflicts must be identified and left open for explicit client/developer confirmation rather than silently accepted.
+
+**For the colleague reviewing this section (2026-09-23):** §14.3, §14.4, and §14.6 below are **genuine unresolved conflicts** between the original `client-view.md` and the newer Arena documents — these need your judgment call. §14.1 and §14.2 were already decided directly by the project owner (Louise) and are **not** open for re-litigation unless you have a reason to revisit them. §14.5 lists items that had no real conflict (the new documents just answered previously-open questions) and are already accepted.
+
+### 14.1 Multi-tenancy / Super Administrator — RESOLVED (2026-09-23, deferred, not abandoned)
+
+**Resolution (project owner, 2026-09-23):** the team originally planned the full multi-tenant SaaS platform ("the house"), but given the current time constraint has deliberately chosen to build the MVP as a **single-tenant "studio arena" for one company only**. This is an explicit, intentional scope decision — **not** a cancellation. The multi-tenant SaaS vision, tenant isolation, and the Super Administrator role remain the confirmed long-term product direction and are planned for a later growth phase once the MVP ships. Recorded in `project-decisions.md` as ENV-007 and SA-005.
+
+| # | Existing documentation | New Arena documents | Status |
+|---|---|---|---|
+| ARENA-1 | `project-decisions.md` ENV-001/ENV-002 (**Confirmed**, long-term): platform is multi-tenant SaaS; tenant data isolation is a fundamental requirement. `ARCHITECTURE_REQUIREMENTS.md` ARC-011: tenant isolation enforced structurally at module level. | `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` §1/§3: "The MVP is **not** a fully generic SaaS competition engine"; lists **"Generic multi-tenant SaaS features"** as explicitly out of scope. Its domain model (§32) and DB schema (§33) have **no Organization/Tenant entity**. | **Resolved.** MVP is deliberately single-tenant (ENV-007). Multi-tenancy deferred to a later phase, not abandoned. |
+| ARENA-2 | `SUPER_ADMIN_REQUIREMENTS.md` (Working Draft): Super Administrator is one of 4 platform actors, with tenant overview/revocation as MVP working scope (`project-decisions.md` SA-001…SA-003, §12 summary row). | The Super Administrator role is **never mentioned** anywhere in the three new Arena documents. Roles are listed only as "Administrators, Judges, Players, Big-screen display" (§1). | **Resolved.** Role deferred with multi-tenancy (SA-005). `SUPER_ADMIN_REQUIREMENTS.md` is retained as-is for when that phase is built — not deleted, not contradicted. |
+| ARENA-3 | `ORGANIZATION_ADMIN_REQUIREMENTS.md` OA-001/OA-002: Organization Admin represents one tenant among potentially many; multi-tenant model assumed throughout. | Arena docs use "Admin" generically and describe competition creation, participants, judges, and questions without framing them relative to an organization/tenant boundary, beyond "the judge must belong to the organization" (§8). | **Resolved.** MVP has exactly one organization; "Admin" in the Arena docs is that organization's admin. Multi-org support deferred with ARENA-1. |
+
+### 14.2 Team stage — RESOLVED (2026-09-23, no conflict; implementation gap noted)
+
+**Resolution (project owner, 2026-09-23):** the team-mode description is **unchanged**. `STAGE_REQUIREMENTS.md` §4.3 (TEAM-010…TEAM-015) and `client-view.md` §3 remain the authoritative description of the rotation mechanic. The Arena Alignment Guideline simply does not redescribe it — that is silence, not a contradiction or a scope cut.
+
+| # | Existing documentation | New Arena documents | Status |
+|---|---|---|---|
+| ARENA-4 | `STAGE_REQUIREMENTS.md` §4.3 (TEAM-010…TEAM-015) and `client-view.md` §3: detailed live puzzle-rotation mechanic — 2–6 players per team, puzzles rotate among teammates every ~60s, a finished puzzle is validated and replaced from a shared pool, round ends when the pool is exhausted or time runs out. | `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` §12 (Player Runtime Flow), §14 (Submission Rules), the Gameplay module (§24), and the REST/WebSocket API (§27–28) describe **every round identically**: one player solves their own puzzle and submits it. No rotation, replenishment, or shared-pool mechanic appears anywhere. The only team-specific content is the team scoring formula (§18) and big-screen team projection (§22). | **Resolved — no requirements conflict.** `STAGE_REQUIREMENTS.md`/`client-view.md` stand as the description of the Team stage. **Remaining implementation-planning gap (not a requirements question):** before Days 7–9 of the build (Competition Runtime), the Alignment Guideline's runtime flow, module design, and API/WebSocket contracts need to be extended to actually implement rotation/replenishment — they currently only describe the Individual-stage-style single-puzzle flow. |
+
+### 14.3 Scoring model — OPEN CONFLICT (for colleague review, 2026-09-23)
+
+**Status update (2026-09-23):** the project owner initially asked to apply an "oldest document wins" default to this conflict, then reconsidered — that default is **retracted**. This is now an **open conflict for direct client/colleague review**, not something resolved by document-precedence rules.
+
+| # | Existing documentation | New Arena documents | Status |
+|---|---|---|---|
+| ARENA-5 | `client-view.md` §2.1 (oldest source): all-or-nothing per question — 100 pts correct, 0 pts wrong/blank, +3 pts/minute early-completion bonus. | `FLOW_REQUIREMENTS.md` FLW-030 attributes a **proportional/per-cell** model to "the client's vision" instead — points awarded by percentage of correctly filled cells. `Sudoku_Arena_MVP_Q3_Decision_Summary.md` Q3.18 / `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` §18 go back to the all-or-nothing model. | **Open — needs a decision.** Which model is correct: all-or-nothing (100/0 + time bonus) or proportional per-cell credit? Did the client's position change between documents, or did `FLOW_REQUIREMENTS.md` mischaracterize it? FLW-Q6 / SC-1…SC-7 depend on this. |
+
+### 14.4 Team scoring formula — OPEN CONFLICT (for colleague review, 2026-09-23)
+
+| # | Existing documentation | New Arena documents | Status |
+|---|---|---|---|
+| ARENA-6 | `client-view.md` §2.1 gives a concrete formula: `team total = (individual two-round sum) × 0.6 + (team two-round sum)`. | `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` §18 / Q3.18 reference "the client's predefined team scoring formula" / "the agreed team formula" **without restating it**. | **Open — needs confirmation.** Is the Arena documents' "agreed formula" the same as the `client-view.md` §2.1 formula above, or was a different formula agreed at some point that isn't written down anywhere? SC-4 depends on this. |
+
+### 14.5 Points resolved 2026-09-23 (no conflict found — not part of the colleague review)
+
+These were previously **open/undecided** questions (not conflicts — no prior document took a firm position), which the new Arena documents answered unopposed. Reviewed against all other documentation with no contradiction found, and accepted as Confirmed:
+
+| Item | Resolution | Recorded at |
+|---|---|---|
+| CAT-1 / CAT-2 / PT-005 (category placement) | One competition = one category; different categories are separate competitions (e.g. `U6`–`U20`) | `project-decisions.md` PT-005 |
+| CMP-2 / CMP-3 / FLW-Q9 (configuration lock point) | Publish generates the entry link/QR **and** locks configuration; no exceptional post-publish edit path | `project-decisions.md` CA-004 |
+| JD-4 / JD-5 (single vs multiple judges) | Exactly one judge per competition; a judge cannot be assigned to more than one *ongoing* competition at a time | `project-decisions.md` JM-005 |
+
+### 14.6 Big Screen control — OPEN CONFLICT (for colleague review, 2026-09-23)
+
+**Status update (2026-09-23):** previously resolved in favor of the oldest document under a now-retracted default; reopened as a direct conflict for colleague/client review.
+
+| # | Existing documentation | New Arena documents | Status |
+|---|---|---|---|
+| ARENA-7 | `client-view.md` §4.1/§4.3 **explicitly** states Judge and Admin/Management have **synchronized** Big Screen control ("裁判端控制 / 管理端同步控制"). | `ORGANIZATION_ADMIN_REQUIREMENTS.md` OA-007/OA-080/OA-081 and `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` §16 both say **only the Judge** controls the Big Screen; the Admin does not operate it during an active competition. | **Open — needs a decision.** Should the Admin retain Big Screen control alongside the Judge (per the client's original document), or is Judge-only correct for the MVP (per the two later documents)? See `project-decisions.md` §10 and OA-007/OA-080/OA-081. |
+
+### 14.7 Documentation redundancy risk
+
+`Sudoku Arena MVP — Question 2 Decision Summary.md` and `Sudoku_Arena_MVP_Q3_Decision_Summary.md` are near-total subsets of `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` §5–22 (large verbatim overlaps, e.g. pause/resume/cancel/ranking behavior). Not a contradiction today, but three documents now carry the same facts; if one is edited later without the others, they will silently drift apart. Consider designating the Alignment Guideline as the single source of truth and the two Decision Summaries as historical/superseded.
