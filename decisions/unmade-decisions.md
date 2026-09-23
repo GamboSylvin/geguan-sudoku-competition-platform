@@ -49,34 +49,36 @@
 
 ## 3. Competition Model & Lifecycle
 
+**Status note (2026-09-23):** the Arena Alignment Guideline resolves this whole section in one stroke: **the competition structure (stages, rounds, counts) is fixed in code for the MVP, not admin-configurable at all.** That single decision resolves or moots most of CMP-9 through CMP-14.
+
 | # | Question |
 |---|---|
-| CMP-1 | What exactly constitutes a "competition" (top-level definition)? |
+| CMP-1 | **Resolved.** Competition = name, description, category, participants, questions, organized as Competition → Category → Stages → Rounds (Alignment §4, §6). |
 | CMP-2 | **Resolved (2026-09-23):** publish generates the entry link/QR and locks configuration. See `project-decisions.md` CA-004. |
 | CMP-3 | **Resolved (2026-09-23):** configuration becomes immutable at publication. See `project-decisions.md` CA-004. |
-| CMP-4 | Is publication sufficient to lock configuration? |
-| CMP-5 | Does first participant/judge access lock configuration? |
-| CMP-6 | Can a published but not-yet-started competition be edited? |
-| CMP-7 | Can anything be modified after the competition starts? |
-| CMP-8 | Are exceptional post-publication/post-start changes allowed? Under what conditions? |
-| CMP-9 | Should configuration changes be audited and/or versioned? |
-| CMP-10 | Can stages/rounds be reordered after configuration? |
-| CMP-11 | Can stages/rounds be deleted after configuration? |
-| CMP-12 | Can an empty stage/round be saved? |
-| CMP-13 | Are there minimum/maximum stage or round counts? |
-| CMP-14 | What happens to assigned questions when a round is changed or deleted? |
+| CMP-4 | **Resolved.** Yes — publication alone locks it (Alignment §5). |
+| CMP-5 | **Moot** — access only exists after publish anyway (the entry link doesn't exist beforehand), so this collapses into CMP-4. |
+| CMP-6 | **Resolved as: no.** There is no editable "published but not started" window — publish locks immediately (§5). |
+| CMP-7 | **Resolved as: no.** Nothing is modifiable once the competition starts (consistent with CMP-6). |
+| CMP-8 | **Resolved as: no exceptions.** No exceptional post-publication edit path is described anywhere. |
+| CMP-9 | **Resolved as: no.** No audit/versioning system exists (see DP-5). |
+| CMP-10 | **Moot.** Stages/rounds are predefined in code, not admin-configured — there's nothing to reorder (Q2.1). |
+| CMP-11 | **Moot** — same reason as CMP-10. |
+| CMP-12 | **Moot** — same reason as CMP-10. |
+| CMP-13 | **Resolved.** Fixed: 2 stages (Individual, Team), each with predefined rounds — not admin-adjustable. |
+| CMP-14 | **Moot** — same reason as CMP-10; questions are assigned to fixed predefined rounds via PDF import, not manually restructured. |
 
 ### 3.1 Stages & Rounds
 
 | # | Question |
 |---|---|
-| SR-1 | What is a "stage" exactly? What is a "round" exactly? |
-| SR-2 | What exactly defines the stage types **Individual**, **Team**, and **PK**? |
-| SR-3 | Are these three stage types fixed for the MVP, or will new types be added? |
-| SR-4 | Which round types are valid within each stage type? |
-| SR-5 | What types of Sudoku rounds exist beyond the current categories? |
-| SR-6 | What exactly constitutes "completion" for each round type? |
-| SR-7 | Which competition transitions are explicitly Judge-controlled, and which are automatic? |
+| SR-1 | **Resolved.** See CMP-1 and `STAGE_REQUIREMENTS.md` for the full stage/round definitions. |
+| SR-2 | **Resolved for Individual/Team** (see §3.4/§3.5 below); **moot for PK** (deferred). |
+| SR-3 | **Resolved.** Fixed for the MVP — Individual + Team only, structure predefined in code, not extensible via the admin UI (Q2.1). |
+| SR-4 | **Partially resolved.** Individual: 2 rounds (standard + variant, per `client-view.md` §2.1). Team: the rotation round is confirmed in scope; whether the other two client-listed team round types (分区协作, 抢答夺分) are also in scope is **still open** — see TEAM-1 below. |
+| SR-5 | **Resolved as: no** — fixed set only for the MVP, no additional round types. |
+| SR-6 | **Open — depends on §14.3** (scoring model conflict) for Individual, and on TEAM-5/§13.4 (rotation implementation gap) for Team. |
+| SR-7 | **Resolved.** Judge manually starts each **stage** only; everything after that (preparation countdown, round start, round end at timer expiry, advancing to the next round/stage) is automatic. **Manual round start is not supported** — see JD-13/JD-14 in §5.2. |
 
 ### 3.2 Category (Age Group) Placement
 
@@ -99,8 +101,8 @@
 
 | # | Question |
 |---|---|
-| IND-1 | Is the **recognizer + solution grid + completion-check** approach acceptable for validating answers in the Individual stage? (Proposed by the developer; must be confirmed with the client.) |
-| IND-2 | If completion is **not** used, what is the **per-question-type scoring system** for the Individual stage and all its rounds? |
+| IND-1 | Is the **recognizer + solution grid + completion-check** approach acceptable for validating answers in the Individual stage? (Proposed by the developer; must be confirmed with the client.) *(Entangled with the open scoring-model conflict at §14.3 — a pure completion-check fits the all-or-nothing model; the proportional/per-cell model would need per-cell recognition instead.)* |
+| IND-2 | If completion is **not** used, what is the **per-question-type scoring system** for the Individual stage and all its rounds? *(Same dependency on §14.3.)* |
 | IND-3 | **Question types** for the Individual stage are to be defined. Which types exist, and how are they determined? |
 | IND-4 | What **puzzle shapes** are supported (e.g., 9×9, 9×6)? How does shape relate to question type? |
 
@@ -118,196 +120,202 @@
 
 ## 4. Player Role
 
+**Status note (2026-09-23 final pre-implementation review):** most of this section is now answered by `Sudoku_Arena_Final_MVP_Alignment_Guideline.md`. Resolved items are marked inline; genuinely still-open items remain as questions.
+
 ### 4.1 Competition Access & Identity
 
 | # | Question |
 |---|---|
-| PL-1 | What exact mechanism does a player use to access a competition (QR code, direct link, code entry, other)? |
-| PL-2 | Does the access action itself identify the player? |
-| PL-3 | How is a player associated with a specific competition? |
-| PL-4 | Is authentication required for players? Is a player account required? |
-| PL-5 | How and when are participant credentials delivered to players? |
-| PL-6 | What happens when an unauthorized or unknown player attempts access? |
+| PL-1 | **Resolved.** Competition-specific link/QR (generated at publish); player logs in with a system-generated username/password (Alignment §11, Q2.4). |
+| PL-2 | **Resolved.** Yes — login with personal credentials identifies the player. |
+| PL-3 | **Resolved.** Via the competition's participant dataset, created from the Excel import. |
+| PL-4 | **Resolved.** Yes to both — authentication is required, and every player has a system-generated account (no anonymous/guest access). |
+| PL-5 | **Still open.** The admin can *generate and export* the username/password list (Q2.4), but **how those credentials physically reach each student is not specified anywhere** (printed handout? teacher relay? email? nothing said). Needs an answer before the competition-day process can be planned. |
+| PL-6 | **Partially resolved.** "Players cannot participate unless they belong to the competition's participant dataset" (Alignment §11) — but the exact error/UX shown to a rejected login attempt is not specified. Low priority. |
 
 ### 4.2 Device & Session Behavior
 
 | # | Question |
 |---|---|
-| PL-7 | Can a player use more than one device during a competition? |
-| PL-8 | What happens if the player refreshes the page? |
-| PL-9 | What happens if the player accidentally closes the page? |
-| PL-10 | What happens if the player changes devices mid-competition? |
-| PL-11 | Is player state recoverable across devices/sessions? |
+| PL-7 | **Still open.** Concurrent multi-device/multi-tab login by the same player is never addressed — is a second simultaneous session blocked, allowed, or does it kick the first? |
+| PL-8 | **Resolved.** A page refresh is functionally a reconnect: the server is timer-authoritative and restores the latest saved grid (§15). |
+| PL-9 | **Resolved** — same mechanism as PL-8. |
+| PL-10 | **Still open** — same underlying question as PL-7 (does logging in from a new device end the old session, or can both be active?). |
+| PL-11 | **Partially resolved.** State recovers correctly within the same login/session (§15). Whether that extends cleanly across a genuine device change (not just a reconnect) is untested by the documents. |
 
 ### 4.3 Network Failure
 
 | # | Question |
 |---|---|
-| PL-12 | What happens if a player's network connection is temporarily lost? |
-| PL-13 | How is player state recovered after reconnection? |
-| PL-14 | What happens if the connection is lost near the exact moment of submission or time expiry? |
+| PL-12 | **Resolved** (Alignment §15). |
+| PL-13 | **Resolved** — latest saved grid restored, server timer continues regardless (§15). |
+| PL-14 | **Resolved** — if the round ends while disconnected, the latest saved state is auto-submitted and scored exactly as if connected (§15). |
 
 ### 4.4 Round Behavior & UI
 
 | # | Question |
 |---|---|
-| PL-15 | What exactly is shown on the pre-stage / pre-competition waiting screen? |
-| PL-16 | What exactly is shown on the round waiting screen (rules, countdown, other info)? |
-| PL-17 | Can a player review or modify the board immediately before submitting? |
-| PL-18 | What is displayed after manual submission? |
-| PL-19 | Can the player continue interacting after submission? |
-| PL-20 | Are there different submission rules for different round types? |
-| PL-21 | What feedback (if any) is shown for correct/incorrect entries? |
-| PL-22 | What does the player see after the final round / final stage? |
-| PL-23 | Are final rankings/results immediately visible to players, or only via the Big Screen? |
+| PL-15 | **Partially resolved.** The competition room shows Competition, Category, Stages, and current state (§11) — but the exact visual layout/detail is undefined. Low priority (UI detail). |
+| PL-16 | **Still open** — the flow names a "Preparation Room" and "Countdown" (§12) but never describes what's actually displayed there (rules text? just a timer?). |
+| PL-17 | **Resolved.** Yes — the player can freely edit the puzzle until submission (§13). |
+| PL-18 | **Resolved.** Submission is confirmed as accepted; puzzle becomes read-only; player does not see their score immediately (§12). |
+| PL-19 | **Resolved.** No — the puzzle is locked/read-only after submission (§12, §14). |
+| PL-20 | **Resolved for Individual** (standard submit/score/rank flow). **Still open for Team** — depends on the unresolved rotation-mechanic implementation gap (§13.4). |
+| PL-21 | **Resolved.** No real-time correctness feedback is shown (§13). |
+| PL-22 | **Resolved.** No player-facing results screen; results are presented only via the Big Screen (Q2.14, Q3.17). |
+| PL-23 | **Resolved.** Only via the Big Screen — players do not get their own final-results view (Q2.14, Q3.17). |
 
 ### 4.5 Team Rounds
 
 | # | Question |
 |---|---|
-| PL-24 | What are the exact team-round rules? |
-| PL-25 | How are puzzles assigned and rotated among team members? |
-| PL-26 | Can teammates communicate through the platform? |
-| PL-27 | How is team progress represented? |
-| PL-28 | How is team completion determined? |
-| PL-29 | How are team results and rankings calculated? |
+| PL-24 | **Resolved** — see `STAGE_REQUIREMENTS.md` §4.3 (TEAM-010…TEAM-015) and `client-view.md` §3, confirmed as still authoritative (§13.4). |
+| PL-25 | **Resolved** — same source: puzzles rotate ~every 60s, replenished from a shared pool on completion. |
+| PL-26 | **Still open** — no document anywhere addresses whether teammates can communicate through the platform (chat, voice, etc.) during a round. |
+| PL-27 | **Resolved** — same source (team progress = pool depletion + per-teammate current puzzle). |
+| PL-28 | **Resolved** — same source (team finishes when the puzzle pool is exhausted or time runs out). |
+| PL-29 | **Resolved for the mechanic** (accumulate points per solved puzzle); **the exact formula question is separately tracked as an open conflict at §14.4.** |
 
 ---
 
 ## 5. Judge Role
 
+**Status note (2026-09-23 final pre-implementation review):** most of this section is now answered by `Sudoku_Arena_Final_MVP_Alignment_Guideline.md`. Big Screen authentication (§5.5) is the one area still largely unaddressed even by the newest documents — flagged as a real gap, not just an open question, in §15 below.
+
 ### 5.1 Access & Authentication
 
 | # | Question |
 |---|---|
-| JD-1 | Who assigns judges to competitions (confirmed: Organization Admin creates/assigns — but what info is required)? |
-| JD-2 | What information is required to create a Judge? |
-| JD-3 | Is a Judge an organization-level entity before being assigned to a competition? |
+| JD-1 | **Resolved.** Organization Admin creates/assigns; only the judge's **name** is required (Q2.10). |
+| JD-2 | **Resolved** — same as JD-1: just a name. |
+| JD-3 | **Resolved.** Yes — judges exist at the organization level (a reusable judge list) and are then assigned to a specific competition (Q2.10). |
 | JD-4 | **Resolved (2026-09-23):** yes, one Judge may serve multiple competitions over time, but not more than one *ongoing* competition at once. See `project-decisions.md` JM-005. |
 | JD-5 | **Resolved (2026-09-23):** no — exactly one Judge per competition. See `project-decisions.md` JM-005. |
-| JD-6 | What exact Judge authentication mechanism is required? |
-| JD-7 | Who distributes Judge credentials, and how? |
-| JD-8 | What exactly does the competition-specific access link establish? |
-| JD-9 | What happens when an unauthorized Judge attempts access? |
-| JD-10 | Can a Judge be removed from a competition before it starts? |
-| JD-11 | What happens if a Judge is removed during an active competition? |
+| JD-6 | **Resolved.** Standard username/password login (`POST /auth/judge/login`); credentials are system-generated at judge creation and shown to the admin in a modal (Q2.10). This **supersedes** the earlier "potentially OTP" language in `project-decisions.md` JM-004/PT-004 — no OTP appears anywhere in the Arena documents, just password login. |
+| JD-7 | **Partially resolved.** The admin sees the credentials immediately (Q2.10) — but exactly how they get **from the admin to the actual judge** (verbally? printed? messaged?) is not specified. Same open gap as PL-5. |
+| JD-8 | **Resolved differently than originally framed.** There isn't a special "access link that establishes context" — it's ordinary role-based login (username/password), scoped to the one competition the judge is assigned to. |
+| JD-9 | **Still open** — no document describes the error/UX for a failed or unauthorized judge login attempt. Low priority (standard auth failure handling). |
+| JD-10 | **Still open** — can an assigned judge be swapped out before the competition starts? Not addressed. |
+| JD-11 | **Still open — real gap.** What happens if the judge needs to be replaced *during* an active competition (illness, emergency)? Nothing addresses this. Related to FL-2 below (judge network loss) — together these mean **there is currently no judge-failover story at all.** |
 
 ### 5.2 Competition Control
 
 | # | Question |
 |---|---|
-| JD-12 | What exactly does "start" mean at the stage level? |
-| JD-13 | Which levels can the Judge manually start (stage, round, competition)? |
-| JD-14 | When is a manual round start allowed? |
-| JD-15 | What does pause affect — all participants? Does the timer stop? |
-| JD-16 | Can the Judge resume after a pause, and how? |
-| JD-17 | Does participant state remain unchanged while paused? |
-| JD-18 | What exactly does "premature end" mean — which levels can be ended? |
-| JD-19 | What happens to unfinished players when a round ends early? Does it auto-submit their current state? |
-| JD-20 | Can a premature end be reversed? |
+| JD-12 | **Resolved.** "Start" at stage level = judge triggers the stage; it becomes active and preparation begins automatically (Alignment §5, Flow C). |
+| JD-13 | **Resolved, and narrower than originally proposed.** The Judge's documented commands (Alignment §16, §27) are: start stage, pause, resume, end round early, finish competition, cancel. **There is no "manually start an individual round" command anywhere in the Arena documents** — rounds always progress automatically once a stage is started. |
+| JD-14 | **Resolved as: not supported in the MVP.** `JUDGE_REQUIREMENTS_PROPOSAL.md` J-005 (manual round start as an exception path) does not appear in the Arena command list at all. **Worth an explicit confirmation that dropping this exception path was intentional**, since the original Judge proposal treated it as a real operational need (e.g., recovering from a stuck automatic transition). |
+| JD-15 | **Resolved.** Pause is global: timer stops, all players blocked, all state preserved, big screen shows "Paused" (Q2.17–19). |
+| JD-16 | **Resolved.** Yes — judge resumes with a 3-2-1-Start countdown that does not consume round time (Q2.20). |
+| JD-17 | **Resolved.** Yes, unchanged (Q2.17). |
+| JD-18 | **Resolved.** "Premature end" applies at the round level: judge ends the current round early (Alignment §17). |
+| JD-19 | **Resolved.** Yes — auto-submits every player's latest saved state, evaluates, scores, updates ranking, then proceeds normally (Alignment §17). |
+| JD-20 | **Resolved (implicitly).** No reversal/undo mechanism is described anywhere — treat as not reversible. |
 
 ### 5.3 Monitoring & Display
 
 | # | Question |
 |---|---|
-| JD-21 | Which participant states are operationally useful for the Judge (connected/disconnected, submitted, elapsed time, progress, other)? |
-| JD-22 | Does the Judge need elapsed time per participant? |
-| JD-23 | Does the Judge need per-participant progress? |
-| JD-24 | What should the Judge do when a participant disconnects? |
-| JD-25 | Is team progress monitoring operationally different from individual monitoring? |
-| JD-26 | What decision or action does the Judge take differently because live ranking is visible? |
-| JD-27 | When should ranking be visible to the Judge? |
+| JD-21 | **Resolved, and narrower than originally proposed.** "There is no separate inactive/absent status in the MVP" (Alignment §15) — the Judge does **not** get a distinct connected/disconnected indicator per player. **Worth confirming this simplification is acceptable**, since the original Judge proposal (J-008) treated connectivity monitoring as operationally valuable (e.g., to investigate a stuck device). |
+| JD-22 | **Resolved as: no.** No per-participant elapsed-time display is described. |
+| JD-23 | **Resolved as: no.** No per-participant progress/completion indicator is described — consistent with "no immediate correctness feedback" applying to the Judge's view too, not just the player's. |
+| JD-24 | **Resolved as: nothing special.** Since there's no disconnect status (JD-21), there's no judge action tied to it — the server handles reconnection transparently. |
+| JD-25 | **Still open** — depends on the unresolved team-rotation implementation gap (§13.4); no team-specific monitoring view is described. |
+| JD-26 | **Resolved.** None needed — ranking is simply always visible to the Judge in real time (`RANKING_UPDATES` pushed continuously, Alignment §28), not gated behind a decision. |
+| JD-27 | **Resolved** — same as JD-26: always visible, updated after every finalized round. |
 
 ### 5.4 Results & Publication
 
 | # | Question |
 |---|---|
-| JD-28 | What exactly does "publish results" mean for the Judge — display only, finalize/lock, official release, export, or another action? |
-| JD-29 | Does publishing finalize/lock the results? |
-| JD-30 | Is a human result-confirmation step necessary, and under what conditions (e.g., exceptional cases, official completion)? |
-| JD-31 | At what exact moments should rankings/results be made visible on the Big Screen? |
+| JD-28 | **Resolved.** There is no separate manual "publish" action — results finalize automatically on submission/scoring and become visible via the Big Screen immediately (Alignment §18–21). |
+| JD-29 | **Resolved.** Yes — finalization = immutability, automatically, with no separate lock step. |
+| JD-30 | **Resolved as: no.** No human confirmation step exists anywhere in the MVP design (Alignment §21: "No result correction UI exists... no dispute workflow"). |
+| JD-31 | **Resolved.** Immediately upon each round's finalization (Alignment §19, Q3.4). |
 
 ### 5.5 Big Screen
 
 | # | Question |
 |---|---|
-| JD-32 | Which Big Screen display modes are required (leaderboard, individual board, team boards, PK boards, stage/final results)? |
-| JD-33 | Who can control the Big Screen: Judge only, Management only, or both? |
-| JD-34 | If both roles can control it, who has priority, and is "later operation wins" the required behavior? |
-| JD-35 | Should Big Screen display actions be recorded/auditable? |
-| JD-36 | Can the displayed target be changed at any time? |
-| JD-37 | How does the Big Screen authenticate? Does it receive a dedicated token/session? |
-| JD-38 | Can Big Screen access expire or be revoked? |
-| JD-39 | Can multiple Big Screens display one competition simultaneously? |
-| JD-40 | Who initializes Big Screen access? Does the Admin facilitate setup even without control rights? |
+| JD-32 | **Resolved (PK modes excluded, deferred).** Normal ranking cycle (paginated, 3-min rotation), individual player projection, team projection (Alignment §22). |
+| JD-33 | **Open conflict — see §14.6.** |
+| JD-34 | **Open conflict — see §14.6.** |
+| JD-35 | **Still open**, likely "no" by pattern (the MVP has no audit system anywhere — see DP-5), but never explicitly stated for Big Screen actions specifically. |
+| JD-36 | **Resolved.** Yes — the judge can switch the projected target at any time (Alignment §22). |
+| JD-37 | **Still open — real gap, see §15.2.** No authentication mechanism for the Big Screen is described anywhere, in any document, old or new. |
+| JD-38 | **Still open — see §15.2.** |
+| JD-39 | **Still open — see §15.2.** |
+| JD-40 | **Still open — see §15.2.** |
 
 ---
 
 ## 6. Organization Admin — Open Functional Questions
 
+**Status note (2026-09-23 final pre-implementation review):** most of this section is now answered by `Sudoku_Arena_Final_MVP_Alignment_Guideline.md`. A few resolutions are actually **scope narrowings** worth an explicit sanity check (marked below), and two areas (question point-values, competition/config reuse) surfaced a genuinely new incoherence/gap — see §15.
+
 ### 6.1 Participants / Teams
 
 | # | Question |
 |---|---|
-| OA-1 | What exact participant fields are required in the Excel import? |
-| OA-2 | How are invalid or duplicate rows handled during import? |
-| OA-3 | Can participants be added individually after import? |
-| OA-4 | Can participants be edited/removed after import? |
-| OA-5 | What exactly identifies a team in the data? |
-| OA-6 | What happens when team data is inconsistent? |
-| OA-7 | Can a participant belong to multiple teams? |
-| OA-8 | Can teams change after import? |
+| OA-1 | **Resolved.** Name, Category, Team (Alignment §7). Narrower than the candidate field list in `FLOW_REQUIREMENTS.md` FLW-051 (which also considered School, Age, City/Province) — worth confirming nothing else is actually needed. |
+| OA-2 | **Resolved.** Missing name/invalid category/invalid team size/conflicting team membership → reject the whole file; exact duplicate rows may be auto-cleaned (§7). |
+| OA-3 | **Resolved as: no.** There is no "add one participant" operation anywhere — only whole-file re-upload before publish (Q2.5). **Worth confirming this is intentional** — a single late registration currently means re-uploading the entire Excel file. |
+| OA-4 | **Resolved as: no individual edit** — same mechanism as OA-3, only full-file replace (Q2.6–2.7). |
+| OA-5 | **Resolved.** A "team" value/column in the participant Excel (§7). |
+| OA-6 | **Resolved** for the stated case (same person in conflicting teams → reject the file). |
+| OA-7 | **Resolved as: no** — implied by the "conflicting teams → reject" rule. |
+| OA-8 | **Resolved.** Only before publish, via full re-upload; locked after publish (§7). |
 
 ### 6.2 Question Bank / PDF
 
 | # | Question |
 |---|---|
-| OA-9 | What exactly is a "question" in the question bank — only the puzzle, or puzzle + solution + metadata + source file? |
-| OA-10 | How is question compatibility with a round type defined? |
-| OA-11 | What happens when a PDF contains multiple puzzles? |
-| OA-12 | What extraction accuracy is required from PDFs? |
-| OA-13 | What happens when PDF extraction fails? |
-| OA-14 | Must the original PDF always be preserved? |
-| OA-15 | Can extracted questions be edited? |
-| OA-16 | Can questions be deleted/archived? |
-| OA-17 | Can the same question be reused across competitions/rounds? |
-| OA-18 | Is question versioning required? |
+| OA-9 | **Partially resolved — and surfaced a new incoherence, see §15.1.** A question = puzzle + solution + parameters (score, difficulty, type) per the PDF structure (`FLOW_REQUIREMENTS.md` FLW-043). **But** per-question "score" as a PDF field conflicts with the confirmed flat 100-points-per-question scoring rule — see §15.1. |
+| OA-10 | **Still open** — "classify/assign to predefined rounds" is mentioned (Alignment §9) but the actual compatibility rule is never defined. |
+| OA-11 | **Resolved.** Yes — a PDF is expected to contain the whole question pack for a competition (§9). |
+| OA-12 | **Resolved as: no accuracy threshold — all-or-nothing.** Any structural/parsing/extraction/classification failure rejects the entire import (§9). |
+| OA-13 | **Resolved** — same as OA-12: full rejection, no partial commit, admin must fix the PDF or use the Question Bank instead. |
+| OA-14 | **Still open** — whether the original PDF file itself is retained after successful import is never stated. |
+| OA-15 | **Still open** — no edit capability for extracted questions is described. |
+| OA-16 | **Still open** — no delete/archive capability for questions is described. |
+| OA-17 | **Resolved.** Yes — the Question Bank exists specifically for reuse across competitions (§9). |
+| OA-18 | **Still open** — no versioning concept is described. |
 
 ### 6.3 Competition Reuse
 
 | # | Question |
 |---|---|
-| OA-19 | What does "reuse a previous configuration" mean exactly? |
-| OA-20 | Should reuse copy stages/rounds only, or also question assignments and rules? |
-| OA-21 | Should reuse exclude participants, judges, credentials, results, and historical data? |
-| OA-22 | Is full competition duplication worth including in the MVP after all? |
+| OA-19 | **Still open — worth flagging explicitly, see §15.3.** None of the three new Arena documents mention reusing/duplicating a whole competition configuration at all — not even in their "explicitly out of scope" list, so it's unclear whether this was cut or simply not yet planned. |
+| OA-20 | **Still open** — same gap as OA-19. |
+| OA-21 | **Still open** — same gap as OA-19. |
+| OA-22 | **Still open** — same gap as OA-19; the older `project-decisions.md` CR-001/CR-002 (Working Position, "not required for MVP but may be considered") predates the Arena documents and was never reconciled with their silence on the topic. |
 
 ### 6.4 Analytics & Results
 
 | # | Question |
 |---|---|
-| OA-23 | What exact statistics are required post-competition? |
-| OA-24 | Which statistics are required at round level, stage level, and overall? |
-| OA-25 | What is the exact team scoring formula? |
-| OA-26 | Which reports must be exportable, and in which formats? |
-| OA-27 | What fields must the results export contain? |
+| OA-23 | **Resolved — and narrowed.** Final ranking + final scores only (Q2.15). Explicitly **not** included: individual grids, per-question answers, timestandard breakdowns, move history (Q2.15). |
+| OA-24 | **Resolved as: overall/final only** — no round-level or stage-level breakdown is exposed to the admin, only the final stage ranking (Q2.15, Q3.16–17). |
+| OA-25 | **Open conflict — see §14.4 / SC-4.** |
+| OA-26 | **Still open — possibly a missing feature, see §15.4.** `project-decisions.md` OA-134/RA-005 confirm the admin should be able to export results, but the Arena documents' minimum API (§27) has **no export endpoint at all** — only `GET .../results` and `GET .../ranking`, presumably for on-screen display. Whether an actual file-export feature is still planned is unclear. |
+| OA-27 | **Still open** — depends on OA-26. |
 
 ### 6.5 Live Admin Access
 
 | # | Question |
 |---|---|
-| OA-28 | Should the Organization Admin see live competition data? |
-| OA-29 | What operational decision would that live access enable? |
-| OA-30 | If enabled, should Admin live access be read-only? |
-| OA-31 | Should the Admin see less live information than the Judge? |
+| OA-28 | **Resolved as: no.** The Arena documents give the Admin only HTTP setup/results endpoints (§27) — no WebSocket channel exists for the Admin (only Player, Judge, Big Screen do, §28). No live view during an active competition. |
+| OA-29 | **Moot** — resolved as OA-28: no live access is planned, so no operational decision needs it. |
+| OA-30 | **Moot** — same as OA-29. |
+| OA-31 | **Resolved.** Yes, by a wide margin — the Admin currently sees nothing live, versus the Judge's full real-time channel. |
 
 ### 6.6 Competition Access Model
 
 | # | Question |
 |---|---|
-| OA-32 | Is there one competition link, or separate Player/Judge/Big Screen access? |
-| OA-33 | Should QR codes be generated automatically? |
-| OA-34 | What exactly does the access mechanism establish (identity, authorization, context)? |
+| OA-32 | **Resolved for Player/Judge.** One entry link/QR is generated at publish (Alignment §5); Player and Judge each then authenticate separately via role-specific username/password logins. **Still open for Big Screen — see §15.2.** |
+| OA-33 | **Resolved.** Yes, generated automatically at publish (§5, Q2.8). |
+| OA-34 | **Resolved for Player/Judge** (ordinary role-based login, scoped to the one assigned competition). **Still open for Big Screen — see §15.2.** |
 
 ---
 
@@ -329,15 +337,17 @@
 
 ## 8. Scoring & Ranking Rules
 
+**Status note (2026-09-23):** the ranking *mechanism* (independent of which scoring model wins) is now resolved. The scoring *model itself* (all-or-nothing vs. proportional) is a genuine open conflict — see §14.3 — and everything entangled with it stays open too.
+
 | # | Question |
 |---|---|
-| SC-1 | How exactly are rankings calculated? |
-| SC-2 | What exactly constitutes a completed/correct Sudoku for each round type (full completion, partial credit, timing tie-breaks)? |
-| SC-3 | How is scoring affected by early submission vs. time expiry? |
-| SC-4 | What is the exact team scoring formula? *(Arena docs reference "the agreed team formula" without restating it — see §14.4 ARENA-6.)* |
-| SC-5 | How are ties resolved in rankings? |
-| SC-6 | Are round scores aggregated to stage scores and overall scores, and how? |
-| SC-7 | What is the effect of incorrect entries on scoring, if any? |
+| SC-1 | **Resolved.** Per-round scores accumulate into a cumulative stage score, which produces the provisional/final stage ranking (Q3.1, §19). |
+| SC-2 | **Open — depends on §14.3.** Whether "completed" means 100% correct (all-or-nothing) or a proportional percentage of correct cells is exactly the unresolved conflict at §14.3. |
+| SC-3 | **Open — depends on §14.3.** `client-view.md`'s +3-points-per-minute-early bonus only makes sense for the all-or-nothing model; if the proportional model is chosen instead, the time-bonus mechanic needs to be redefined. |
+| SC-4 | **Open conflict — see §14.4 ARENA-6.** |
+| SC-5 | **Resolved.** Tie-break order: higher score → earlier completion/submission time → case-insensitive alphabetical name (Q3.1). |
+| SC-6 | **Resolved.** Round scores aggregate to a per-stage cumulative score; there is **no** cross-stage combined ranking (Individual and Team stay separate) — Q3.2, STG-011. |
+| SC-7 | **Open — depends on §14.3.** The effect of a wrong/blank cell is exactly what's undecided between the two scoring models. |
 
 ---
 
@@ -345,12 +355,12 @@
 
 | # | Question |
 |---|---|
-| FL-1 | What happens when a participant loses network connectivity (state recovery, resume behavior)? |
-| FL-2 | What happens when a Judge loses network connectivity? |
-| FL-3 | What happens if the server fails during an active competition? |
-| FL-4 | What is the expected recovery procedure after server failure (resume, restart round, etc.)? |
-| FL-5 | What are the exact anti-cheating requirements inside a physical venue, if any? |
-| FL-6 | How is the round timer kept consistent across server, judge, and player views? |
+| FL-1 | **Resolved.** Server-authoritative timer keeps running regardless; latest saved state is preserved and used for auto-submit if the round ends before reconnection (Alignment §15). |
+| FL-2 | **Still open — real gap, see §15.5.** Nowhere is Judge disconnection addressed. Does the competition auto-pause? Can the Admin (who has no live channel per OA-28) intervene at all? Combined with JD-11 (judge removal mid-competition), **there is currently no judge-failure story of any kind.** For a live, one-shot school event this is a meaningful operational risk worth resolving before build. |
+| FL-3 | **Still open — real gap, unchanged since `ARCHITECTURE_REQUIREMENTS.md` ARCQ-5.** No document addresses what happens to in-flight competition state if the server process crashes/restarts mid-competition. |
+| FL-4 | **Still open** — same gap as FL-3; no recovery procedure is described. |
+| FL-5 | **Still open**, likely acceptable to leave for later — physical-venue anti-cheating is mostly a human/process matter (proctoring, seating) rather than a software requirement, but worth a conscious "not needed for MVP" confirmation rather than silence. |
+| FL-6 | **Substantially resolved.** Server owns the authoritative round timer; clients render a local countdown purely for display and never treat it as truth (Alignment §30). The exact sync *protocol* (how often the server pushes time, drift correction) is an implementation detail, not a requirements gap. |
 
 ---
 
@@ -358,69 +368,69 @@
 
 | # | Question |
 |---|---|
-| DP-1 | What competition information must be persisted (configuration, questions, participants, submissions, per-move state, results, audit trail)? |
-| DP-2 | What information must be updated/displayed in real time? |
-| DP-3 | What granularity of player state must be saved (every move, final state, snapshot + delta)? |
-| DP-4 | How long must competition data be retained? |
-| DP-5 | Are configuration changes audited/versioned? |
-| DP-6 | What exactly does the system do with team progress data during live monitoring? |
+| DP-1 | **Resolved.** Long-term (PostgreSQL): competition config, participants/teams/accounts, judges, stages/rounds, questions, finalized results/scores/ranking data. **Not** retained long-term: final grids, detailed move history, manual-vs-auto submission flag (Alignment §20, §33). Pre-finalization runtime state (grid, in-progress moves) lives only in Redis. No audit trail (see DP-5). |
+| DP-2 | **Resolved.** Competition/stage/round/timer state and ranking updates, pushed over WebSocket to Player, Judge, and Big Screen (Alignment §28). |
+| DP-3 | **Resolved.** Continuous per-move grid saves over WebSocket, rate-limited to roughly 2 updates/second per player (Alignment §28, `PLAYER_GRID_UPDATE`). |
+| DP-4 | **Still open** — no retention period is stated anywhere. Worth resolving given this is student data from a school competition (possible institutional/privacy retention expectations). |
+| DP-5 | **Resolved as: no.** No audit/versioning system exists anywhere in the MVP (explicit out-of-scope: "Score correction/audit system"; publish locks configuration so there's nothing to audit post-publish, and pre-publish draft edits aren't tracked either). |
+| DP-6 | **Still open** — depends on the unresolved team-rotation implementation gap (§13.4); no team-progress data model is described beyond the overall team score. |
 
 ---
 
 ## 11. Architecture, Technology & Infrastructure
 
-**Status: Partially resolved. The architectural *style* has been decided (see `project-decisions.md` §8.1 and `requirements/ARCHITECTURE_REQUIREMENTS.md`). Technology, database, and deployment remain Open and must still be *derived from* the requirements.**
+**Status: Substantially resolved as of the 2026-09-23 review.** The architectural *style* was already decided (`project-decisions.md` §8.1 / `ARCHITECTURE_REQUIREMENTS.md`). The Arena `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` goes further and **names concrete technology choices that were previously listed as fully Open** — these were not yet reflected in the decision tracker before this review.
 
-> **Divergence notice:** the style decisions were made by **development-team preference** (two-developer team, deployment simplicity), which deviates from the previously stated process rule that architecture be *derived from* requirements. This deviation is recorded, not silent. The requirements remain unstable, so the style stays revisable.
+> **Divergence notice (unchanged):** the style decisions were made by **development-team preference** (two-developer team, deployment simplicity), deviating from the process rule that architecture be *derived from* requirements. Recorded, not silent.
 
-**Resolved (moved to `project-decisions.md` §8.1):**
+**Newly resolved by the Arena Alignment Guideline (2026-09-23 — should be moved into `project-decisions.md` §8/§9):**
 
 | ID | Formerly Open Decision | Resolution |
 |---|---|---|
-| ARCH-1 | Overall system architecture (monolith, modular monolith, microservices, event-driven, etc.) | **Partially resolved** — **modular monolith** (ARC-001/002), with **in-process event-driven** communication in the competition/game subsystem (ARC-020/021). Recorded as **Working Position**. |
-| *(deferral list)* | "WebSocket/event architecture" (listed as deferred in `project-decisions.md` §11) | **Partially resolved** — event-driven **scope** decided (game subsystem, in-process). Real-time **transport technology** remains Open (ARCH-5). |
+| ARCH-3 | Frontend technology / framework. | **Resolved.** React (with TypeScript) — Alignment §34, §40. |
+| ARCH-4 | Database technology and data modeling. | **Resolved.** PostgreSQL for durable business data; Redis for fast-changing runtime state (Alignment §33). A concrete minimum domain model is also given (§32) — see ARCH-15. |
+| ARCH-5 | Real-time communication technology. | **Resolved.** WebSocket (Alignment §28, §40) — not SSE or polling. |
+| ARCH-6 | Caching / state-management technology. | **Resolved** — Redis, same as ARCH-4. |
+| ARCH-7 | Authentication and authorization implementation. | **Resolved — and this changes an earlier assumption.** Plain username/password login for Player/Judge/Admin (`POST /auth/{role}/login`). **No OTP** appears anywhere in the Arena documents, which supersedes the "potentially OTP or one-time credential" language in `project-decisions.md` PT-004/JM-004. Big Screen authentication is the one exception — still fully open, see §15.2. |
+| ARCH-14 | API design. | **Substantially addressed, not final.** A concrete minimum REST + WebSocket contract is given (Alignment §27–28), explicitly labeled as a starting point rather than a locked spec. |
+| ARCH-15 | The detailed competition domain model. | **Substantially addressed, not final.** A minimum relational model is given (Alignment §32): Competition → Category/Judge/Participants/Stages/QuestionPack; Participant → Player/Team; Round → Questions/PlayerRoundState; RoundResult; StageRanking. |
+| ARCH-16 | Module decomposition. | **Substantially addressed, not final.** The Alignment Guideline's modules (§23–26: Competition, Participant/Identity, Question, Stage/Round, Gameplay, Orchestrator, Scoring, Ranking, Big Screen) closely match `ARCHITECTURE_REQUIREMENTS.md` ARC-012's candidate list. |
 
-**Still Open:**
+**Still genuinely Open:**
 
 | # | Open Decision |
 |---|---|
-| ARCH-2 | Backend technology / language / framework. |
-| ARCH-3 | Frontend technology / framework. |
-| ARCH-4 | Database technology and data modeling. |
-| ARCH-5 | Real-time communication technology (WebSockets, SSE, polling, other). |
-| ARCH-6 | Caching / state-management technology (e.g., Redis). |
-| ARCH-7 | Authentication and authorization implementation. |
-| ARCH-8 | Deployment architecture. |
+| ARCH-2 | **Backend language/framework — still not explicitly named.** The React/TypeScript frontend choice suggests (but does not confirm) a Node.js/TypeScript backend for a small team; this is an inference, not a stated decision. Needs an explicit answer before coding starts. |
+| ARCH-8 | Deployment architecture — Alignment §36 (Day 15) mentions "production deployment, environment configuration" but names no hosting provider or infrastructure. |
 | ARCH-9 | Infrastructure (cloud provider, hosting, scaling). |
 | ARCH-10 | External dependencies and libraries. |
-| ARCH-11 | PDF/OCR/extraction technology for question import. |
-| ARCH-12 | Dynamic rules engine / plugin architecture (if the client's "Steam-like" upload concept is ever accepted). |
-| ARCH-13 | Configuration distribution architecture (client's "unified distribution engine" — not accepted yet). |
-| ARCH-14 | API design. |
-| ARCH-15 | The detailed competition domain model. |
-| ARCH-16 | **Module decomposition** — the candidate modules (ARC-012) are a proposal and must be validated against the domain model. |
-| ARCH-17 | **Event catalog** — the candidate events (ARC-027) are a proposal and must be validated against resolved requirements. |
-| ARCH-18 | **Structural tenant-isolation mechanism** — how isolation is enforced without relying on developer discipline (ARC-011 / ARCQ-4). |
-| ARCH-19 | **Event durability** — is in-process delivery sufficient, or must some events survive a restart? (ARCQ-3) |
+| ARCH-11 | PDF extraction technology — Alignment §9 confirms **no OCR**, a "predefined format" with the "narrowest parser necessary," but names no specific library/approach. |
+| ARCH-12 | Dynamic rules engine / plugin architecture — explicitly **not** part of the MVP (Alignment §3, non-goals). |
+| ARCH-13 | Configuration distribution architecture — explicitly **not** part of the MVP (Alignment §3, non-goals). |
+| ARCH-17 | Event catalog — the Alignment Guideline's WebSocket message list (§28) serves a similar purpose but wasn't cross-checked against `ARCHITECTURE_REQUIREMENTS.md` ARC-027's candidate event catalog. |
+| ARCH-18 | Structural tenant-isolation mechanism — **moot for the current MVP** (single-tenant, ENV-007); remains relevant only for the later multi-tenant phase. |
+| ARCH-19 | Event durability (in-process vs. must-survive-restart) — still open, related to FL-3/FL-4 (server failure recovery). |
 
-**Note on the client proposal:** the client's "unified configuration distribution engine" and "dynamic/marketplace-style logic upload" concepts should not be accepted as architecture decisions until the underlying business variation is understood.
+**Note on the client proposal:** the client's "unified configuration distribution engine" and "dynamic/marketplace-style logic upload" concepts remain **not accepted** — the Alignment Guideline confirms this explicitly (§3, §6 non-goals).
 
 ---
 
-## 12. Priority Open Questions (Suggested Discussion Order)
+## 12. Priority Open Questions (Suggested Discussion Order) — updated 2026-09-23
 
-The following questions most directly block the domain model and should be resolved first:
+**Most of the original list below is now resolved** (see the status notes throughout §1–11). What actually still blocks a clean start to coding is a much shorter list:
 
-1. What exactly defines the stage types Individual / Team / PK, and which round types are valid in each? *(PK deferred — MVP realizes Individual + Team.)*
-2. Where does category (age group) belong, and can one competition mix categories?
-3. At what point does competition configuration lock (publication, first access, start, stage/round start)?
-4. What exactly does "publish results" mean, and does it finalize/lock results?
-5. What is the exact player competition-access and authentication mechanism?
-6. Who controls the Big Screen (Judge only vs. Judge + Admin), and what is the priority model?
-7. What is the exact team scoring formula and team-round completion rule?
-8. What is the exact scoring/ranking calculation model (partial credit, tie-breaks, timing effects)?
-9. What are the requirements for network/server failure recovery during a live competition?
-10. What exactly must be persisted and what must be real-time, at what granularity?
+1. **Scoring model** (§14.3) — all-or-nothing per question vs. proportional per-cell credit. Blocks the domain model, the Scoring module, and the question-PDF schema (see also §15.1's point-value incoherence).
+2. **Team scoring formula** (§14.4) — confirm the `client-view.md` formula is still the agreed one, or get the real one.
+3. **Big Screen control** (§14.6) — Judge-only vs. Judge + Admin shared control.
+4. **Big Screen authentication** (§15.2) — no mechanism is defined anywhere; blocks building that client at all.
+5. **Judge failure/replacement path** (§15.5) — no story exists for judge disconnection or mid-competition replacement.
+6. **Backend language/framework** (ARCH-2, §11) — the only major technology choice still genuinely unnamed.
+7. **Credential delivery mechanism** (PL-5/JD-7, §4.1/§5.1) — how generated usernames/passwords physically reach players and the judge.
+8. **Per-question point-value incoherence** (§15.1) — reconcile the PDF's per-question "score/difficulty" fields against the flat 100-point rule.
+9. **Results export** (§15.4) — confirm whether a real export/download feature is still in scope, or on-screen viewing is sufficient.
+10. **Server failure / recovery** (FL-3/FL-4, §9) — still completely unaddressed; a real risk for a live one-shot event.
+
+Everything else in §1–11 that was previously on this list — stage/round type definitions, category placement, publish/lock semantics, player access mechanism, persistence granularity — **is now resolved** and doesn't need further discussion unless someone has new information.
 
 ---
 
@@ -514,3 +524,44 @@ These were previously **open/undecided** questions (not conflicts — no prior d
 ### 14.7 Documentation redundancy risk
 
 `Sudoku Arena MVP — Question 2 Decision Summary.md` and `Sudoku_Arena_MVP_Q3_Decision_Summary.md` are near-total subsets of `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` §5–22 (large verbatim overlaps, e.g. pause/resume/cancel/ranking behavior). Not a contradiction today, but three documents now carry the same facts; if one is edited later without the others, they will silently drift apart. Consider designating the Alignment Guideline as the single source of truth and the two Decision Summaries as historical/superseded.
+
+---
+
+## 15. Final Pre-Implementation Review (2026-09-23) — Newly Identified Gaps & Incoherences
+
+A full re-read of every requirements and decision document (old and new) against each other, specifically looking for anything not yet captured anywhere in this file. Sections 1–11 above were also individually reconciled against the Arena documents as part of this pass (see the "Status note" at the top of each). The items below are **new** — not previously flagged in any form.
+
+### 15.1 New incoherence: per-question point values vs. the confirmed flat scoring rule
+
+`FLOW_REQUIREMENTS.md` FLW-031/FLW-043 and the question-PDF description say each question carries its own **"score, difficulty, type"** as parameters — implying **variable, per-question point values**. But the confirmed scoring rule (`client-view.md` §2.1, matched by the Arena documents) is a **flat 100 points per question** for the Individual stage, with no mention of difficulty-weighted scoring anywhere in the actual competition-rules documents. These two pictures don't fit together: either the PDF's "score" field is unused/vestigial, or the flat-100-points rule needs revisiting for questions of different difficulty. **Needs a decision:** does every question in a round really score the same regardless of its stated "score"/"difficulty," or should the PDF's per-question score actually drive scoring (which would reopen the scoring-model conflict at §14.3 further)?
+
+### 15.2 New gap: Big Screen authentication is completely unaddressed
+
+No document — old or new — describes **how the Big Screen actually connects and authenticates**. Player and Judge both get `POST /auth/{role}/login` with generated credentials (Alignment §27); there is **no equivalent for the Big Screen anywhere**: no endpoint, no token concept, no mention of expiry/revocation, no mention of whether multiple Big Screens can display the same competition. This is a real gap for a browser-based Big Screen client — without an answer, that piece of the web app cannot be built. Covers the previously-listed JD-37 through JD-40, OA-32/34's Big-Screen half, and CA-003.
+
+### 15.3 New gap: competition/configuration reuse is unaddressed by the newest documents
+
+`project-decisions.md` CR-001 (Working Position, pre-Arena) said the admin "should ideally" be able to reuse a previous competition's configuration for a new one. The three Arena documents **never mention this at all** — not as a supported feature, and not in their explicit "out of scope" list either (which does list many other cut features by name). It's unclear whether this was silently dropped or just not yet written down. Given the competition structure is now fixed in code (§3 above), the practical need for "reuse a configuration" may be much smaller than originally imagined — but that should be an explicit call, not an accidental omission. Covers OA-19 through OA-22.
+
+### 15.4 New gap: results export may have been silently dropped
+
+`project-decisions.md` OA-134/RA-005 (both currently Working Position) confirm the admin should be able to **export** competition results, with format/fields left open. The Arena documents' minimum API (§27) provides `GET /competitions/:id/results` and `GET .../ranking` — which reads as on-screen display data, not a file export. No export format, no export endpoint, no mention of "export" as a capability anywhere in the 2101-line Alignment Guideline. Given how minimal the post-competition data already is (final ranking + final scores only, Q2.15), it's worth explicitly confirming whether a real export/download feature is still planned for the MVP, or whether "the admin can view results on screen" is now considered sufficient. Covers OA-26/OA-27.
+
+### 15.5 New gap: no Judge failure/replacement story at all
+
+Three separate threads converge on the same hole: JD-10 (can a judge be swapped before start?), JD-11 (what happens if the judge needs replacing mid-competition?), and FL-2 (what happens if the judge simply loses network connectivity?). **None of these are addressed by any document.** Given the Judge is the single point of control for starting stages, pausing, and ending rounds — and the Admin has no live channel at all during an active competition (§6.5 above) — a judge going offline or needing replacement appears to have **no defined recovery path whatsoever**. For a live, one-shot school event where the whole competition runs through one judge account, this is worth resolving before build, not after.
+
+### 15.6 Clarification, not a conflict: authentication model has simplified from "OTP" to "password"
+
+Several older documents (`project-decisions.md` PT-004, JM-004; `ORGANIZATION_ADMIN_REQUIREMENTS.md` OA-053, OA-063) speculated about OTP or one-time-credential access for players and judges. The Arena documents settle on ordinary system-generated username/password accounts instead — no OTP anywhere. Not a conflict (the older documents only ever said "potentially OTP," never committed to it), but worth recording explicitly as the actual answer rather than leaving the old "potentially OTP" language sitting there unresolved. See ARCH-7 in §11.
+
+### 15.7 Summary table
+
+| # | Topic | Type | Severity |
+|---|---|---|---|
+| 15.1 | Per-question point values vs. flat scoring | Incoherence between documents | High — affects the domain model and scoring engine |
+| 15.2 | Big Screen authentication undefined | Missing requirement | High — blocks building that client entirely |
+| 15.3 | Competition/config reuse unaddressed | Silent scope gap | Medium |
+| 15.4 | Results export possibly dropped | Silent scope gap | Medium |
+| 15.5 | No judge failure/replacement path | Missing requirement | High — operational risk on competition day |
+| 15.6 | OTP → password simplification | Clarification only | Low — already effectively answered |

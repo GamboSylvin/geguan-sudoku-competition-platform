@@ -369,12 +369,13 @@ The following are **deliberately deferred** to later project phases and must **n
 | Product model | Multi-tenant SaaS is the confirmed **long-term** vision; not an online game; digitalize operations. **MVP is single-tenant (ENV-007, 2026-09-23) — one company, multi-tenancy deferred, not abandoned.** | — | Super Admin participant/result access, billing, deletion semantics (for the later multi-tenant phase) |
 | Environment | Physical venue; org-provided devices; no remote proctoring; MVP scope = single tenant (ENV-007) | Backend authoritative (principle) | Anti-cheating details in venue |
 | Roles | System calculates results/rankings; Judge controls display. **MVP realizes Admin/Judge/Player only — Super Administrator deferred with multi-tenancy (SA-005).** | Judge operations (proposed) | Multiple admins/judges; admin live access; Super Admin participant/result access (later phase) |
-| Competition structure | Competition → Stages → Rounds; MVP stage set = Individual + Team; PK deferred | Stage types Individual/Team/PK (Individual+Team realized); no competition-level duration; per-stage rankings with no combined final ranking; individual stage = individually scored per player; team stage = rotation round emphasized + 2 listed-but-undefined round types | Stage/round type definitions; category placement; validation approach (recognizer vs per-type scoring); grid shapes; other team round types (分区协作 / 抢答夺分) MVP scope |
-| Player flow | Access → wait → rules+countdown → play → auto-save → submit/auto-submit → next | — | Access mechanism; session/device behavior; post-submit UI |
-| Results | Auto validation/scoring/ranking; idempotent submission | Admin can view/export results | Scoring formulas; publication semantics; analytics specifics |
-| Non-functional | Multi-tenant, real-time, interactive, state-driven, isolated, automated, timed rounds | Event-oriented — realized in the game subsystem (ARC-020) | Persistence/real-time mechanism details |
-| Architecture | — | **Modular monolith** (ARC-001/002); **event-driven game subsystem, in-process** (ARC-020/021); structural tenant isolation (ARC-011) — all Working Position, team-decided | Backend/frontend/DB/real-time transport/caching/auth/deployment technology; domain model; module decomposition & event catalog (Proposed) |
-| DB | — | — | Everything (explicitly deferred) |
+| Competition structure | **Fixed, not admin-configurable for MVP** (CS-020/021): exactly 2 stages (Individual, Team), predefined rounds/durations/rules; category = one per competition; publish locks configuration; PK deferred | Team stage = rotation round emphasized + 2 listed-but-undefined round types (分区协作 / 抢答夺分, TEAM-1 open) | Validation approach (recognizer vs per-type scoring) and grid shapes, both entangled with the open scoring-model conflict (§13.5) |
+| Player flow | Access (link/QR + password login) → wait → rules+countdown → play → auto-save → submit/auto-submit → next; no post-submit results shown to player (Big Screen only) | — | Credential-delivery mechanism to players (§15.2 in `unmade-decisions.md`); multi-device/concurrent-session behavior |
+| Judge | Starts stage only (no manual round start); global pause/resume; premature end auto-submits+scores; no per-participant connectivity monitoring; results finalize/lock automatically, no manual confirmation | — | Judge failure/replacement path (no story exists at all — high-priority gap); Big Screen control ownership (§13.7) |
+| Results | Auto validation/scoring/ranking; idempotent submission; cumulative per-stage ranking with defined tie-breaks; no cross-stage combined ranking; results immutable once finalized | Admin can view/export results (export mechanism itself unconfirmed — §15.4) | Scoring model itself (all-or-nothing vs. proportional, §13.5); team scoring formula (§13.6); per-question point-value incoherence (§15.1) |
+| Non-functional | Multi-tenant vision retained long-term (MVP is single-tenant); real-time, interactive, state-driven, automated, timed rounds; persistence scope defined (PostgreSQL durable / Redis runtime, no long-term grid/move retention, no audit trail) | Event-oriented — realized in the game subsystem (ARC-020) | Data retention period; server-failure recovery (FL-3/4, unaddressed); judge-disconnect handling (FL-2, unaddressed) |
+| Architecture | **Modular monolith** (ARC-001/002); **event-driven game subsystem, in-process** (ARC-020/021); **React/TypeScript frontend, PostgreSQL+Redis, WebSocket transport** (§14.4) — all Working Position, team-decided | Structural tenant isolation (ARC-011, moot until multi-tenant phase); candidate module decomposition & event catalog | **Backend language/framework — the one major technology choice still unnamed**; deployment/infra; PDF-extraction library |
+| DB | PostgreSQL (durable) + Redis (runtime), scope defined (§14.5) | — | Retention policy; schema normalization (implementation detail) |
 
 ---
 
@@ -395,3 +396,60 @@ Three new documents were added at the project root on 2026-09-23 (`Sudoku_Arena_
 | 13.7 | `client-view.md` §4.1/§4.3: Judge **and** Admin/Management both control the Big Screen (synchronized). | `ORGANIZATION_ADMIN_REQUIREMENTS.md` OA-007 and `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` §16 both say Judge-only. | **Open conflict — for colleague review.** See `unmade-decisions.md` §14.6 and OA-007/OA-080/OA-081. |
 
 **Summary:** 13.1–13.3 (multi-tenancy) stand as the project owner's direct decision. 13.4 (team-mode description) stands as-is with a noted implementation gap. 13.5–13.7 are genuine, unresolved document conflicts, fully detailed in `unmade-decisions.md` §14.3, §14.4, §14.6 for the colleague to answer.
+
+---
+
+## 14. Newly Confirmed Decisions — Final Pre-Implementation Review (2026-09-23)
+
+A full reconciliation pass (`unmade-decisions.md` §1–11, each section's "Status note") found that the Arena Alignment Guideline answers a large number of previously-Open items with no conflict. Recorded here as Confirmed/Working Position per this document's own decision-tracking rule, rather than left sitting only as inline notes in the open-questions file.
+
+### 14.1 Competition structure is fixed, not admin-configurable
+
+| ID | Decision | Status |
+|---|---|---|
+| CS-020 | **Superseded: CS-004 (no fixed stage/round count) no longer applies to the MVP.** The competition structure is fully fixed in code: exactly 2 stages (Individual, Team), each with predefined rounds, preparation times, durations, and rules. The admin does **not** configure stages/rounds/durations during competition creation — only name, description, category, participant Excel, and question PDF. | Confirmed (2026-09-23) |
+| CS-021 | Consequently, reordering, deleting, or saving empty stages/rounds (formerly CMP-10…CMP-14) are **moot** — there is no admin-facing structure to modify. | Confirmed (2026-09-23) |
+| CS-022 | The Judge manually starts each **stage** only. Preparation countdown, round start, round end at timer expiry, and advancing to the next round/stage are all **automatic**. **There is no manual individual-round start capability** — this narrows the earlier Judge proposal (J-005), which treated manual round start as a needed exception path. Worth an explicit sanity check that dropping it was intentional. | Confirmed (2026-09-23) — see `unmade-decisions.md` JD-13/14 |
+
+### 14.2 Judge operational semantics
+
+| ID | Decision | Status |
+|---|---|---|
+| J-030 | **Pause is global**, not per-round: timer stops, all players blocked from editing, big screen shows "Paused," all state preserved exactly. Resume uses a 3-2-1-Start countdown that does not consume round time. | Confirmed (2026-09-23) |
+| J-031 | **Premature ("early") round end:** auto-submits every player's latest saved state, evaluates, scores, updates ranking, then proceeds to the next round/stage normally. Not reversible (no undo mechanism is described). | Confirmed (2026-09-23) |
+| J-032 | **No per-participant connectivity/progress monitoring for the Judge in the MVP** — "there is no separate inactive/absent status." This narrows the earlier Judge proposal (J-008), which treated connectivity monitoring as operationally valuable. Worth an explicit sanity check. | Confirmed (2026-09-23) — see `unmade-decisions.md` JD-21 |
+| J-033 | **"Publish results" has no separate manual step.** Results finalize automatically on scoring and become immutable immediately — no human confirmation step, no correction/dispute workflow exists in the MVP. | Confirmed (2026-09-23) |
+| J-034 | Real-time ranking is **always** visible to the Judge (pushed continuously), not gated behind any decision. | Confirmed (2026-09-23) |
+
+### 14.3 Authentication model
+
+| ID | Decision | Status |
+|---|---|---|
+| PT-006 | **Supersedes the "potentially OTP" language in PT-004/JM-004.** Players, Judges, and Admins all authenticate with ordinary system-generated username/password accounts. No OTP appears anywhere in the newer documents. **Big Screen authentication remains completely undefined — see `unmade-decisions.md` §15.2, a real gap, not yet resolved.** | Confirmed (2026-09-23) for Player/Judge/Admin |
+
+### 14.4 Technology choices named by the Arena Alignment Guideline
+
+| ID | Decision | Status |
+|---|---|---|
+| ARCH-020 | Frontend: **React with TypeScript**. | Confirmed (2026-09-23) — supersedes ARCH-3 as Open |
+| ARCH-021 | Database: **PostgreSQL** for durable business data; **Redis** for fast-changing runtime state/caching. | Confirmed (2026-09-23) — supersedes ARCH-4/ARCH-6 as Open |
+| ARCH-022 | Real-time transport: **WebSocket** (not SSE or polling). | Confirmed (2026-09-23) — supersedes ARCH-5 as Open |
+| ARCH-023 | A minimum REST + WebSocket API contract and a minimum relational domain model are proposed (Alignment §27–28, §32) — explicitly a starting point, not final. | Working Position (2026-09-23) |
+| ARCH-024 | **Backend language/framework is still not explicitly named** — the React/TypeScript frontend choice suggests but does not confirm a Node.js backend. This remains the one major technology gap before coding starts. | **Open** — see `unmade-decisions.md` §12 priority list |
+
+### 14.5 Persistence scope
+
+| ID | Decision | Status |
+|---|---|---|
+| DP-010 | Long-term storage (PostgreSQL) is limited to: competition config, participants/teams/accounts, judges, stages/rounds, questions, and finalized results/scores/ranking. **Explicitly not retained long-term:** final grids, detailed move history, manual-vs-auto submission flag. Runtime-only state (grid, in-progress moves) lives in Redis and is discarded after finalization. | Confirmed (2026-09-23) |
+| DP-011 | No audit/versioning system exists anywhere in the MVP (configuration changes, admin edits, or results). | Confirmed (2026-09-23) |
+| DP-012 | Data retention period is **still undecided** — worth resolving given this is student data from a school competition. | **Open** |
+
+### 14.6 Scoring/ranking mechanism (independent of the still-open scoring-model conflict)
+
+| ID | Decision | Status |
+|---|---|---|
+| SC-020 | Ranking = cumulative per-round scores within a stage, producing a provisional ranking after every finalized round and a final ranking when the stage ends. | Confirmed (2026-09-23) |
+| SC-021 | Tie-break order: higher score → earlier completion/submission time → case-insensitive alphabetical name. | Confirmed (2026-09-23) |
+| SC-022 | No cross-stage combined ranking — Individual and Team stages each produce their own independent final ranking. | Confirmed (2026-09-23) — matches STG-011 |
+| SC-023 | **What "completed/correct" actually means, and the effect of a wrong entry, remain open** — entangled with the scoring-model conflict at §13.5/`unmade-decisions.md` §14.3. | **Open** |
