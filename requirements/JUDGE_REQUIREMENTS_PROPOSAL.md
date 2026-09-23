@@ -4,6 +4,8 @@
 **Status:** Proposal for discussion --- NOT final requirements\
 **Audience:** Client, product stakeholders, and development team
 
+> **Update (2026-09-23):** many of this proposal's open items were subsequently answered by `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` and recorded in `decisions/unmade-decisions.md` §5 / `decisions/project-decisions.md` §14.2. In particular: **manual round start (J-005) does not appear in the MVP build** (only manual stage start + early round end are supported); **per-participant connectivity/progress monitoring (J-008) is not included** ("no separate inactive/absent status in the MVP"); **real-time ranking (J-009) is simply always visible to the Judge**, not gated; **"publish results" (J-020) and result confirmation (J-021) resolve to full automation** — no manual publish step, no confirmation step. Treat this document as historical context; `decisions/unmade-decisions.md` §5 is the current source of truth for what's actually decided vs. still open.
+
 ## 1. Purpose
 
 This document proposes how the **Judge** role could operate the Sudoku

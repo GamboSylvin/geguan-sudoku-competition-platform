@@ -94,28 +94,28 @@ Module boundaries must follow the **domain and responsibilities already describe
 
 *(Working Position.)*
 
-### ARC-011 — Tenant isolation is a module-level concern
+### ARC-011 — Tenant isolation is a module-level concern — **[Moot for the current MVP, 2026-09-23]**
 **Tenant data isolation (ENV-002 / NF-005) is a fundamental requirement** and must be enforced structurally. No module may expose tenant-owned data across tenant boundaries, and isolation must not depend on every developer remembering to add a filter.
 
-*(Confirmed requirement, reflected architecturally.)*
+*(Confirmed requirement, reflected architecturally — but the current MVP is deliberately single-tenant (ENV-007), so there is nothing to isolate right now. This remains the design target for the later multi-tenant growth phase.)*
 
 ### ARC-012 — Candidate modules (Proposed — requires validation)
 The following module candidates are **derived from the existing requirements** as a starting point. They are a **proposal**, not a settled decomposition, and must be validated against the domain model once the open requirements are resolved.
 
 | Candidate module | Derived from |
 |---|---|
-| Identity & Access | Roles (§4 actors), competition access/entry links (CA-001…CA-003), participant/judge credentials (PT-004, JM-004), authentication is Open |
-| Tenant / Organization | ENV-001…ENV-002, SA-010…SA-013, OA-001…OA-003, ORG-* |
-| Competition Configuration | CS-001…CS-009, OA-010…OA-024, competition lifecycle & lock point (Open — CMP-3, FLW-021) |
-| Question Bank & Import | QB-001…QB-005, OA-040…OA-044, PDF import (technology Open — ARCH-11) |
+| Identity & Access | Roles (§4 actors), competition access/entry links (CA-001…CA-003), participant/judge credentials (PT-004, JM-004). **Update 2026-09-23: authentication resolved to username/password for Player/Judge/Admin (PT-006); Big Screen auth remains Open — `unmade-decisions.md` §15.2.** |
+| Tenant / Organization | ENV-001…ENV-002, SA-010…SA-013, OA-001…OA-003, ORG-*. **Update 2026-09-23: moot for the current single-tenant MVP (ENV-007) — relevant only to the later multi-tenant phase.** |
+| Competition Configuration | CS-001…CS-009, OA-010…OA-024. **Update 2026-09-23: structure is fixed in code, not admin-configurable (CS-020); lock point resolved — publish = lock (CA-004).** |
+| Question Bank & Import | QB-001…QB-005, OA-040…OA-044, PDF import (technology Open — ARCH-11). **Update 2026-09-23: surfaced a new incoherence between per-question point values and the flat scoring rule — `unmade-decisions.md` §15.1.** |
 | Participants & Teams | PT-001…PT-005, OA-050…OA-053, team derivation from import data |
 | Judge Management | JM-001…JM-004, OA-060…OA-063 |
 | Competition Execution (Game Engine) | EX-001…EX-011, J-002…J-007, NF-004, NF-009, NF-010 — stage/round lifecycle and timers |
-| Answer Validation & Scoring | EX-001…EX-004, EX-010, SC-* (scoring model still **Open** — FLW-Q6) |
+| Answer Validation & Scoring | EX-001…EX-004, EX-010, SC-* (scoring model still **Open** — `unmade-decisions.md` §14.3) |
 | Team Rotation | CS-014, TEAM-010…TEAM-015 |
-| Results & Analytics | RA-001…RA-005, OA-130…OA-134 |
+| Results & Analytics | RA-001…RA-005, OA-130…OA-134. **Update 2026-09-23: MVP scope narrowed to final ranking + scores only; export feature possibly dropped — `unmade-decisions.md` §15.4.** |
 | Live Monitoring & Presentation | NF-002, J-008, J-010…J-014, Big Screen (client-view §4) |
-| Audit / Configuration Versioning | Open — CMP-9, DP-5 (whether required is undecided) |
+| Audit / Configuration Versioning | **Update 2026-09-23: resolved as: not required.** No audit/versioning system exists anywhere in the MVP (DP-011). This module candidate can likely be dropped. |
 
 **Open question:** this decomposition is provisional. It must be revisited once the domain model exists, because several requirements that drive the boundaries are themselves unresolved.
 
@@ -242,19 +242,21 @@ Explicitly **not** part of this architecture:
 
 ## 8. What This Document Does Not Decide
 
+> **Update (2026-09-23):** several of these have since been named by `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` and recorded in `decisions/project-decisions.md` §14.4 — struck through below. Backend language/framework is now the one major technology choice still genuinely unnamed.
+
 Still **Open** and still to be derived from requirements:
 
-- Backend technology / language / framework.
-- Frontend technology / framework.
-- Database technology and data modeling.
-- Real-time communication technology (WebSocket, SSE, polling, other).
-- Caching / state-management technology.
-- Authentication and authorization implementation.
-- Deployment architecture and infrastructure.
-- External dependencies and libraries.
-- PDF/OCR/extraction technology.
-- API design.
-- The detailed competition domain model.
+- **Backend technology / language / framework — still genuinely open** (the only major one left; see `decisions/unmade-decisions.md` §12).
+- ~~Frontend technology / framework.~~ **Resolved: React with TypeScript.**
+- ~~Database technology and data modeling.~~ **Resolved: PostgreSQL (durable) + Redis (runtime/cache).**
+- ~~Real-time communication technology.~~ **Resolved: WebSocket.**
+- ~~Caching / state-management technology.~~ **Resolved: Redis.**
+- Authentication and authorization implementation — **partially resolved**: username/password for Player/Judge/Admin; Big Screen auth still fully undefined (`decisions/unmade-decisions.md` §15.2).
+- Deployment architecture and infrastructure — still open.
+- External dependencies and libraries — still open.
+- PDF/OCR/extraction technology — **partially resolved**: no OCR, predefined format, narrowest parser needed; specific library still open.
+- API design — **substantially addressed, not final**: a minimum REST + WebSocket contract is given (Alignment §27–28).
+- The detailed competition domain model — **substantially addressed, not final**: a minimum relational model is given (Alignment §32).
 
 ---
 

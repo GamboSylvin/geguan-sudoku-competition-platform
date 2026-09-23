@@ -315,10 +315,12 @@ The following have not yet been sufficiently defined:
 
 ## 6. Decision Status
 
+> **Update (2026-09-23):** the multi-tenant SaaS platform below remains the confirmed **long-term** product vision, but the current MVP build is deliberately scoped to a **single organization** (one school/university) due to the 15-day implementation timeline — deferred, not abandoned. See `decisions/project-decisions.md` ENV-007/ENV-008.
+
 ### Confirmed
 
-- The product is intended to be a multi-tenant SaaS platform.
-- Tenant data must be isolated from other tenants.
+- The product is intended to be a multi-tenant SaaS platform. **(Long-term vision — deferred for the current MVP, see update above.)**
+- Tenant data must be isolated from other tenants. **(Same deferral.)**
 - The initial competition environment is a supervised physical venue.
 - Computers and/or tablets are the expected participant devices.
 - Automatic answer validation and ranking calculation are core objectives.
@@ -333,7 +335,7 @@ The following have not yet been sufficiently defined:
 - A round automatically submits the player's current state when its time limit expires.
 - Repeated submission must not alter the player's result.
 - From the player's perspective, rounds and stages proceed sequentially with waiting states between them.
-- Team-based rounds are a possible competition category, but their detailed interaction rules are not yet defined.
+- Team-based rounds are a possible competition category, but their detailed interaction rules are not yet defined. **(Update 2026-09-23: since resolved — see `STAGE_REQUIREMENTS.md` §4.3 and `decisions/unmade-decisions.md` §4.5 for the confirmed rotation mechanic.)**
 
 ### Not Yet Decided
 

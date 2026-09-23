@@ -3,10 +3,12 @@
 # Super Administrator Requirements
 
 **Status:** Working Requirements Draft
-**Scope:** MVP
+**Scope:** ~~MVP~~ **Deferred (2026-09-23)** — see update below
 **Method:** Problem → Requirements → Domain/System Model → Architecture Analysis → Architecture Decision → Technology Analysis → Stack Decisions → Detailed Design → Coding
 
 > This document captures the current Super Administrator vision after comparison with the client's proposal and the existing requirements/decision records. It is a requirements-level document, not an architecture or technology decision. Open questions are intentionally preserved.
+
+> **Update (2026-09-23):** the MVP was deliberately scoped down to a **single organization** (one school/university, due to the 15-day timeline) — see `decisions/project-decisions.md` ENV-007/SA-005. The Super Administrator role, and multi-tenancy generally, is **deferred to a later growth phase, not cancelled**. This document remains the working spec for that future phase; none of it is active MVP scope right now. See `decisions/unmade-decisions.md` §1 and §14.1.
 
 ## 1. Role Definition
 

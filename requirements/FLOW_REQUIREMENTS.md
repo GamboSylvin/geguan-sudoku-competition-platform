@@ -214,44 +214,48 @@ The expected answers / solutions in the upload are **a requirement to be sent la
 
 ## 8. Open Points to Check with Client
 
-This section consolidates every **[Check with client]** marker from above:
+> **Update (2026-09-23):** most of these are now resolved — see the inline notes below and `decisions/unmade-decisions.md` §13/§6/§3. Two (FLW-Q6, and the new FLW-Q7 dependency) remain genuine open conflicts for direct colleague/client review.
 
 | # | Question | Related existing question |
 |---|---|---|
-| FLW-Q1 | What exactly does "publishing" generate? Does it auto-generate player/judge links? | CMP-2 |
-| FLW-Q2 | Are player and judge access the same link, or separate? Does the link identify the user or require additional auth? | PL-1, JD-8 |
-| FLW-Q3 | What happens when an unregistered/unauthorized player attempts entry? | PL-6 |
-| FLW-Q4 | Which competition transitions are Judge-controlled vs automatic? | SR-7, J-003/J-004/J-005 |
-| FLW-Q5 | Is PK in scope for MVP, or reserved for later? | SR-3 |
-| FLW-Q6 | **Scoring model:** is scoring per-cell proportional, all-or-nothing per puzzle, or hybrid? How do time bonuses and difficulty weighting fit? | SC-1…SC-7 |
-| FLW-Q7 | Per-question points: assigned individually or per-type? | SC-3 |
-| FLW-Q8 | Round duration: driven by question type or set manually? | CS-005 |
-| FLW-Q9 | **Lifecycle:** is publication = lock? Is there any post-publication edit path? | CMP-3, CMP-7, CMP-8 |
-| FLW-Q10 | Question document: what exactly is in the PDF? Are solutions required at upload? | OA-9, OA-11 |
-| FLW-Q11 | Participant fields: which are required? How exactly is team membership detected from the file? | PT-1, OA-1 |
+| FLW-Q1 | **Resolved.** Publish generates the entry link/QR and locks configuration. | CMP-2 |
+| FLW-Q2 | **Resolved for Player/Judge** (separate role-based username/password logins, not a shared link). **Still open for the Big Screen** — no access mechanism defined anywhere, see `decisions/unmade-decisions.md` §15.2. | PL-1, JD-8 |
+| FLW-Q3 | **Still open** (minor) — the exact error/UX for an unauthorized attempt isn't specified. | PL-6 |
+| FLW-Q4 | **Resolved.** Judge manually starts each stage only; everything else (rounds, preparation, transitions) is automatic. No manual round start exists in the MVP. | SR-7, J-003/J-004/J-005 |
+| FLW-Q5 | **Resolved.** PK is deferred, out of MVP scope. | SR-3 |
+| FLW-Q6 | **Still open — genuine conflict, see `decisions/unmade-decisions.md` §14.3.** All-or-nothing (matches `client-view.md`) vs. this document's proportional/per-cell description (see the superseded note at FLW-030 above). |
+| FLW-Q7 | **Still open — and connects to a newly found incoherence.** The question-PDF format implies per-question point values (score/difficulty fields), which conflicts with the confirmed flat 100-points-per-question rule. See `decisions/unmade-decisions.md` §15.1. | SC-3 |
+| FLW-Q8 | **Resolved.** Round durations are fixed/predefined in code for the MVP (not admin-configurable, not dynamically driven by question type). | CS-005 |
+| FLW-Q9 | **Resolved.** Publication = lock; no post-publication edit path exists. | CMP-3, CMP-7, CMP-8 |
+| FLW-Q10 | **Resolved.** PDF contains questions + solutions + parameters (score, difficulty, type) — see FLW-Q7 above for the incoherence this creates. | OA-9, OA-11 |
+| FLW-Q11 | **Resolved.** Name, Category, Team are the required fields; team membership comes from the Team column. | PT-1, OA-1 |
 
 ---
 
 ## 9. Status Summary
 
+**Update (2026-09-23):** superseded by the per-item resolutions above and in `decisions/unmade-decisions.md` §3, §6, §13. Kept below for history only.
+
 | Item | Status |
 |---|---|
-| Competition → stages → rounds structure | Client vision, matches existing working position, **unconfirmed** |
-| Stage types: Individual / Team / PK | Client vision, matches existing working position, **unconfirmed** |
-| Round fields: name, duration, type, questions | Client vision, matches existing working position, **unconfirmed** |
-| Organization Admin creates competitions | Client vision, matches existing confirmed OA-005, **unconfirmed for Flow** |
-| Link/QR for players + judges; separate Big Screen token | Client vision, matches existing working position, **unconfirmed** |
-| Setting (draft) → Published → Locked lifecycle | Client vision — **diverges from/refines existing open question**; check with client |
-| Recognition-based proportional scoring | Client vision — **new/diverging from client-view rules**; check with client |
-| Question bank + direct upload + saved to bank | Client vision, matches existing working position, **unconfirmed** |
-| Excel participant import + team-from-file | Client vision, matches existing working position, **unconfirmed** |
-| Solutions in question upload | **Requirement to be sent later** |
+| Competition → stages → rounds structure | Client vision, matches existing working position, **unconfirmed** — *now resolved as fixed/predefined, not admin-configurable* |
+| Stage types: Individual / Team / PK | Client vision, matches existing working position, **unconfirmed** — *now resolved: Individual + Team only, PK deferred* |
+| Round fields: name, duration, type, questions | Client vision, matches existing working position, **unconfirmed** — *now resolved, fixed per round* |
+| Organization Admin creates competitions | Client vision, matches existing confirmed OA-005, **unconfirmed for Flow** — *now resolved* |
+| Link/QR for players + judges; separate Big Screen token | Client vision, matches existing working position, **unconfirmed** — *resolved for Player/Judge; Big Screen still undefined, see §15.2* |
+| Setting (draft) → Published → Locked lifecycle | Client vision — **diverges from/refines existing open question**; check with client — *now resolved: publish = lock, confirmed* |
+| Recognition-based proportional scoring | Client vision — **new/diverging from client-view rules**; check with client — *still a genuine open conflict, see FLW-Q6* |
+| Question bank + direct upload + saved to bank | Client vision, matches existing working position, **unconfirmed** — *now resolved* |
+| Excel participant import + team-from-file | Client vision, matches existing working position, **unconfirmed** — *now resolved* |
+| Solutions in question upload | **Requirement to be sent later** — *now resolved: solutions are part of the PDF structure* |
 
 ---
 
 ## 10. Next Step
 
-1. Validate the flow and mechanics with the client.
-2. Resolve the divergences in §8 (especially scoring model and lifecycle/lock point).
-3. Record accepted items in `requirements/` as confirmed requirements and in `decisions/project-decisions.md` only after explicit client confirmation.
-4. Continue to domain/system modeling and architecture analysis only after the flow is stable.
+**Update (2026-09-23):** step 1–3 below are largely complete — see `decisions/project-decisions.md` §13–§14 and `decisions/unmade-decisions.md` §14–§15. What remains: resolve the scoring-model conflict (FLW-Q6) and the per-question point-value incoherence (FLW-Q7) with the client/colleague, then proceed to step 4.
+
+1. ~~Validate the flow and mechanics with the client.~~
+2. ~~Resolve the divergences in §8~~ (mostly done; scoring model and lifecycle/lock point — lifecycle is resolved, scoring model remains open).
+3. ~~Record accepted items in `requirements/` as confirmed requirements and in `decisions/project-decisions.md`~~ (done for this pass).
+4. Continue to domain/system modeling and architecture analysis only after the flow is stable — largely underway via `ARCHITECTURE_REQUIREMENTS.md` and the Arena Alignment Guideline.

@@ -11,7 +11,7 @@
 - `JUDGE_REQUIREMENTS_PROPOSAL.md` — judge role proposal (explicitly **not** final)
 - `STAGE_REQUIREMENTS.md` — stage definitions, starting with the Individual stage (working draft)
 - `ARCHITECTURE_REQUIREMENTS.md` — architectural style (modular monolith + game-subsystem event-driven), recorded as a team decision (working draft)
-- `Sudoku_Arena_Final_MVP_Alignment_Guideline.md`, `Sudoku Arena MVP — Question 2 Decision Summary.md`, `Sudoku_Arena_MVP_Q3_Decision_Summary.md` — later internal engineering-planning documents for the 15-day MVP sprint (added 2026-09-23, at project root). **Not yet reconciled** with this register — several statements conflict with items below marked Confirmed. See §13 and `unmade-decisions.md` §14.
+- `Sudoku_Arena_Final_MVP_Alignment_Guideline.md`, `Sudoku Arena MVP — Question 2 Decision Summary.md`, `Sudoku_Arena_MVP_Q3_Decision_Summary.md` — later internal engineering-planning documents for the 15-day MVP sprint (added 2026-09-23, at project root). **Reconciled as of 2026-09-23** (see §13, §14): most conflicts and previously-open questions are resolved and recorded below; the remaining genuine conflicts (scoring model, team scoring formula, Big Screen control) are deliberately left open for direct colleague/client review — see `unmade-decisions.md` §14.3, §14.4, §14.6.
 
 ---
 

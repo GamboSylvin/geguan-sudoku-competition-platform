@@ -77,12 +77,8 @@ For each round, the admin should be able to configure at minimum:
 
 ## 4. Category
 
-### OA-030 — Category placement is unresolved
-It has not yet been determined whether:
-1. a competition is dedicated to a single category; or
-2. participants from multiple categories can participate in the same competition.
-
-The correct domain level for category information is therefore not finalized.
+### OA-030 — Category placement — **[Resolved 2026-09-23]**
+~~It has not yet been determined whether a competition is dedicated to a single category or multi-category.~~ **Resolved:** one competition = one category (e.g. `U6`–`U20`). Different categories are separate competitions. Category is set at competition-creation time. See `decisions/project-decisions.md` PT-005.
 
 This must be clarified with the client/developers before finalizing the domain model.
 
@@ -141,8 +137,8 @@ System
 Creates/derives teams and participant grouping
 ```
 
-### OA-053 — Participant access credentials
-The system should provide competition-specific participant access credentials, potentially an OTP, one-time credential, or account credential. The exact mechanism is undecided.
+### OA-053 — Participant access credentials — **[Resolved 2026-09-23]**
+~~The system should provide competition-specific participant access credentials, potentially an OTP, one-time credential, or account credential. The exact mechanism is undecided.~~ **Resolved:** ordinary system-generated username/password accounts. No OTP. See `decisions/project-decisions.md` §14.3 (PT-006).
 
 ## 7. Judge Management
 
@@ -165,19 +161,19 @@ Assigns Judge
 Specific Competition
 ```
 
-### OA-063 — Judge competition access
-The system should provide assigned judges with competition-specific access credentials, potentially an OTP or other one-time credential. The exact mechanism remains undecided.
+### OA-063 — Judge competition access — **[Resolved 2026-09-23]**
+~~The system should provide assigned judges with competition-specific access credentials, potentially an OTP or other one-time credential. The exact mechanism remains undecided.~~ **Resolved:** same as OA-053 — username/password, system-generated at judge creation. **Still open:** how the credentials physically reach the judge from the admin (see `decisions/unmade-decisions.md` JD-7).
 
 ## 8. Competition Access / Entry Links
 
 ### OA-070 — Generate competition access
 After competition preparation, the admin may generate or obtain access information that allows authorized players and judges to enter the appropriate competition environment. A link and/or QR code is currently envisioned.
 
-### OA-071 — Player and Judge entry
-The access mechanism should establish the appropriate competition context without requiring users to navigate through unrelated competitions. Exact authentication/authorization remains undecided.
+### OA-071 — Player and Judge entry — **[Resolved 2026-09-23]**
+~~The access mechanism should establish the appropriate competition context without requiring users to navigate through unrelated competitions. Exact authentication/authorization remains undecided.~~ **Resolved:** one entry link/QR generated at publish, then role-specific username/password login scopes the user to that one competition.
 
-### OA-072 — Big Screen access
-A separate mechanism may be required for the Big Screen to access the competition environment. A competition-specific link/token was previously considered, but the exact mechanism is unresolved.
+### OA-072 — Big Screen access — **[Still genuinely unresolved — real gap]**
+A separate mechanism may be required for the Big Screen to access the competition environment. A competition-specific link/token was previously considered, but the exact mechanism is unresolved. **This remains true even after the newest Arena documents — no Big Screen authentication mechanism is described anywhere.** See `decisions/unmade-decisions.md` §15.2.
 
 ## 9. Big Screen Responsibility
 
@@ -208,16 +204,16 @@ This is a **conceptual principle, not an architecture decision**. The actual arc
 
 ## 11. Live Competition Data
 
-### OA-100 — Possible live-data access
-It is undecided whether the Organization Admin should have access to live competition data. Judge is the primary live operator; Admin live visibility may be useful but requires a concrete operational justification.
+### OA-100 — Possible live-data access — **[Resolved 2026-09-23]**
+~~It is undecided whether the Organization Admin should have access to live competition data.~~ **Resolved as: no.** The Arena documents give the Admin only pre/post-competition HTTP endpoints — no WebSocket channel exists for the Admin (only Player, Judge, and Big Screen do). No live view during an active competition.
 
 ## 12. Competition Editing and Locking
 
 ### OA-110 — Edit before publication
 The admin should be able to edit a competition while it is still being prepared.
 
-### OA-111 — Configuration lock point
-The exact point at which configuration becomes immutable is unresolved. The current likely boundary is after publication, but this must be explicitly defined.
+### OA-111 — Configuration lock point — **[Resolved 2026-09-23]**
+~~The exact point at which configuration becomes immutable is unresolved.~~ **Resolved:** publication itself locks the configuration, immediately, with no exceptional post-publication edit path described. See `decisions/project-decisions.md` CA-004.
 
 Possible factors:
 - Publication
@@ -248,10 +244,10 @@ After a competition, the Organization Admin can access its results.
 ### OA-131 — Rankings
 The admin can view rankings generated by the system. The admin does not manually calculate rankings.
 
-### OA-132 — Reports and statistics
-The admin can access competition reports/statistics. Exact analytics are intentionally not finalized.
+### OA-132 — Reports and statistics — **[Narrowed 2026-09-23]**
+~~The admin can access competition reports/statistics across all the dimensions below.~~ **Resolved as much narrower for the MVP:** only final ranking + final scores (Alignment §Q2.15). Explicitly **not** included: round-level or stage-level breakdowns, individual grids, per-question answers, detailed statistics. The list of "possible dimensions" below was the original aspiration; treat it as historical, not current MVP scope.
 
-Possible dimensions to define later:
+Possible dimensions (original aspiration, mostly cut for MVP — see above):
 - Overall competition results
 - Stage-level results
 - Round-level results
@@ -261,10 +257,10 @@ Possible dimensions to define later:
 - Other basic competition statistics
 
 ### OA-133 — Team scoring information
-The admin can access team scoring information after the competition. The exact team scoring formula must be defined separately.
+The admin can access team scoring information after the competition. **The exact team scoring formula is a genuine open conflict** — see `decisions/unmade-decisions.md` §14.4.
 
-### OA-134 — Export results
-The admin should be able to export competition results. Exact formats and fields remain to be specified.
+### OA-134 — Export results — **[Still open, possibly dropped — see §15.4]**
+The admin should be able to export competition results. Exact formats and fields remain to be specified. **The Arena Alignment Guideline's minimum API has no export endpoint at all** — only on-screen `GET` results/ranking. Whether an actual export/download feature is still planned needs an explicit answer. See `decisions/unmade-decisions.md` §15.4.
 
 ## 15. Responsibility Boundary
 
@@ -352,6 +348,8 @@ Both models include:
 - Current vision: do not accept this as an architecture decision until the actual business variation is understood.
 
 ## 18. Open Questions for Client / Developer Discussion
+
+> **Update (2026-09-23):** most of the questions below are now answered by `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` and recorded in `decisions/unmade-decisions.md` §6 (each with a "Resolved" or "Still open" note). Notably: competition/stage/round structure is fixed, not admin-configurable (resolving most of §1 below); PDF/question-bank questions mostly resolved but surfaced a new incoherence (per-question point values vs. the flat scoring rule — see `decisions/unmade-decisions.md` §15.1); competition-config reuse and results export are **not addressed** by the newer documents at all — see §15.3/§15.4. Treat this section as historical context; `decisions/unmade-decisions.md` §6 is the current source of truth.
 
 ### Competition
 1. Can one competition contain participants from multiple categories?

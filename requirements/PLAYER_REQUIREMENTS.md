@@ -89,7 +89,7 @@ If the player finishes before the round time limit, the player can choose to sub
 
 Submission represents the player's final result for that round.
 
-The exact post-submission UI/state is not yet defined.
+The exact post-submission UI/state is not yet defined. **(Update 2026-09-23: resolved — puzzle becomes read-only, submission is confirmed as accepted, no immediate score shown; player waits for the next round. See `decisions/unmade-decisions.md` PL-18/PL-19.)**
 
 ### 4.7 Automatic Submission at Time Expiry
 
@@ -186,6 +186,8 @@ The following are therefore **not finalized requirements**:
 These require clarification before detailed design.
 
 ## 8. Open Questions
+
+> **Update (2026-09-23):** most of the questions below are now answered by `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` and recorded in `decisions/unmade-decisions.md` §4 (each with a "Resolved" or "Still open" note). Notably still genuinely open: how credentials are delivered to players, multi-device/concurrent-session behavior, and whether teammates can communicate during a Team round. Treat this section as historical context; `decisions/unmade-decisions.md` §4 is the current source of truth.
 
 ### Competition Access
 
