@@ -437,7 +437,7 @@ A full reconciliation pass (`unmade-decisions.md` §1–11, each section's "Stat
 | ARCH-023 | A minimum REST + WebSocket API contract and a minimum relational domain model are proposed (Alignment §27–28, §32) — explicitly a starting point, not final. | Working Position (2026-09-23) |
 | ARCH-024 | **Backend language/framework is still not explicitly named** — the React/TypeScript frontend choice suggests but does not confirm a Node.js backend. This remains the one major technology gap before coding starts. | **Open** — see `unmade-decisions.md` §12 priority list |
 | ARCH-025 | **Expected scale/concurrency for the real competition is undefined.** `client-view.md`'s original numbers (≥1000 devices, 3000 concurrent) were for the full multi-tenant platform vision and almost certainly don't apply to one school's single event — but no document states the real number, and no architecture decision has been sized against it. | **Open — high priority**, see `unmade-decisions.md` §15.8 |
-| ARCH-026 | **UI language/localization was never specified**, despite the entire client-facing competition context being Chinese-language. | **Open — high priority**, see `unmade-decisions.md` §15.7 |
+| ARCH-026 | **UI language: bilingual — both English and Chinese.** Not Chinese-only, not English-only. i18n must be planned into the frontend architecture from the start. | Confirmed (2026-09-23, by product owner) |
 
 ### 14.5 Persistence scope
 

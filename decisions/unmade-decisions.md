@@ -426,7 +426,7 @@
 3. **Big Screen control** (§14.6) — Judge-only vs. Judge + Admin shared control.
 4. **Big Screen authentication** (§15.2) — no mechanism is defined anywhere; blocks building that client at all.
 5. **Judge failure/replacement path** (§15.5) — no story exists for judge disconnection or mid-competition replacement.
-6. **UI language/localization** (§15.7) — never specified anywhere, for a Chinese-language school competition.
+~~6. UI language/localization~~ **Resolved 2026-09-23: bilingual English + Chinese.**
 7. **Expected scale/concurrency for the real event** (§15.8) — the old "1000+ devices" numbers likely no longer apply; the real number was never stated.
 8. **Backend language/framework** (ARCH-2, §11) — the only major technology choice still genuinely unnamed.
 9. **Credential delivery mechanism** (PL-5/JD-7, §4.1/§5.1) — how generated usernames/passwords physically reach players and the judge.
@@ -559,9 +559,9 @@ Three separate threads converge on the same hole: JD-10 (can a judge be swapped 
 
 Several older documents (`project-decisions.md` PT-004, JM-004; `ORGANIZATION_ADMIN_REQUIREMENTS.md` OA-053, OA-063) speculated about OTP or one-time-credential access for players and judges. The Arena documents settle on ordinary system-generated username/password accounts instead — no OTP anywhere. Not a conflict (the older documents only ever said "potentially OTP," never committed to it), but worth recording explicitly as the actual answer rather than leaving the old "potentially OTP" language sitting there unresolved. See ARCH-7 in §11.
 
-### 15.7 New gap: no stated language/localization requirement anywhere
+### 15.7 UI language/localization — **RESOLVED (2026-09-23, by product owner)**
 
-Every document that describes the actual competition experience (`client-view.md`) is written for a **Chinese school competition**, for Chinese-speaking students and judges. But **no document anywhere — not the requirements, not the decisions, not the Arena Alignment Guideline — states what language the actual web app's UI should be in.** All of the English-language planning documents never raise this. For a real competition day with students and a judge using the product live, this is not a cosmetic detail — building the UI in the wrong language (or not planning for bilingual support) is exactly the kind of thing that forces a rebuild after the fact. **Needs an explicit answer:** Chinese only, English only, or does it need to support both?
+**Resolved: the UI must support both English and Chinese (bilingual).** Not Chinese-only, not English-only. This is a real product requirement — i18n/translation must be planned as part of the frontend architecture from the start, not bolted on later.
 
 ### 15.8 New gap: expected scale/concurrency for the actual competition is undefined — and the old numbers may no longer apply
 
@@ -577,5 +577,5 @@ Every document that describes the actual competition experience (`client-view.md
 | 15.4 | Results export possibly dropped | Silent scope gap | Medium |
 | 15.5 | No judge failure/replacement path | Missing requirement | High — operational risk on competition day |
 | 15.6 | OTP → password simplification | Clarification only | Low — already effectively answered |
-| 15.7 | UI language/localization never specified | Missing requirement | High — affects every screen; wrong guess means a rebuild |
+| 15.7 | UI language/localization | **Resolved (2026-09-23)** — bilingual English + Chinese | — |
 | 15.8 | Expected scale/concurrency for the real event undefined | Missing requirement | High — affects live architecture decisions already being made |
