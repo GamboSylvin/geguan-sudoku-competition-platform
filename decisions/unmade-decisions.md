@@ -426,13 +426,15 @@
 3. **Big Screen control** (§14.6) — Judge-only vs. Judge + Admin shared control.
 4. **Big Screen authentication** (§15.2) — no mechanism is defined anywhere; blocks building that client at all.
 5. **Judge failure/replacement path** (§15.5) — no story exists for judge disconnection or mid-competition replacement.
-6. **Backend language/framework** (ARCH-2, §11) — the only major technology choice still genuinely unnamed.
-7. **Credential delivery mechanism** (PL-5/JD-7, §4.1/§5.1) — how generated usernames/passwords physically reach players and the judge.
-8. **Per-question point-value incoherence** (§15.1) — reconcile the PDF's per-question "score/difficulty" fields against the flat 100-point rule.
-9. **Results export** (§15.4) — confirm whether a real export/download feature is still in scope, or on-screen viewing is sufficient.
-10. **Server failure / recovery** (FL-3/FL-4, §9) — still completely unaddressed; a real risk for a live one-shot event.
+6. **UI language/localization** (§15.7) — never specified anywhere, for a Chinese-language school competition.
+7. **Expected scale/concurrency for the real event** (§15.8) — the old "1000+ devices" numbers likely no longer apply; the real number was never stated.
+8. **Backend language/framework** (ARCH-2, §11) — the only major technology choice still genuinely unnamed.
+9. **Credential delivery mechanism** (PL-5/JD-7, §4.1/§5.1) — how generated usernames/passwords physically reach players and the judge.
+10. **Per-question point-value incoherence** (§15.1) — reconcile the PDF's per-question "score/difficulty" fields against the flat 100-point rule.
+11. **Results export** (§15.4) — confirm whether a real export/download feature is still in scope, or on-screen viewing is sufficient.
+12. **Server failure / recovery** (FL-3/FL-4, §9) — still completely unaddressed; a real risk for a live one-shot event.
 
-Everything else in §1–11 that was previously on this list — stage/round type definitions, category placement, publish/lock semantics, player access mechanism, persistence granularity — **is now resolved** and doesn't need further discussion unless someone has new information.
+Everything else in §1–11 that was previously on this list — stage/round type definitions, category placement, publish/lock semantics, player access mechanism, persistence granularity — **is now resolved** and doesn't need further discussion unless someone has new information. Items 13 and beyond in the earlier §1–11 detail (team-round parameters, question-bank management, competition reuse, multi-device sessions, data retention, anti-cheating policy) are real but lower-priority — worth answering, but they won't block starting to code the core flow.
 
 ---
 
@@ -557,7 +559,15 @@ Three separate threads converge on the same hole: JD-10 (can a judge be swapped 
 
 Several older documents (`project-decisions.md` PT-004, JM-004; `ORGANIZATION_ADMIN_REQUIREMENTS.md` OA-053, OA-063) speculated about OTP or one-time-credential access for players and judges. The Arena documents settle on ordinary system-generated username/password accounts instead — no OTP anywhere. Not a conflict (the older documents only ever said "potentially OTP," never committed to it), but worth recording explicitly as the actual answer rather than leaving the old "potentially OTP" language sitting there unresolved. See ARCH-7 in §11.
 
-### 15.7 Summary table
+### 15.7 New gap: no stated language/localization requirement anywhere
+
+Every document that describes the actual competition experience (`client-view.md`) is written for a **Chinese school competition**, for Chinese-speaking students and judges. But **no document anywhere — not the requirements, not the decisions, not the Arena Alignment Guideline — states what language the actual web app's UI should be in.** All of the English-language planning documents never raise this. For a real competition day with students and a judge using the product live, this is not a cosmetic detail — building the UI in the wrong language (or not planning for bilingual support) is exactly the kind of thing that forces a rebuild after the fact. **Needs an explicit answer:** Chinese only, English only, or does it need to support both?
+
+### 15.8 New gap: expected scale/concurrency for the actual competition is undefined — and the old numbers may no longer apply
+
+`client-view.md` (the original, full-platform vision) states hard scale targets throughout: **"≥1000 devices online"**, **"3000 concurrent users"**, **"low bandwidth"** — these numbers drove the original architecture thinking (light instructions only, no video, etc.). Since the MVP scope narrowed to **one school's single competition** (ENV-007/ENV-008), it's very unlikely those numbers still apply as-is — but **no document states what the real expected number of participants, judges, and Big Screens for the actual MVP competition day actually is.** The Arena Alignment Guideline's only mention of performance anywhere in its 2101 lines is a single unquantified line on Day 15: "Performance sanity test." This directly affects real architecture decisions already being made (is a single-process modular monolith with one Postgres + one Redis instance actually sufficient? does the WebSocket approach need to handle 50 concurrent players, or 500?) — exactly the kind of assumption that, if wrong, forces rework after coding has started. **Needs an explicit number** (even a rough one: "this MVP needs to handle roughly N students, M judges, K big screens") before implementation.
+
+### 15.9 Summary table
 
 | # | Topic | Type | Severity |
 |---|---|---|---|
@@ -567,3 +577,5 @@ Several older documents (`project-decisions.md` PT-004, JM-004; `ORGANIZATION_AD
 | 15.4 | Results export possibly dropped | Silent scope gap | Medium |
 | 15.5 | No judge failure/replacement path | Missing requirement | High — operational risk on competition day |
 | 15.6 | OTP → password simplification | Clarification only | Low — already effectively answered |
+| 15.7 | UI language/localization never specified | Missing requirement | High — affects every screen; wrong guess means a rebuild |
+| 15.8 | Expected scale/concurrency for the real event undefined | Missing requirement | High — affects live architecture decisions already being made |
