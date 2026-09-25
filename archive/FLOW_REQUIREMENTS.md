@@ -137,8 +137,8 @@ The client describes a **recognition-based scoring system**:
 - When a player submits, the system compares the **number of grids (cells) the player filled correctly** against the solution grid.
 - Points are awarded **according to the percentage of correct cells**.
 
-**[Check with client — Important divergence, open conflict as of 2026-09-23]**
-This is a **partial-credit / proportional** scoring model. The existing client-view.md competition rules describe a different model: individual rounds worth 100 points, full-correct submissions earn +3/min early bonus, wrong/blank answers score 0. These two models need to be **reconciled**: is scoring per-cell proportional, all-or-nothing per puzzle, or a hybrid? The newer `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` §18 uses the all-or-nothing model, but this has not been confirmed as the final answer — see `decisions/unmade-decisions.md` §14.3 for the open conflict, flagged for direct colleague/client review.
+**[Resolved 2026-09-24 by the stakeholder]**
+The proportional / per-cell description above is **discarded**. Scoring is **all-or-nothing per puzzle**: a puzzle scores only if it is fully correct. Points are set **per question by difficulty** and are customizable. The early bonus exists **only in the Individual stage**, counts whole minutes, and needs a fully correct round. See `decisions/project-decisions.md` §15.1 (SCR-001 to SCR-005).
 
 ### FLW-031 — Per-question point value and type
 - Each type of question has a **particular point value**.
@@ -223,8 +223,8 @@ The expected answers / solutions in the upload are **a requirement to be sent la
 | FLW-Q3 | **Still open** (minor) — the exact error/UX for an unauthorized attempt isn't specified. | PL-6 |
 | FLW-Q4 | **Resolved.** Judge manually starts each stage only; everything else (rounds, preparation, transitions) is automatic. No manual round start exists in the MVP. | SR-7, J-003/J-004/J-005 |
 | FLW-Q5 | **Resolved.** PK is deferred, out of MVP scope. | SR-3 |
-| FLW-Q6 | **Still open — genuine conflict, see `decisions/unmade-decisions.md` §14.3.** All-or-nothing (matches `client-view.md`) vs. this document's proportional/per-cell description (see the superseded note at FLW-030 above). |
-| FLW-Q7 | **Still open — and connects to a newly found incoherence.** The question-PDF format implies per-question point values (score/difficulty fields), which conflicts with the confirmed flat 100-points-per-question rule. See `decisions/unmade-decisions.md` §15.1. | SC-3 |
+| FLW-Q6 | **Resolved 2026-09-24 — all-or-nothing per puzzle** (`decisions/project-decisions.md` SCR-001). The proportional description at FLW-030 is discarded. |
+| FLW-Q7 | **Resolved 2026-09-24 — points are set per question according to difficulty and are customizable** (`decisions/project-decisions.md` SCR-003). Whether a round's total is fixed at 100 is still open (`decisions/unmade-decisions.md` §16, U-03). | SC-3 |
 | FLW-Q8 | **Resolved.** Round durations are fixed/predefined in code for the MVP (not admin-configurable, not dynamically driven by question type). | CS-005 |
 | FLW-Q9 | **Resolved.** Publication = lock; no post-publication edit path exists. | CMP-3, CMP-7, CMP-8 |
 | FLW-Q10 | **Resolved.** PDF contains questions + solutions + parameters (score, difficulty, type) — see FLW-Q7 above for the incoherence this creates. | OA-9, OA-11 |

@@ -187,7 +187,7 @@ These require clarification before detailed design.
 
 ## 8. Open Questions
 
-> **Update (2026-09-23):** most of the questions below are now answered by `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` and recorded in `decisions/unmade-decisions.md` §4 (each with a "Resolved" or "Still open" note). Notably still genuinely open: how credentials are delivered to players, multi-device/concurrent-session behavior, and whether teammates can communicate during a Team round. Treat this section as historical context; `decisions/unmade-decisions.md` §4 is the current source of truth.
+> **Update (2026-09-23):** most of the questions below are now answered by `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` and recorded in `decisions/unmade-decisions.md` §4 (each with a "Resolved" or "Still open" note). **Update (2026-09-24):** the three points that were still open are now resolved by the stakeholder — credentials are printed slips, a student has one active device and may continue on another tablet with the same login, and teammates do not communicate through the system (`decisions/project-decisions.md` §15.5–15.6). Students use Quark Browser on learning tablets; the individual answer screen is described in §15.7 (UI-001). Treat this section as historical context; `decisions/unmade-decisions.md` §4 is the current source of truth.
 
 ### Competition Access
 

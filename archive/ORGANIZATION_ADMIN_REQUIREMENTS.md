@@ -77,7 +77,7 @@ For each round, the admin should be able to configure at minimum:
 
 ## 4. Category
 
-### OA-030 — Category placement — **[Resolved 2026-09-23]**
+### OA-030 — Category placement — **[Resolved 2026-09-23; modified 2026-09-24: an event holds several categories running in parallel, each ranked separately — `decisions/project-decisions.md` EVT-002]**
 ~~It has not yet been determined whether a competition is dedicated to a single category or multi-category.~~ **Resolved:** one competition = one category (e.g. `U6`–`U20`). Different categories are separate competitions. Category is set at competition-creation time. See `decisions/project-decisions.md` PT-005.
 
 This must be clarified with the client/developers before finalizing the domain model.
@@ -177,11 +177,11 @@ A separate mechanism may be required for the Big Screen to access the competitio
 
 ## 9. Big Screen Responsibility
 
-### OA-080 — Admin has no Big Screen control — **[Open conflict, 2026-09-23]**
-The Organization Admin has **no control rights over the Big Screen**. Big Screen operational control is reserved for the Judge. **Note:** `client-view.md` §4.1/§4.3 states the client's original design has both Judge and Admin/Management with synchronized Big Screen control — this contradicts OA-080. Not yet resolved; flagged for direct colleague/client review. See `decisions/unmade-decisions.md` §14.6.
+### OA-080 — Big Screen control — **[Resolved 2026-09-24 by the stakeholder]**
+~~The Organization Admin has no control rights over the Big Screen.~~ **Resolved:** with **one** screen, judge and controller (admin) both control it; with **several** screens, only the controller does, and all screens show the same content. See `decisions/project-decisions.md` §15.3 (BSC-002).
 
-### OA-081 — Admin may facilitate access, not control
-The admin may participate in preparing/generating access information for the Big Screen if required by the final access model. This does not grant display-control authority. Depends on the OA-080 conflict above.
+### OA-081 — Big Screen access — **[Resolved 2026-09-24]**
+All screens open from **one shared link** with no per-screen login (BSC-001). The controller opens it and controls it.
 
 ## 10. Live Competition Responsibility
 
@@ -204,7 +204,7 @@ This is a **conceptual principle, not an architecture decision**. The actual arc
 
 ## 11. Live Competition Data
 
-### OA-100 — Possible live-data access — **[Resolved 2026-09-23]**
+### OA-100 — Possible live-data access — **[Superseded 2026-09-24: the controller needs a real-time view of all progress and can take over — `decisions/project-decisions.md` ROL-004]**
 ~~It is undecided whether the Organization Admin should have access to live competition data.~~ **Resolved as: no.** The Arena documents give the Admin only pre/post-competition HTTP endpoints — no WebSocket channel exists for the Admin (only Player, Judge, and Big Screen do). No live view during an active competition.
 
 ## 12. Competition Editing and Locking
@@ -212,7 +212,7 @@ This is a **conceptual principle, not an architecture decision**. The actual arc
 ### OA-110 — Edit before publication
 The admin should be able to edit a competition while it is still being prepared.
 
-### OA-111 — Configuration lock point — **[Resolved 2026-09-23]**
+### OA-111 — Configuration lock point — **[Resolved 2026-09-23; partly superseded 2026-09-24: numeric values stay editable by the controller until each round starts, and participants can be edited at any time — `decisions/project-decisions.md` SCR-005, PAR-003]**
 ~~The exact point at which configuration becomes immutable is unresolved.~~ **Resolved:** publication itself locks the configuration, immediately, with no exceptional post-publication edit path described. See `decisions/project-decisions.md` CA-004.
 
 Possible factors:
@@ -259,7 +259,7 @@ Possible dimensions (original aspiration, mostly cut for MVP — see above):
 ### OA-133 — Team scoring information
 The admin can access team scoring information after the competition. **The exact team scoring formula is a genuine open conflict** — see `decisions/unmade-decisions.md` §14.4.
 
-### OA-134 — Export results — **[Still open, possibly dropped — see §15.4]**
+### OA-134 — Export results — **[Resolved 2026-09-24: export of scores, rankings and answers is required (RES-002); the file format is still open]**
 The admin should be able to export competition results. Exact formats and fields remain to be specified. **The Arena Alignment Guideline's minimum API has no export endpoint at all** — only on-screen `GET` results/ranking. Whether an actual export/download feature is still planned needs an explicit answer. See `decisions/unmade-decisions.md` §15.4.
 
 ## 15. Responsibility Boundary

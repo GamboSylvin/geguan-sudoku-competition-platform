@@ -242,6 +242,8 @@ Explicitly **not** part of this architecture:
 
 ## 8. What This Document Does Not Decide
 
+> **Update (2026-09-24):** the stakeholder gave the real scale — about 600–720 students, 11 rooms, at least 30 judges, 10 synchronized big screens — and several new functions (per-question points, configurable values, score corrections with a log, archived scores on rematch, answers kept then purged after 15 days, participant numbering, copy). The architecture style is unchanged, but the domain model, API and plan in the Alignment Guideline must be revised before coding (`decisions/unmade-decisions.md` §16, I-01).
+>
 > **Update (2026-09-23):** several of these have since been named by `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` and recorded in `decisions/project-decisions.md` §14.4 — struck through below. Backend language/framework is now the one major technology choice still genuinely unnamed.
 
 Still **Open** and still to be derived from requirements:

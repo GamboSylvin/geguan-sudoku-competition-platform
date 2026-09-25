@@ -4,6 +4,8 @@
 **Status:** Proposal for discussion --- NOT final requirements\
 **Audience:** Client, product stakeholders, and development team
 
+> **Update (2026-09-24):** the stakeholder's answers changed the Judge role again. The event needs **at least 30 judges**, each assigned a range of participant numbers. Judges **do** see their students' status (connected, submitted), and a judge can restart the round of one student. A **controller (控制员, the administrator)** starts, pauses and ends rounds for everyone, controls the big screens when there are several, sees all progress live, and takes over when a judge loses connection. A rematch can be triggered by the judge or the controller. See `decisions/project-decisions.md` §15.2–15.3. This supersedes the statements below about connectivity monitoring and a single judge.
+>
 > **Update (2026-09-23):** many of this proposal's open items were subsequently answered by `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` and recorded in `decisions/unmade-decisions.md` §5 / `decisions/project-decisions.md` §14.2. In particular: **manual round start (J-005) does not appear in the MVP build** (only manual stage start + early round end are supported); **per-participant connectivity/progress monitoring (J-008) is not included** ("no separate inactive/absent status in the MVP"); **real-time ranking (J-009) is simply always visible to the Judge**, not gated; **"publish results" (J-020) and result confirmation (J-021) resolve to full automation** — no manual publish step, no confirmation step. Treat this document as historical context; `decisions/unmade-decisions.md` §5 is the current source of truth for what's actually decided vs. still open.
 
 ## 1. Purpose

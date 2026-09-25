@@ -6,6 +6,8 @@
 **Scope:** MVP
 **Related documents:** `FLOW_REQUIREMENTS.md` (flow), `client-view.md` (client vision), `decisions/project-decisions.md`, `decisions/unmade-decisions.md`
 
+> **Update (2026-09-24, stakeholder answers — `decisions/project-decisions.md` §15):** the Team stage has **two modes only**: rotation and "齐心协力" (working together); the buzzer-style mode is dropped, and rotation is built first. Rotation defaults are **10 questions** and **60 seconds**, both customizable. Team rounds have **no early-finish bonus** (the bonus exists only in the Individual stage). Each school has exactly one team per category, and a **school total ranking** is required (individual × 0.6 + team). The rules of "齐心协力" are not yet defined.
+>
 > This document defines the **competition stages**. The MVP realizes the **Individual** and **Team** stages. The **PK** stage is **deferred** and not realized in the MVP.
 >
 > When a requirement diverges from the client's `client-view.md`, the divergence is explicitly identified and left open for client validation.
