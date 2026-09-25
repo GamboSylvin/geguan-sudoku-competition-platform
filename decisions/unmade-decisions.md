@@ -75,7 +75,7 @@ The stakeholder answered most questions on 2026-09-24 and approved the team's pr
 
 | ID | Open point |
 |---|---|
-| I-01 | **The skeleton must be revised before coding:** the planning guideline's domain model, API and 15-day plan predate these answers. They need events with several categories, rooms and judge number ranges, per-question points, configurable values, archived scores, a score-correction log, an "auto-filled" flag, the 15-day purge, participant numbering, copy, and several synchronized big screens. The Guideline's module list also has no module for team rotation, control-hub arbitration, score corrections, purge, import/export or copy (see `requirements/ARCHITECTURE.md` §3). |
+| I-01 | **The skeleton must be revised before coding:** the planning guideline's domain model, API and 15-day plan predate these answers. They need events with several categories, rooms and judge number ranges, per-question points, configurable values, archived scores, the state of a team's rotation (refill queue and the question each tablet holds; the old row DP-6 asked for a team-progress data model), a score-correction log, an "auto-filled" flag, the 15-day purge, participant numbering, copy, and several synchronized big screens. The Guideline's module list also has no module for team rotation, control-hub arbitration, score corrections, purge, import/export or copy (see `requirements/ARCHITECTURE.md` §3). |
 | I-02 | Backend language/framework is still not named (ARCH-2). |
 | I-03 | Deployment and infrastructure, including whether to run an on-site server on the venue network as a fallback (ARCH-8/9). The venue facts the team needs from the stakeholder are U-46. |
 | I-04 | PDF extraction approach (ARCH-11). |
