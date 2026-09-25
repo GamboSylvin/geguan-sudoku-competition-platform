@@ -17,4 +17,6 @@ Source documents that have been read in full and merged into the live documents 
 | `ARCHITECTURE_REQUIREMENTS.md` | `ARCHITECTURE.md` §1, 3, 5, 10; register notes | 2026-09-25 | The team's architecture decision (modular monolith, in-process events) and its rationale. Its technology gaps were later filled by the Guideline; the event scope is still open as `I-08` (the file notes multi-tenant isolation, now later). |
 | `SUPER_ADMIN_REQUIREMENTS.md` | `REQUIREMENTS.md` §11; register rows `SA-006`…`SA-033`; open items `SA-9`…`SA-12` | 2026-09-25 | The Super Administrator's working scope for the later multi-tenant phase (tenant and competition overview, revocation, self-registration). Deferred, not cancelled (`SA-005`). |
 
+| `unmade-decisions-history.md` | the live `decisions/unmade-decisions.md` (open items only) and `decisions/project-decisions.md` (answers) | 2026-09-25 | The old open-questions register (sections 1–15) with every resolved row, split off when the live file was cleaned. Look here for the old row IDs (PL-*, JD-*, OA-*, SC-*, FL-*, ARCH-*). |
+
 **Rule:** a file is moved here only after its extraction report was approved and the checklist (`CONSOLIDATION_LOG.md`, in this folder) marks it done.

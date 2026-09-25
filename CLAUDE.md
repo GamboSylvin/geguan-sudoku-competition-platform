@@ -10,7 +10,7 @@ Do not assume that requirements, architecture, constraints, or technical decisio
 
 Do not move into implementation unless explicitly requested.
 
-Before any coding starts, the open items marked "needed before coding" in `requirements/REQUIREMENTS.md` §12 and `decisions/unmade-decisions.md` §16 (in particular I-01, the revised domain model and API) must be dealt with.
+Before any coding starts, the open items marked "needed before coding" in `requirements/REQUIREMENTS.md` §12 and `decisions/unmade-decisions.md` (in particular I-01, the revised domain model and API) must be dealt with.
 
 ---
 
@@ -48,7 +48,7 @@ Requirements may be proposals unless tagged [C].
 Contains the current decision tracking:
 
 * `project-decisions.md` — history and current status of project decisions (rows with IDs such as SCR-001, ROL-003, PAR-005).
-* `unmade-decisions.md` — decisions that are still open, deferred, or otherwise require confirmation. Section 16 is the live list (U-* for the stakeholder or assumptions, I-* internal); the older sections are history and are annotated when resolved.
+* `unmade-decisions.md` — decisions that are still open, deferred, or otherwise require confirmation. The file holds only open items (U-* for the stakeholder or assumptions, I-* internal, and a few later-phase rows); once an item is answered it moves to `project-decisions.md` and leaves this file. The old body, with all resolved rows, is archived in `archive/unmade-decisions-history.md`. Any question the project files cannot answer is recorded here, never guessed.
 
 Decision statuses must always be respected.
 

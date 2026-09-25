@@ -248,6 +248,7 @@ The server keeps the round timer running. A reconnecting player receives the cur
   - **No manual tenant creation:** organizations register themselves on their own portal; the Super Administrator does not add them. (SA-032)
   - **Deferred beyond that:** billing and payments (there is no payment system); suspending or blocking one organization admin without deleting the tenant; platform-level configuration; an audit log of Super Administrator actions (SA-12); reactivating a deleted tenant. Whether access is read-only apart from revocation is undecided. (SA-8)
   - **Shape:** platform (one Super Administrator) → tenants that register themselves → each tenant's organization admin(s) and competitions, whose names and basic details the Super Administrator sees. The Super Administrator sees organizations and their representatives, competition counts and basic details, and can revoke tenants; it never adds them.
+- **Puzzle authoring or generation:** not planned. Questions come only from the imported PDF (strict format, no OCR), and the app does not create, generate or edit puzzles. **[A]** U-45 (to confirm with the stakeholder)
 - **Reusable Question Bank [L]** (the client's flow document calls the puzzles "equations" and the bank the "equation bank"): imported question packs saved globally so later competitions can reuse them (or import a new PDF); the system tells the admin when the bank is empty. When configuring a round the admin would select questions from the bank, filtered to those compatible with the round type, and manage the bank independently of any competition (create, edit, delete, archive, version: not yet defined); the admin is the only role that manages it. Questions extracted from an imported PDF are also saved to the bank. The first version uses each competition's own upload. **[T]** (CMP-101)
 - **Buzzer mode (抢答夺分) [dropped]:** the whole team sees the same puzzle and races to answer; the first correct answer gets full points; a wrong answer deducts points or passes the right to answer. (TEM-001)
 - **Rules in the client document replaced by later answers:** the +10 per minute early bonus for team rounds (SCR-002); wrong-answer deductions and time-and-accuracy weighting in the standard round (SCR-001); the proportional "percentage of correct cells" scoring described in the client's flow document, discarded in favor of all-or-nothing per puzzle (SCR-001); the judge marking answers and controlling rotation and refill, which the system now does automatically (EX-001); "past comparison" reports (RES-004).
@@ -258,12 +259,12 @@ The server keeps the round timer running. A reconnecting player receives the cur
 
 ## 12. Open items
 
-The complete live list is `../decisions/unmade-decisions.md` §16: 59 items, U-01…U-44 (questions for the stakeholder and low-risk assumptions) and I-01…I-15 (internal), plus the older later-phase rows listed in its §16.4. Those that most affect what is built:
+The complete live list is `../decisions/unmade-decisions.md`: 64 items, U-01…U-46 (questions for the stakeholder and low-risk assumptions) and I-01…I-18 (internal), plus the later-phase rows kept in its §4. Those that most affect what is built:
 
 - **Competition rules still open:** U-03 (round total), U-21 (齐心协力), U-22 (tie-break), U-23 (players see their score), U-24 (publish step), U-27 (awards), U-31 (cancel), U-33 (submission granularity), U-34 (preparation length), U-35 (next stage start).
-- **Setup and data:** U-32 (files per category), U-36 (whole-file re-upload after publish), U-42 (appeals versus the 15-day deletion).
+- **Setup and data:** U-32 (files per category), U-36 (whole-file re-upload after publish), U-42 (appeals versus the 15-day deletion), U-45 (puzzle authoring or generation, assumed out), U-46 (venue network, internet and hosting).
 - **Assumptions awaiting confirmation:** U-04, U-11…U-20, U-37…U-41, U-43, U-44.
-- **Internal, needed before coding:** I-01 (revised domain model and API), I-06 (question delivery timing), I-10 (server restart mid-round), I-11 (late manual submit), I-14 and I-15 (answer check and grid shapes); also I-02 (backend language), I-03, I-04, I-05, I-07, I-08, I-09, I-12, I-13.
+- **Internal, needed before coding:** I-01 (revised domain model and API), I-06 (question delivery timing), I-10 (server restart mid-round), I-11 (late manual submit), I-14 and I-15 (answer check and grid shapes); also I-02 (backend language), I-03, I-04, I-05, I-07, I-08, I-09, I-12, I-13, I-16 (session length and idle behavior), I-17 (team roles and names), I-18 (what the developers know, which decides I-02).
 
 ## 13. MVP acceptance scenario
 
