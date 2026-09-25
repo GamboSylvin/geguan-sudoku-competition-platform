@@ -1,6 +1,6 @@
 # CONSOLIDATION_LOG.md
 
-**Status:** finished on 2026-09-25 and archived. All 12 source files and the stakeholder answers were merged, each checked twice, and both live documents were reviewed end to end. Kept as the record of what was merged where.
+**Status:** finished on 2026-09-25 and archived (a last careful re-read of every archived file, after archiving, added two small statements: why judges see connection status, and that only the admin manages the question bank; a further sentence-by-sentence check of all eleven English files then added a wrong-answer-key rule (U-44), the note that organizers have no dedicated platform, the shared components across role areas, and the split between internal events and client messages). All 12 source files and the stakeholder answers were merged, each checked twice, and both live documents were reviewed end to end. Kept as the record of what was merged where.
 
 Working checklist for merging the requirement documents into the four live documents: `../requirements/REQUIREMENTS.md`, `../requirements/ARCHITECTURE.md`, `../decisions/project-decisions.md`, `../decisions/unmade-decisions.md`.
 
