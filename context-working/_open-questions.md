@@ -6,7 +6,7 @@
 > question will guess, so none of these may stay open once specs are written.
 >
 > The stakeholder-facing items are collected in `_stakeholder-question-pack.md` (36 questions plus a re-confirmation table).
-> Answers received go back into this file first.
+> Answers received go back into this file first, and then into the draft context files (`project-overview.md`, `competition-rules.md`, `architecture.md`, `ui-context.md`, `progress-tracker.md`, ...), which are updated as answers arrive.
 >
 > Source: `_interview-notes.md`. IDs in brackets (U-03, I-06, ...) are references from the user's
 > answers only; each question is written in plain words so this file stands on its own.
@@ -21,37 +21,9 @@
 
 ## Resolved items
 
-Decided on 2026-09-26 by the project owner, answering in the stakeholder's role (pack Q1 to Q4 and their follow-ups). These are decisions to build from, tagged [T].
-They are **not yet confirmed by the client's own stakeholder** and must not be presented as "confirmed by the stakeholder". Where something is still open, it is listed under Priority 1 below.
-Terms: an event has categories; a category has two stages (Individual, Team); each stage has 2 rounds; an Individual round has 6 puzzles.
-The decisions are also recorded in the project's decision register (rows SCR-006 to SCR-012 and SUB-001 to SUB-007 in decisions/project-decisions.md §15.8) and in requirements/REQUIREMENTS.md §3 to §7. Those files were not touched here.
+Resolved points were moved out of this file on 2026-09-26. The decisions are in `competition-rules.md` (tagged [T], not client-confirmed); the client's confirmation of them is carried by rows R15 to R28 of `_stakeholder-question-pack.md`. This file now lists only what is still open.
 
-| Topic | Decision | IDs |
-|---|---|---|
-| Points and total | The controller defines the points of the puzzles before a round starts. No default split of the 100 points is imposed. The round total is the sum of the question points, calculated, not stored as a fixed 100. | U-71 |
-| Total warning | If the total of an Individual round is not 100, the controller sees a warning before the round starts; it is not blocked. Team rounds have no fixed maximum (the team score is the number of correct answers times the points per question) and no warning. | U-72 |
-| Submission | A student submits once for the whole round. Until then the student moves freely between the 6 puzzles and edits any of them. After submitting, all puzzles of the round are read-only and the submission is final. | U-33 |
-| Before the final submit | The student is asked to confirm. A student may submit with blank puzzles; they score 0, and the confirmation says how many are blank. | U-74 |
-| After submitting | The student sees the submission accepted and no immediate score. | |
-| Judge restart of one student | Treated as a one-person rematch (ROL-005): the earlier submission and score are archived, not deleted; a judge can restart a student only while the round is running; the restarted round starts with a blank grid and the remaining round time on the shared server timer, so the student has the same deadline as everyone (corrected 2026-09-26: the earlier "full round time" conflicted with the shared timer). If a restart would come too late to be useful, the remedy is the replay of the round, which the judge or the controller can trigger (ROL-005). The bonus is measured on the round timer, like everyone else's, not on a separate clock. This differs from a tablet failure, where the student continues on another tablet with the saved answers and the remaining time (PAR-005). | U-75 |
-| Early-finish bonus, rule | Applies in both Individual rounds; team rounds have none. Earned when the student submits before time ends with every puzzle of the round fully correct, counted in whole minutes (1 min 30 s early counts as 1 minute). The rate is 3 points per whole minute, customizable by the controller before a round starts. | U-47, U-18 |
-| Maximum bonus | No limit by default. The controller may set an optional maximum, in points, separately for each Individual round. Empty means no cap. | |
-| Bonus and ranking | The bonus is part of the round score, so a round score can exceed the round maximum. The individual ranking and the school total use that round score. | U-73 |
-| How the bonus is measured | On the server round timer, which stops during a pause, in whole minutes. Fixed at the student's own manual submit and never changed afterwards. An automatic submission (time expiry, or the controller ending the round early) gets no bonus. A student who submitted earlier keeps the bonus. | U-78 |
-| Round end | A round has no automatic end when everyone has submitted. It runs until its timer ends or the controller ends it. | U-79 |
-| Values the controller can enter | Question points, the bonus rate and counts are whole numbers, so question and round scores are stored as integers. A question's points are a whole number of at least 1: negative points are not allowed (no negative marking is documented) and zero is not allowed either. Zero is allowed for the bonus rate (meaning no bonus). Times and question counts must be greater than zero. The school coefficient accepts decimals (default 0.6). No maximum, except the optional bonus cap. | U-80 |
-| School total | Stored as an exact decimal, not a floating-point number, and neither rounded nor truncated. Schools are ranked on the exact value, and it is shown with its decimals. Question and round scores stay whole numbers. | U-82 (open: does the regulation require rounding?) |
-| Late submit (Individual rounds) | The server clock decides. A manual submit that reaches the server after the round timer has ended is not counted as a manual submit; the latest autosaved answers are submitted automatically instead, as at any time expiry. No grace period. Considered fair, since answers are saved in real time. | U-48 |
-| After a late submit | The student sees the same state as any student whose time expired: puzzles read-only, submission shown as received, no score. No separate message about lateness. | U-77 |
-| Team rotation timing | The 60 seconds is the interval at which questions move to the next seat, not a deadline. When a question moves to the next teammate, the partly filled grid goes with it. A submit for a question the tablet no longer holds is rejected, and the member sees the new question. If a total round time is set, when it ends only answers already submitted and correct count. | U-76 |
-| Students see their score | Students see their own score and rank after the results are published. Right after a submit they see no score. | U-23 |
-
-Status of every row: project owner decision, in the stakeholder's role [T]; not confirmed by the client's stakeholder.
-
-Corrections recorded: the bonus's "everything correct" was first wrongly listed as confirmed; only the wording was confirmed, and the reading "every puzzle of the round" is now decided (see the bonus rule).
-"A submission is the player's final result for that round" came from the earlier player requirements, not from a stakeholder confirmation; the once-per-round rule is now decided by the project owner.
-
-Last updated: 2026-09-26, after the project owner's report on Part 1 (Q1 to Q4) was applied. All interview steps asked; readiness check not passed.
+Last updated: 2026-09-26, after the resolved points were removed (they live in `competition-rules.md`). All interview steps asked; readiness check not passed.
 
 ---
 
@@ -63,8 +35,7 @@ Priority 3 = confirmations and later-phase items.
 
 ### Priority 1 — scoring and round rules
 
-Pack Q1 to Q4 (points and total, submission, early-finish bonus, late submit) and their follow-ups were decided on 2026-09-26 by the project owner, answering in the stakeholder's role.
-The full decisions are in "Resolved items" at the top of this file. They are tagged [T] and are **not yet confirmed by the client's own stakeholder** (pack R15 to R21).
+Pack Q1 to Q4 (points and total, submission, early-finish bonus, late submit) were decided on 2026-09-26 by the project owner, answering in the stakeholder's role. The decisions are in `competition-rules.md` ([T], **not yet confirmed by the client's own stakeholder**, pack R15 to R28).
 
 **Still open from this part**
 
@@ -72,71 +43,23 @@ The full decisions are in "Resolved items" at the top of this file. They are tag
 - The project owner will come back with a sample PDF. Do not assume the PDF carries the points.
 - Answer: _
 
-**A4d. When may students see their score? (U-24)** — OPEN, stakeholder
+**A4d. When may students see their score? (U-24, U-88)** — OPEN, stakeholder
 - What does "publish results" mean, and when exactly do results count as published? (Decided: students see their own score and rank after the results are published, and no score right after a submit, U-23.)
 - Answer: _
 
-**A1e. Follow-ups, round 4, asked the user directly (2026-09-26)** — OPEN
-- **H1. Team-round question points.** "Team score = number of correct answers times the points per question." Is the points value the same for every question of a team round (one value per round), or set per question by difficulty, as in the individual rounds?
-- **H2. Limit on judge restarts.** Is there a limit on how many times the same student can be restarted in one round?
-- Answer: _
-
-**A1d. Unscored or practice puzzles? (U-83)** — OPEN, stakeholder
-- A question's points are a whole number of at least 1 (zero and negative points are not allowed). Do unscored or practice puzzles exist?
-- Answer: _
-
-**A4f. Does the regulation require rounding of the school total? (U-82)** — OPEN, stakeholder
-- The school total is stored as an exact decimal and is neither rounded nor truncated. Does the regulation require it to be rounded, and how?
-- Answer: _
-
-(Follow-ups G1 to G4, asked the user directly on 2026-09-26, were answered and are recorded in "Resolved items".)
-
 ### Priority 2 — event behaviour
 
-**A5. Preparation countdown (U-34)** — Priority 2 — OPEN
-- Question: How long is the preparation countdown before each round?
-- Suggestion on record: none. The earlier "30 seconds" was withdrawn.
-- Answer (2026-09-25): **"Don't know."** Still OPEN.
-- Known: the countdown is automatic, and each round has a preparation room showing the round's rules and the countdown. [T]
-  The team's plan says the length is "predefined" but gives no value. Being a numeric value, the controller can customize it before a round starts. [P] (SCR-005)
+**A5f. Do the categories have their own question files? (U-32)** — OPEN, stakeholder
+- Answer: _
 
-**A6. Next stage start (U-35)** — Priority 2 — OPEN
-- Question: After a stage ends, must the controller start the next stage manually, or should it begin by itself?
-- Suggestion on record: none. The earlier "the next stage waits for the controller" was withdrawn.
-- Answer (2026-09-25), split in two:
-  - **Next round inside a stage:** starts by itself. After a stage starts, preparation, countdown, round and the next round need no judge or controller action. [T] (CS-022, J-003). Recorded as a team decision; the stakeholder has not confirmed it.
-  - **Next stage: "don't know."** Still OPEN (U-35). The team's plan is inconsistent: its lifecycle diagram and its stage-transition flow disagree.
-- Known: only the controller starts a stage. [P] (ROL-003)
+**A6d. Finished early: awards, and reset after finishing (U-27, U-89)** — OPEN, stakeholder
+- Do awards apply when a competition is finished early? Can the controller reset (rematch) after the competition has finished?
+- Answer: _
 
-**A7. Essential features on the day (U-07)** — Priority 2 — OPEN
-- Question: Which features are essential for each role and for the event day, and which can come later? The team proposes building the individual stage first, end to end; it is not signed off. Do you confirm?
-- Why it matters: with two junior developers and about 15 days, the build order decides what exists on the day.
-- Suggestion on record: only the team's "Individual stage first" [A], not signed off. The earlier feature table and longer build order were withdrawn.
-- Answer (2026-09-25): **"Don't know."** Still OPEN (U-07). The stakeholder did not rank the features into "essential on the day" and "later".
-- Known:
-  - The team's proposal, not signed off [A]: build the individual stage first, end to end. (A longer order given earlier is not documented and must not be used.)
-  - Within the team stage, the stakeholder confirmed that rotation is built first. [C] (TEM-001)
-  - The school total needs both team rounds, so 齐心协力 matters if it is required on the day.
-
-**A8. Server restart during a round (I-10)** — Priority 2 — OPEN
-- Question: What is acceptable if the server restarts or crashes in the middle of a round? Must the event continue exactly where it stopped, with the timer correct? How long an interruption is tolerable?
-- The earlier "product constraint: a restart must not lose the event" was withdrawn.
-- Suggestion on record (NOT an answer, not used): none. Options to present (prepared by Claude, not decided): full recovery of running rounds from stored state; recovery with the controller pausing and resuming manually.
-- Answer (2026-09-25), partly answered:
-  - **Answered:** the stakeholder's accepted behaviour is that after a network or server failure the round is replayed, and the judge or controller can trigger it. [C] (ROL-005)
-  - **Still OPEN:** whether a round must continue exactly where it stopped (I-10, technical).
-  - **Still OPEN:** how long an interruption can be tolerated (U-49).
-  - Note: replay is the only accepted behaviour on record. Whether a mid-round restart can instead continue is undecided.
-
-**A9. Question delivery and early inspection (I-06)** — Priority 2 — OPEN
-- Question: The questions are preloaded on the tablets so only light commands travel during the round. How much risk of a student inspecting them before the start is acceptable? Should questions be sent only at the moment of the start, accepting a load spike on the Wi-Fi?
-- The earlier "product constraint: students should not be able to inspect questions before the round starts" was withdrawn.
-- Suggestion on record (NOT an answer, not used): none.
-- Answer (2026-09-25): **"Don't know."** Still OPEN (I-06 is the technical choice; U-50 is the risk the stakeholder accepts).
-- Known:
-  - The client document preloads questions on the tablets to keep traffic light. [S]
-  - The two options on the table: preload them encrypted and release the key at the start, or fetch them at the round start with staggering.
-  - Up to about 300 tablets sit in one room.
+**A8. Server restart during a round (I-10)** — Priority 2 — PARTLY RESOLVED (2026-09-26)
+- Decided [C] (BLD-007): a replay is acceptable. Round state changes are kept in PostgreSQL and the working grids in Redis with persistence on. After a restart the competition comes back paused, so the controller chooses to resume or replay (see `architecture.md`).
+- **Still OPEN (U-49):** how long an interruption during a round is acceptable.
+- Answer: _
 
 **A10. Team round 2, "齐心协力" (U-21)** — Priority 2 — OPEN (deferred)
 - Question: What exactly is the second team round? Is it the partition-collaboration round (team members each solve part of one grid)? How does scoring work?
@@ -176,11 +99,6 @@ The full decisions are in "Resolved items" at the top of this file. They are tag
 **A16. Primary user (U-52)** — Priority 3 — OPEN
 - Question: Which of the four ends (player, controller, judge, big screen) is the primary user of the product?
 - Suggestion on record: none. The documents list four ends and a business goal of reducing the organizers' effort, without naming a primary user. The earlier "the controller" was withdrawn.
-- Answer: _
-
-**A17. Who assigns judges' ranges (U-53)** — Priority 2 — OPEN
-- Question: Each judge has a range of participant numbers. Who assigns each range, and when: at setup, or also during the event?
-- Suggestion on record: none. The earlier "the controller gives each judge a range" was withdrawn.
 - Answer: _
 
 **A18. Who opens the big-screen link and hands out slips and tablets (U-54)** — Priority 2 — OPEN
@@ -244,11 +162,6 @@ The full decisions are in "Resolved items" at the top of this file. They are tag
 - Why it matters: the README requires team roles to be defined before the build starts.
 - Answer (2026-09-25): **Not in the documents.** Still OPEN (I-17). The documents record only two junior developers [T], a stakeholder on the client side, and a project owner who made the single-tenant decision (ENV-007). The project owner must supply the names and roles.
 
-**C4. File storage (I-19)** — OPEN
-- Question: Where are uploaded and generated files kept (question PDF, participant Excel, exports): server disk or object storage?
-- The documents do not mention file storage. New internal item I-19.
-- Answer (2026-09-25): **Not decided.** Still OPEN (I-19). The documents settle only PostgreSQL and Redis.
-
 **C5. Session length and login rules** — OPEN
 - Question: How long should a login session last? (The earlier "it must survive a whole round and a page refresh" was withdrawn.) Documented [P] (PAR-005): one active device per account, the newest login takes over. Do you confirm?
 - Suggestion on record (NOT an answer, not used): none for length.
@@ -256,12 +169,6 @@ The full decisions are in "Resolved items" at the top of this file. They are tag
   - **Session length: not decided.** Still OPEN (I-16).
   - **One active device per account, newest login takes over:** recorded [P] (PAR-005). The team proposed it and the stakeholder approved it in the blanket answer, without discussing the detail. It is not an explicit stakeholder decision, so it stays to be re-confirmed (E2).
   - Known from PAR-005: a student whose tablet fails can continue on another tablet with the same login, with saved answers and remaining time carried over.
-
-**C6. Live state and recovery design** — OPEN
-- Question: Where does the live grid state live while a round runs (Redis is a documented team decision [T]), and how does it reach PostgreSQL: on submit, at intervals, or both? How is it protected if Redis restarts?
-- Note: the earlier load figure (about 800 clients, about 2 saves per second) is a suggestion on record, not confirmed (B1), and the earlier "server restart must not lose the event" rule was withdrawn.
-- Depends on: A8, B1.
-- Answer: _
 
 **C7. Internal-only status tags** — OPEN
 - Question: The context files keep the status tags ([C], [P], [S], [T], [A], [O], [L]). Confirm this format and whether decision IDs stay as references.
@@ -387,33 +294,11 @@ Which questions were re-asked, and the outcome. A question stays OPEN until a cl
   - All interview steps have now been asked. Readiness check not passed.
   - To ask the team and the project owner at the end.
 
-- **2026-09-26, answers to pack Q1 (follow-ups), Q2 and Q3 received:**
-  - Q1: sum rule resolved as a team decision; follow-ups: default split OPEN (U-71), where points are set OPEN (U-03), warning applies to Individual rounds only (team decision), team-round maximum OPEN (U-72). Logged as stakeholder items because the user is not sure.
-  - Q2: resolved as a team decision (one submission per whole round in the Individual stage). Two follow-ups asked directly (A2b).
-  - Q3: a, b, d resolved as team decisions; c conflicts with the 2026-09-25 correction, asked directly (A3b).
-  - All of these still need stakeholder confirmation (pack R15 to R17).
-- **2026-09-26, answers to pack Q4 and to the follow-ups A2b and A3b received:**
-  - Q4: resolved as a team decision (server clock, no grace period, auto-submit of the latest autosave). Stakeholder confirmation pending (U-48). Follow-up A4b asked directly (team rotation, student message).
-  - A3 c: the earlier "confirmed" claim was wrong; the wording is confirmed, the reading is not (U-47).
-  - New stakeholder items: bonus and ranking (U-73), confirmation before final submit (U-74), what a judge's restart starts with and its time (U-75).
-  - **Check for deletion (requested by the user):** none of Q1 to Q4 can be deleted, because each still has a stakeholder-dependent part. Q1: U-71, U-03, U-72, and R15. Q2: U-33 confirmation (R16), U-74, U-75. Q3: U-18/U-47 (R17), the reading of c (U-47), U-73. Q4: U-48 (R20).
-- **2026-09-26, answers to the Q4 follow-ups received:** the late-submit rule is corrected to the Individual rounds only. Team rotation late-submit behaviour is a new stakeholder item (U-76); a lateness message for students is a new stakeholder item (U-77).
-  The user was asked six further follow-ups for Q1 to Q4 (A4c, F1 to F6). Q1 to Q4 still cannot be deleted.
-- **2026-09-26, report on Part 1 (Q1 to Q4) received from the project owner, answering in the stakeholder's role:** all of the entries above (A1, A1b, A2, A2b, A3, A3b, A4, A4b, A4c and their working positions) are **superseded**.
-  - The decisions are recorded in "Resolved items" at the top of this file, tagged [T], **not confirmed by the client's own stakeholder**. The six A4c follow-ups (F1 to F6) were answered: F1 students see their own score and rank only after results are published (U-23), F2 bonus measured on the pausing server round timer and fixed at the manual submit (U-78), F3 no automatic round end (U-79), F4 blank puzzles allowed with a count in the confirmation (U-74), F5 whole numbers and limits (U-80), F6 optional cap in points per Individual round.
-  - The resolved blocks A1 to A4c were removed from the open list; only what is still open remains under Priority 1: A1c (do the PDFs carry points, U-03 second part), A4d (when students see scores, U-24), A4e (four new follow-ups G1 to G4 asked directly).
-  - New stakeholder-facing wording is in the pack (Part 1 rewritten; R15 to R21 replace the earlier R15 to R20; new Q1c and Q4c).
-  - Not covered yet: Q5 to Q7 of Part 1 and Parts 2 to 7 of the pack.
-- **2026-09-26, answers to the round 3 follow-ups G1 to G4 received:**
-  - G1: a judge can restart a student only while the round is running; the restarted student gets a blank grid and the **remaining** round time on the shared server timer. This **corrects** the earlier "full round time" in the Resolved items. If a restart would come too late, the remedy is the replay of the round (ROL-005). Earlier submission and score archived.
-  - G2: the bonus is measured on the round timer, not on a separate clock.
-  - G3: the school total is an exact decimal, neither rounded nor truncated, ranked on the exact value and shown with its decimals; question and round scores stay whole numbers. New stakeholder item: does the regulation require rounding (U-82).
-  - G4: a question's points are a whole number of at least 1; negative and zero points are not allowed. New stakeholder item: do unscored or practice puzzles exist (U-83).
-  - Recorded as project owner decisions, [T], not confirmed by the client's own stakeholder. Pack R21 and the Part 1 text updated; new pack questions Q1d and Q4d.
-- **2026-09-26, check of Q1 to Q4 requested by the user (ask follow-ups, otherwise delete):**
-  - Two more follow-ups found and asked directly (A1e): team-round question points (same for every question or per question) and a limit on judge restarts. Q1 stays in the pack until they are answered.
-  - Cleared: Q2 (submission), Q3 (early-finish bonus), Q4 (late submit) and Q4b (team rotation timing) were removed from the pack, since every part is clear and only the client's confirmation remains, which is carried by R16 to R19 and R21. Their decisions stay in "Resolved items" here as the record for the context files.
-  - Not deleted: Q1 (pending A1e, Q1c, Q1d), Q4c (U-24) and Q4d (U-82), which depend on the stakeholder or the project owner.
+- **2026-09-26, Part 1 of the pack (Q1 to Q6) answered on the project side.** All resolved entries were removed from this log. The decisions are in `competition-rules.md` ([T], not client-confirmed) and their client confirmation is carried by pack rows R15 to R28. The open items that came out of them stay in the sections above (A1c, A4d, A5f, A6d).
+- **2026-09-26, decisions file transferred (`decisions-for-the-context-builder.md`, removed after transfer).** It stated that Q1 to Q6 and the builder's blocking questions were **confirmed by the stakeholder** on 2026-09-26, which reverses their earlier [T] status; the context files now carry them as [C]. Verify with the project owner.
+  - Resolved and removed from this file: essential features on the event day (first slice = Individual stage), the server-restart behaviour except its duration (U-49 stays), question delivery, judge ranges, file storage, live-state placement, roles (one role per account, several controllers), workflow and CI.
+  - New open items (section K): sample files (U-01), extra Excel columns (U-40), unique solutions (U-90), judge and controller credentials (I-30), what I-14 and I-15 are, and the scope of the 15-day deletion (U-59, U-62).
+  - Left blank on purpose (TBD — to be decided by the project owner): backend language and framework, developers' skills, names and roles, who builds what, where the server runs on the event day.
 
 ---
 
@@ -422,23 +307,20 @@ Which questions were re-asked, and the outcome. A question stays OPEN until a cl
 Working rule (set by the user): if an answer is unclear and the user can clarify it, ask a follow-up before moving on.
 If the stakeholder or the venue must clarify it, log it here and return to it at the end. Assume nothing.
 
-**Project owner and the developers (the user has no answer; ask them):**
-- C3 team names and roles (I-17) · C1 developers' skills (I-18) · E1 which team decisions stay open
+**Project owner (blank on purpose or to be supplied):**
+- Backend language and framework (I-02), developers' skills (I-18), names and roles (I-17), who builds what (I-23), where the server runs (I-03, U-46): TBD — to be decided by the project owner
+- K1 sample files (U-01) · K5 what I-14 and I-15 are
 
 **Team can settle it (decision not yet made):**
-- C2 backend language and framework (I-02) · C4 file storage (I-19) · C5 session length (I-16) · H1 final module list (I-01) and how modules communicate (I-08) · I2 component library, icons and fonts (I-20) · J1 to J9 build units, order, definition of done, split of work, environment, git, CI, review, team sync (I-21 to I-28; J1 also depends on the stakeholder's U-07)
-- C6 live-state and recovery design · C7 status-tag format · E1 the [T] team decisions
-- Technical side of A4 (late submit, I-11) · A8 (continuing after a restart, I-10) · A9 (how questions are delivered, I-06)
-- A2 and A6 (next stage): the team's own plan is ambiguous on per round or per puzzle (U-33), and disagrees with itself on next stage (U-35);
-  the team can say what its plan means, but the product behaviour still needs the stakeholder.
+- C5 session length (I-16) · H1 final module list (I-01) and how modules communicate (I-08) · I2 component library, icons, fonts (I-20) · J5 environment (I-24) · J9 team sync (I-28) · J1 to J3 build units, order and definition of done · K4 judge and controller credentials (I-30) · C7 status-tag format · E1 the [T] team decisions
 
 **Only the stakeholder can settle it (log and return at the end):**
-- U-03 second part (do the question PDFs carry the points, project owner) | U-24 (when students see scores) | U-82 (does the regulation require rounding of the school total) | U-83 (unscored or practice puzzles) | client confirmation of the Part 1 decisions (pack R15 to R21)
-- A5 countdown length (U-34) · A6 next stage (U-35) · A7 event-day features (U-07) · A8 tolerable interruption (U-49) · A9 accepted early-viewing risk (U-50)
-- A10 what 齐心协力 is (U-05, U-21) · A11 to A19 (authoring U-45, third language U-51, primary user U-52, judge ranges U-53, link and slips U-54, judge powers U-55) · D1 to D6 (U-56 risks, U-57 external systems, U-58 performance, U-59 data protection, U-37 anti-cheating, U-60 scale, U-61 reliability, with U-46 and U-49) · H2 to H4 (U-62 archived scores, U-63 read/change rules, U-55 judge powers, U-64 several roles, U-11 one or more controllers) · I1 to I6 (U-65 brand and look, U-70 fonts and Chinese display, U-66 layouts, U-67 screen sizes, U-68 language switching, U-69 accessibility) · E2 to E6 re-confirmations
+- A1c question PDF carries points (U-03) · A4d when students see scores (U-24, U-88) · A6d awards and reset after an early finish (U-27, U-89) · A5f question files per category (U-32) · A8 acceptable interruption length (U-49) · K2 extra Excel columns (U-40) · K3 unique solutions (U-90) · K6 15-day deletion scope (U-59, U-62)
+- A10 what 齐心协力 is (U-05, U-21) · A11 to A19 remaining (authoring U-45, third language U-51, primary user U-52, link and slips U-54, judge powers U-55) · D1 to D6 (U-56 risks, U-57 external systems, U-58 performance, U-59 data protection, U-37 anti-cheating, U-60 scale, U-61 reliability) · H2 and H3 (U-62 archived scores, U-63 read/change rules, U-55 judge powers) · I1 to I6 (U-65 brand and look, U-70 fonts and Chinese display, U-66 layouts, U-67 screen sizes, U-68 language switching, U-69 accessibility) · E2 to E6 re-confirmations
+- Client confirmation of the 2026-09-26 decisions: stated as given (see `competition-rules.md`); verify with the project owner.
 
 **Venue or school (stakeholder to obtain):**
-- B1 exact numbers (U-02) · B2 tablets and Quark version (U-06) · B3 venue network · B4 hosting (also a team decision on the setup side)
+- B1 exact numbers (U-02) · B2 tablets and Quark version (U-06) · B3 venue network
 
 ---
 
@@ -497,11 +379,8 @@ Documented:
 
 OPEN: who can read and who can change what is not written as a rule (U-63). For example: whether a player can read only their own answers, whether a judge can read students outside their range, who may edit participants during the event, and whether a judge can change a score.
 
-### H4. Roles — partly OPEN
-- Roles in this version: player, judge, controller (also called admin) and big screen [S]. The Super Administrator is deferred [L] (SA-005). No role above the controller is documented in this version.
-- **OPEN, one person with several roles:** not documented (U-64).
-- **OPEN, controller and admin being the same role:** assumed and unconfirmed [A] (ROL-001, U-11).
-- **OPEN, more than one controller:** not confirmed, and it **conflicts with the older rule of exactly one admin** (U-11, OA-002). Both statements are recorded; neither is chosen.
+### H4. Roles — RESOLVED (2026-09-26)
+Decided [C] (BLD-004): one role per account; several controller accounts are allowed; one person with several roles is handled as two accounts. This settles U-64 and the "more than one controller" conflict (U-11). Whether "controller" and "administrator" are literally the same role remains assumed [A]. See `architecture.md`.
 
 ---
 
@@ -570,12 +449,41 @@ Answered with what the documents hold. **No list of units, no dependencies, no d
   The boundaries move with actual strengths, and the split is not strictly backend versus frontend.
 - Still open: it predates the stakeholder's answers; the developers' names and skills are not recorded (I-17, I-18); both developers are still to record their acceptance (I-08).
 
-### J5 to J9. Workflow items — all OPEN
+### J5 and J9. Workflow items still open
+Resolved 2026-09-26: git branching, pull requests, CI and review (I-25 to I-27, BLD-002); see `ai-workflow-rules.md`. The first slice is decided (BLD-009); units, order and the definition of done (J1 to J3) are still to be drafted.
 - **J5. Environment (I-24):** not decided. The only mention is "environment configuration" as stabilization work near the end.
-- **J6. Git branching and pull-request rules (I-25):** not documented.
-- **J7. CI: lint, type check, tests, build before a merge (I-26):** not documented.
-- **J8. Review, whether by AI, automated checks or a human (I-27):** not documented.
 - **J9. Team meeting rhythm (I-28):** not documented. The plan says "integrate every day", which is not a meeting rule.
+
+---
+
+## K. New open items from the 2026-09-26 decisions
+
+**K1. The sample question PDF and participant Excel (U-01)** — OPEN, project owner
+- Not yet sent. Blocks the import units and the grid shapes.
+- Answer: _
+
+**K2. Extra participant Excel columns (U-40)** — OPEN
+- The columns are Name, School, Category, Team. Are there any others?
+- Answer: _
+
+**K3. Unique solution of every puzzle (U-90)** — OPEN
+- The answer check compares the submitted grid with the solution stored with the question and relies on every puzzle having a unique solution. Is that guaranteed?
+- Answer: _
+
+**K4. Format of judge and controller credentials (I-30)** — OPEN
+- Participants use the participant number and a short random password. What do judges and controllers use?
+- Answer: _
+
+**K5. What are I-14 and I-15?** — OPEN, project owner
+- The requirements list them as needed before coding (REQUIREMENTS §12), but no file here describes them, and the 2026-09-26 decisions did not address them.
+- Answer: _
+
+**K6. Does the 15-day deletion cover the uploaded participant Excel? (U-59, U-62)** — OPEN
+- Also open: whether archived scores and the correction log follow the 15-day deletion.
+- Answer: _
+
+**K7. Blank on purpose: TBD — to be decided by the project owner**
+- Backend language and framework (I-02), the developers' skills (I-18), names and roles (I-17), who builds what (I-23), and where the server runs on the event day (I-03, U-46). Do not choose a value.
 
 ---
 
