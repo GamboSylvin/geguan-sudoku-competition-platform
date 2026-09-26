@@ -58,6 +58,17 @@ The first slice of the build is the **Individual stage, end to end**. The team s
 - **Server restart mid-round** [C] (BLD-007): a **replay is acceptable**. Round state changes are kept in PostgreSQL and the working grids in Redis with persistence on. After a restart the competition comes back **paused**, so the controller chooses to resume or replay. **OPEN (U-49):** how long an interruption is acceptable.
 - Recovery after a network or server failure: the round is replayed, triggered by a judge or the controller [C] (ROL-005).
 
+## API boundaries
+
+Documented:
+- All client requests go through the one backend; the client is never an authority [T]. The server owns state.
+- Real-time commands and state travel over WebSocket [T] (ARCH-022). The API contract is a "Working Position", a starting point and not final [T] (ARCH-023).
+- Separate login endpoints per role [T].
+- The big screen uses one shared link with no login and is a passive display: it receives state and shows it [C]/[S].
+- Inside the backend, a module's internals are reachable only through its public interface [T].
+
+**OPEN (do not invent):** the API style and endpoint conventions, versioning, the error shape, and the WebSocket message contract. They depend on the backend language (I-02) and are written with `code-standards.md` and the first unit specs.
+
 ## Storage model
 
 - **PostgreSQL:** durable data and round state changes. Durable results live in PostgreSQL, **never only in Redis** [T].
@@ -102,6 +113,15 @@ Data rules already decided: question and round scores are whole numbers; the sch
   - **Judge:** sees the status of their assigned students and can restart one student's round [P] (ROL-003).
   - **Controller:** can do everything a judge can, plus event setup, rules and customization [C] (ROL-002); sees all progress in real time and can take over from a disconnected judge [C] (ROL-004). Commands: start a stage, pause, resume, end a round early, finish (early), reset or rematch, correct scores, control the big screens.
 - **OPEN:** who can read and who can change what is not written as a rule (U-63, U-55): whether a player can read only their own answers, whether a judge can read students outside their range, who may edit participants during the event, whether a judge can change a score.
+
+## Cross-tool integration rules
+
+Documented:
+- Round state changes are kept in PostgreSQL and the working grids in Redis with persistence turned on [C] (BLD-007). Durable results are never only in Redis [T].
+- Only members of the competition's participant dataset can take part, and a judge can enter only the competition they are assigned to [T]. These are access rules; how they are enforced across the API, the WebSocket layer and storage is OPEN.
+- Files live on the server's disk in a mounted folder [C] (BLD-001). How the database refers to them is still to be written with the data model.
+
+**OPEN (do not invent):** the rules for how WebSocket, PostgreSQL, Redis and the file store must work together, for example what must be verified before a real-time session or a command is accepted. They are written with the data model and the first unit specs.
 
 ## External services
 
@@ -186,4 +206,4 @@ None described in the documents (no SMS, email or student-ID system mentioned). 
 | U-49 | How long an interruption during a round is acceptable |
 | I-05, U-60 | Load target and ceiling; listed both as [C] and as open |
 | U-06 | Tablet model and Quark version |
-| I-14, I-15 | [[FILL-BEFORE-CODING: what I-14 and I-15 are and how they are resolved = ________ ; owner: project owner]] The requirements list them as needed before coding; no context file describes them. **Where to look:** `requirements/REQUIREMENTS.md` §12 and `decisions/unmade-decisions.md` (search for I-14 and I-15) |
+| I-14, I-15 | [[FILL-BEFORE-CODING: what I-14 and I-15 are and how they are resolved = ________ ; owner: project owner]] The requirements list them as needed before coding; no context file describes them. **Where to look:** `context-feeders/requirements/REQUIREMENTS.md` §12 and `context-feeders/decisions/unmade-decisions.md` (search for I-14 and I-15) |

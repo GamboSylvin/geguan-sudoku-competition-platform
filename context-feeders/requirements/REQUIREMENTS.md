@@ -1,3 +1,5 @@
+> **[CONTEXT FEEDER NOTE]** This file is part of the requirements record. It FEEDS the `context/` folder; it is NOT what a coding agent builds from - build from `context/` (see the root `CLAUDE.md`). If this file and `context/` differ, do not resolve it silently: raise it. It is maintained under the documentation rules in the root `CLAUDE.md`.
+
 # REQUIREMENTS.md
 
 **Status:** Consolidated and reviewed on 2026-09-25: all 12 source passes and the merge of the stakeholder answers (pass 0) are done (`../archive/client-view.md`, the Alignment Guideline, the Q2 and Q3 summaries, `../archive/PROJECT_ANALYSIS_UPDATED.md`, `../archive/PLAYER_REQUIREMENTS.md`, `../archive/ORGANIZATION_ADMIN_REQUIREMENTS.md`, `../archive/JUDGE_REQUIREMENTS_PROPOSAL.md`, `../archive/STAGE_REQUIREMENTS.md`, `../archive/FLOW_REQUIREMENTS.md`, `../archive/ARCHITECTURE_REQUIREMENTS.md`, `../archive/SUPER_ADMIN_REQUIREMENTS.md`); see `../archive/CONSOLIDATION_LOG.md`

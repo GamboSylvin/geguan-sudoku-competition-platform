@@ -1,3 +1,5 @@
+> **[CONTEXT FEEDER NOTE]** Archived source document, already merged into the requirements and decisions and, from there, into `context/`. Kept for reference only; do NOT use it to decide what to build. It is not maintained: the only edits are this note and the updated folder paths.
+
 # FLOW_REQUIREMENTS.md
 
 # Competition Flow Requirements
@@ -6,7 +8,7 @@
 **Scope:** MVP
 **Method:** Problem → Requirements → Domain/System Model → Architecture Analysis → Architecture Decision → Technology Analysis → Stack Decisions → Detailed Design → Coding
 
-> This document captures the **client's vision of the competition flow and system mechanics** as described in discussion. Nothing here is confirmed. Items that match existing requirements or decisions are marked as **matching — still unconfirmed**. Items that diverge from existing documents are marked **[Check with client]** and are also recorded in `decisions/unmade-decisions.md`. This document is a working draft for client validation, not a binding specification.
+> This document captures the **client's vision of the competition flow and system mechanics** as described in discussion. Nothing here is confirmed. Items that match existing requirements or decisions are marked as **matching — still unconfirmed**. Items that diverge from existing documents are marked **[Check with client]** and are also recorded in `context-feeders/decisions/unmade-decisions.md`. This document is a working draft for client validation, not a binding specification.
 
 ---
 
@@ -93,7 +95,7 @@ Each **round** has:
 
 *(Matches CS-003 stage types — unconfirmed. Note: the current working position lists these three types but the actual competition regulations referenced in client-view only use Individual + Team, with PK as a reserved capability.)*
 
-**Resolved for MVP:** PK is **deferred**; the MVP realizes **Individual + Team** only. See CS-010 / CS-016 in `decisions/project-decisions.md` and `STAGE_REQUIREMENTS.md` §1, §5.
+**Resolved for MVP:** PK is **deferred**; the MVP realizes **Individual + Team** only. See CS-010 / CS-016 in `context-feeders/decisions/project-decisions.md` and `STAGE_REQUIREMENTS.md` §1, §5.
 
 **[Check with client]** — Is PK in scope for the MVP, or reserved for later?
 
@@ -138,7 +140,7 @@ The client describes a **recognition-based scoring system**:
 - Points are awarded **according to the percentage of correct cells**.
 
 **[Resolved 2026-09-24 by the stakeholder]**
-The proportional / per-cell description above is **discarded**. Scoring is **all-or-nothing per puzzle**: a puzzle scores only if it is fully correct. Points are set **per question by difficulty** and are customizable. The early bonus exists **only in the Individual stage**, counts whole minutes, and needs a fully correct round. See `decisions/project-decisions.md` §15.1 (SCR-001 to SCR-005).
+The proportional / per-cell description above is **discarded**. Scoring is **all-or-nothing per puzzle**: a puzzle scores only if it is fully correct. Points are set **per question by difficulty** and are customizable. The early bonus exists **only in the Individual stage**, counts whole minutes, and needs a fully correct round. See `context-feeders/decisions/project-decisions.md` §15.1 (SCR-001 to SCR-005).
 
 ### FLW-031 — Per-question point value and type
 - Each type of question has a **particular point value**.
@@ -214,17 +216,17 @@ The expected answers / solutions in the upload are **a requirement to be sent la
 
 ## 8. Open Points to Check with Client
 
-> **Update (2026-09-23):** most of these are now resolved — see the inline notes below and `decisions/unmade-decisions.md` §13/§6/§3. Two (FLW-Q6, and the new FLW-Q7 dependency) remain genuine open conflicts for direct colleague/client review.
+> **Update (2026-09-23):** most of these are now resolved — see the inline notes below and `context-feeders/decisions/unmade-decisions.md` §13/§6/§3. Two (FLW-Q6, and the new FLW-Q7 dependency) remain genuine open conflicts for direct colleague/client review.
 
 | # | Question | Related existing question |
 |---|---|---|
 | FLW-Q1 | **Resolved.** Publish generates the entry link/QR and locks configuration. | CMP-2 |
-| FLW-Q2 | **Resolved for Player/Judge** (separate role-based username/password logins, not a shared link). **Still open for the Big Screen** — no access mechanism defined anywhere, see `decisions/unmade-decisions.md` §15.2. | PL-1, JD-8 |
+| FLW-Q2 | **Resolved for Player/Judge** (separate role-based username/password logins, not a shared link). **Still open for the Big Screen** — no access mechanism defined anywhere, see `context-feeders/decisions/unmade-decisions.md` §15.2. | PL-1, JD-8 |
 | FLW-Q3 | **Still open** (minor) — the exact error/UX for an unauthorized attempt isn't specified. | PL-6 |
 | FLW-Q4 | **Resolved.** Judge manually starts each stage only; everything else (rounds, preparation, transitions) is automatic. No manual round start exists in the MVP. | SR-7, J-003/J-004/J-005 |
 | FLW-Q5 | **Resolved.** PK is deferred, out of MVP scope. | SR-3 |
-| FLW-Q6 | **Resolved 2026-09-24 — all-or-nothing per puzzle** (`decisions/project-decisions.md` SCR-001). The proportional description at FLW-030 is discarded. |
-| FLW-Q7 | **Resolved 2026-09-24 — points are set per question according to difficulty and are customizable** (`decisions/project-decisions.md` SCR-003). Whether a round's total is fixed at 100 is still open (`decisions/unmade-decisions.md` §16, U-03). | SC-3 |
+| FLW-Q6 | **Resolved 2026-09-24 — all-or-nothing per puzzle** (`context-feeders/decisions/project-decisions.md` SCR-001). The proportional description at FLW-030 is discarded. |
+| FLW-Q7 | **Resolved 2026-09-24 — points are set per question according to difficulty and are customizable** (`context-feeders/decisions/project-decisions.md` SCR-003). Whether a round's total is fixed at 100 is still open (`context-feeders/decisions/unmade-decisions.md` §16, U-03). | SC-3 |
 | FLW-Q8 | **Resolved.** Round durations are fixed/predefined in code for the MVP (not admin-configurable, not dynamically driven by question type). | CS-005 |
 | FLW-Q9 | **Resolved.** Publication = lock; no post-publication edit path exists. | CMP-3, CMP-7, CMP-8 |
 | FLW-Q10 | **Resolved.** PDF contains questions + solutions + parameters (score, difficulty, type) — see FLW-Q7 above for the incoherence this creates. | OA-9, OA-11 |
@@ -234,7 +236,7 @@ The expected answers / solutions in the upload are **a requirement to be sent la
 
 ## 9. Status Summary
 
-**Update (2026-09-23):** superseded by the per-item resolutions above and in `decisions/unmade-decisions.md` §3, §6, §13. Kept below for history only.
+**Update (2026-09-23):** superseded by the per-item resolutions above and in `context-feeders/decisions/unmade-decisions.md` §3, §6, §13. Kept below for history only.
 
 | Item | Status |
 |---|---|
@@ -253,9 +255,9 @@ The expected answers / solutions in the upload are **a requirement to be sent la
 
 ## 10. Next Step
 
-**Update (2026-09-23):** step 1–3 below are largely complete — see `decisions/project-decisions.md` §13–§14 and `decisions/unmade-decisions.md` §14–§15. What remains: resolve the scoring-model conflict (FLW-Q6) and the per-question point-value incoherence (FLW-Q7) with the client/colleague, then proceed to step 4.
+**Update (2026-09-23):** step 1–3 below are largely complete — see `context-feeders/decisions/project-decisions.md` §13–§14 and `context-feeders/decisions/unmade-decisions.md` §14–§15. What remains: resolve the scoring-model conflict (FLW-Q6) and the per-question point-value incoherence (FLW-Q7) with the client/colleague, then proceed to step 4.
 
 1. ~~Validate the flow and mechanics with the client.~~
 2. ~~Resolve the divergences in §8~~ (mostly done; scoring model and lifecycle/lock point — lifecycle is resolved, scoring model remains open).
-3. ~~Record accepted items in `requirements/` as confirmed requirements and in `decisions/project-decisions.md`~~ (done for this pass).
+3. ~~Record accepted items in `context-feeders/requirements/` as confirmed requirements and in `context-feeders/decisions/project-decisions.md`~~ (done for this pass).
 4. Continue to domain/system modeling and architecture analysis only after the flow is stable — largely underway via `ARCHITECTURE_REQUIREMENTS.md` and the Arena Alignment Guideline.

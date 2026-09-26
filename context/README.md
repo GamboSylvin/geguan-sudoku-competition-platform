@@ -7,7 +7,7 @@ This folder is the single source of truth a coding agent reads before it builds 
 
 | File | What it holds | State |
 |---|---|---|
-| `ENTRY_POINT.md` | What an agent reads first, in order. Not yet renamed to `CLAUDE.md` (a root `CLAUDE.md` already exists) | Draft |
+| root `CLAUDE.md` (outside this folder) | The entry point an agent reads first, in order. It also keeps the documentation-phase rules for `context-feeders/requirements/`, `context-feeders/decisions/` and `context-feeders/archive/` | Merged 2026-09-26 |
 | `project-overview.md` | Product, users, flow, features, scope | Mostly written |
 | `competition-rules.md` | The competition and scoring rules that have been decided, and the ones still open | Written from the decisions so far |
 | `architecture.md` | Stack, boundaries, invariants, storage, access model | Mostly written: the backend language, hosting and the data model are blank (see `FILL-BEFORE-CODING.md`) |
@@ -18,15 +18,17 @@ This folder is the single source of truth a coding agent reads before it builds 
 | `FILL-BEFORE-CODING.md` | The checklist of every blank to fill before coding, with owners | Written |
 | `data-model.md` | The data model and schema | **Placeholder**, to be filled and approved |
 | `specs/00-build-plan.md` | Units, order, dependencies, definition of done | **Placeholder**, to be filled |
+| `specs/01-foundation.md` | The spec of Unit 1 (foundation), in the feature-spec structure | **Placeholder**, to be filled and approved |
+| `samples/` | Where the sample participant Excel and question PDF are placed | Empty, to be filled |
 
-Not yet written: the unit specs (`specs/NN-unit-name.md`). They follow the build plan.
+Not yet written: the specs of the later units (`specs/NN-unit-name.md`). They follow the build plan.
 
 **Blanks:** search the folder for `FILL-BEFORE-CODING` (needed before the first unit), `FILL-BEFORE-UNIT` (needed before a named unit) and `FILL-BEFORE-DEPLOYMENT`. **Do not write code while a `FILL-BEFORE-CODING` marker remains.**
 
 ## Working files (outside this folder)
 
-The interview record, the open questions and the questions for the client's stakeholder are in **`context-working/`**, next to `context/`, so that this folder holds only the context. **Do not read them to decide what to build**; they contain superseded statements.
-The context builder records new answers there first and then updates the files here. Delete or archive `context-working/` once the context files are approved.
+Everything that feeds this folder lives in the transit folder **`context-feeders/`**, next to `context/`, so that this folder holds only the context: `requirements/`, `decisions/`, `archive/` and `working/` (the interview record, the open questions and the questions for the client's stakeholder). Each file there starts with a note saying its role. **Do not read them to decide what to build**; `working/` contains superseded statements.
+The context builder records new answers in `context-feeders/working/` first and then updates the files here. Delete or archive `context-feeders/working/` once the context files are approved.
 
 ## Status tags (used in every file)
 

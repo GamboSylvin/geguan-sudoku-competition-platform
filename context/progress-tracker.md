@@ -12,8 +12,8 @@ Close the few blockers left, draft the data model and the build plan for approva
 
 ## Completed
 
-- The pre-build interview (all seven steps and the workflow items) was run; the record is in `context-working/_interview-notes.md`.
-- Open questions were collected in `context-working/_open-questions.md`; the client-facing questions are in `context-working/_stakeholder-question-pack.md`.
+- The pre-build interview (all seven steps and the workflow items) was run; the record is in `context-feeders/working/_interview-notes.md`.
+- Open questions were collected in `context-feeders/working/_open-questions.md`; the client-facing questions are in `context-feeders/working/_stakeholder-question-pack.md`.
 - Part 1 of the pack (Q1 to Q6, scoring and round rules) and the builder's blocking questions were answered on 2026-09-26. The answers were transferred from `decisions-for-the-context-builder.md` (removed after transfer) into these files. That file stated they were **confirmed by the stakeholder**, which reverses their earlier [T] status.
 - First draft of the context folder written and updated to v1.
 
@@ -44,7 +44,7 @@ The full checklist, with the blanks to fill and who owns each, is `FILL-BEFORE-C
 | When students see scores (U-24, U-88); awards and reset after an early finish (U-89, U-27) | Results and finish units |
 | The second team round (U-05, U-21); question files per category (U-32) | Team stage (later slice) |
 | Hosting (**TBD — to be decided by the project owner**, U-46); names, roles and who builds what (**TBD — to be decided by the project owner**, I-17, I-23) | Deployment; assignment of units. Not needed to start coding |
-| Client confirmation of the requirements in writing (A14) | Release, not the first unit |
+| Client confirmation of the requirements in writing (methodology Step 8, A14) | The methodology makes it mandatory before specs are written (see `FILL-BEFORE-CODING.md`, section E). Whether it can wait until after Unit 1 is a decision for the project owner |
 
 ## Next Up
 
@@ -69,7 +69,9 @@ Coding is blocked by items 1 to 4 of "Minimum to start coding". Nothing else blo
 Record here every change to the context that a unit might depend on: a confirmed rule that changed, a blank that was filled, a conflict that was raised and how it was resolved. One line per change: date, what changed, files touched, who.
 The person completing the context and the context builder both add lines. If two changes conflict, do not overwrite: raise it and ask the project owner which to keep.
 
-- 2026-09-26: context folder created (v1). Working files moved out to `context-working/`. Sample files folder `samples/` added.
+- 2026-09-26: context folder created (v1). Working files moved out to `context-feeders/working/`. Sample files folder `samples/` added.
+- 2026-09-26: `requirements/`, `decisions/`, `archive/` and the working files were moved into one transit folder, `context-feeders/` (with `working/` for the working files). 307 paths inside the documents were updated, a role note was added at the top of each of the 23 files, and `context-feeders/README.md` was added. Contents were not changed otherwise. A full backup was taken before the move.
+- 2026-09-26: the entry point was merged into the root `CLAUDE.md` (as the methodology requires). The documentation-phase rules of the previous `CLAUDE.md` were kept in full; the "do not implement" line now says coding needs an explicit request and the coding gate. Backup of the previous file: `context-feeders/working/CLAUDE.documentation-phase.backup.md`. `context/ENTRY_POINT.md` was removed.
 
 ## Known Issues
 
@@ -78,7 +80,6 @@ The person completing the context and the context builder both add lines. If two
 - The participant figures do not add up: 11 rooms (10 of about 30 and one of about 300) is about 600, not 600–720 (U-02).
 - Question delivery now differs from the client's original document, which preloads questions on the tablets (decision BLD-006: fetch at the round start).
 - IDs to verify against the register: U-45 (puzzle authoring, earlier cited as U-43) and U-47.
-- A root `CLAUDE.md` already exists (documentation phase), so the entry point stays in `context/ENTRY_POINT.md` for now.
 
 ## Withdrawn or corrected statements (do not reintroduce)
 
@@ -88,11 +89,11 @@ The person completing the context and the context builder both add lines. If two
 - No plan requirement to add a "compatibility check": the documents say only that a test on a real tablet was proposed as a team default (U-06).
 - No session-length constraint is stated (I-16). No stated product constraint on last-second fairness beyond the late-submit rule.
 - Corrected: a judge restart gives the **remaining** round time, not the full round time. The late-submit rule applies to the **Individual rounds** only; the team rotation's 60 seconds is an interval for moving questions, not a deadline.
-- The full history is in `context-working/_interview-notes.md`, "Corrections received". Keep or archive it before deleting that file.
+- The full history is in `context-feeders/working/_interview-notes.md`, "Corrections received". Keep or archive it before deleting that file.
 
 ## Open Questions
 
-Full list: `context-working/_open-questions.md`. The client-facing subset: `context-working/_stakeholder-question-pack.md`. Highest impact now:
+Full list: `context-feeders/working/_open-questions.md`. The client-facing subset: `context-feeders/working/_stakeholder-question-pack.md`. Highest impact now:
 
 - I-14 and I-15: what are they?
 - U-01, U-03, U-40: the sample files, points in the PDF, extra Excel columns.
@@ -122,8 +123,8 @@ No database exists. The schema is not designed (I-01).
 ## Session Notes
 
 - Assume nothing. Anything marked **TBD — to be decided by the project owner** must stay blank until the project owner decides.
-- The working files (in `context-working/`, outside this folder) are the record of the requirements process. Answers are recorded there first, then reflected here.
-- The root `CLAUDE.md` governs `requirements/`, `decisions/` and `archive/`; those were not touched while drafting this folder.
+- The working files (in `context-feeders/working/`, outside this folder) are the record of the requirements process. Answers are recorded there first, then reflected here.
+- The root `CLAUDE.md` governs `context-feeders/requirements/`, `context-feeders/decisions/` and `context-feeders/archive/`; their content was not changed while drafting this folder (they were only moved into `context-feeders/`, with paths updated and a role note added at the top of each file).
 - Runtime environment facts (versions, environment variables, commands): none yet.
 
 ## Last Updated

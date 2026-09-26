@@ -13,7 +13,7 @@ Search the whole `context/` folder for these markers. Each one has a blank (`___
 - `[[FILL-BEFORE-UNIT: ... ]]` — required before the named unit only.
 - `[[FILL-BEFORE-DEPLOYMENT: ... ]]` — needed to deploy, not to start coding.
 
-The descriptions of the markers in this file, `README.md`, `ENTRY_POINT.md` and `ai-workflow-rules.md` are not blanks. The real blanks are in `architecture.md`, `code-standards.md`, `project-overview.md`, `ui-context.md`, `data-model.md`, `specs/00-build-plan.md` and `samples/README.md`.
+The descriptions of the markers in this file, `README.md`, the root `CLAUDE.md` and `ai-workflow-rules.md` are not blanks. The real blanks are in `architecture.md`, `code-standards.md`, `project-overview.md`, `ui-context.md`, `data-model.md`, `specs/00-build-plan.md`, `specs/01-foundation.md` and `samples/README.md`.
 `TBD — to be decided by the project owner` marks a value left blank on purpose; it is filled through a marker above.
 Placeholders: `data-model.md`, `specs/00-build-plan.md` and `samples/` are empty structures to fill.
 Items tagged `[O]` or written `OPEN (U-xx)` that are **not** in this checklist are **waiting for stakeholder answers**: do **not** fill them (see section D).
@@ -25,12 +25,12 @@ Items tagged `[O]` or written `OPEN (U-xx)` that are **not** in this checklist a
 | A1 | **Backend language and framework** = ________ (I-02) | `architecture.md` Stack table; `code-standards.md` Language and Framework | Project owner | [ ] |
 | A2 | **Developers' skills** = ________ (I-18): what each knows well; experience with real-time apps, PostgreSQL, Redis | `project-overview.md` Client and team | Project owner | [ ] |
 | A3 | **Names and roles** of developer 1, developer 2, project owner, business lead; **who builds what** = ________ (I-17, I-23) | `project-overview.md` Client and team | Project owner | [ ] |
-| A4 | **I-14 and I-15**: what they are and how they are resolved = ________. **Where to look:** `requirements/REQUIREMENTS.md` §12 and `decisions/unmade-decisions.md` (search for I-14 and I-15) | `architecture.md` Open technical decisions | Project owner | [ ] |
-| A5 | **Development environment** = ________ (I-24): reproducible setup, dependency lock files, `.env.example`, containers if the stack needs them | `architecture.md` Development environment | Team | [ ] |
+| A4 | **I-14 and I-15**: what they are and how they are resolved = ________. **Where to look:** `context-feeders/requirements/REQUIREMENTS.md` §12 and `context-feeders/decisions/unmade-decisions.md` (search for I-14 and I-15) | `architecture.md` Open technical decisions | Project owner | [ ] |
+| A5 | **Development environment** = ________ (I-24): reproducible setup, dependency lock files, `.env.example`, containers if the stack needs them. The methodology's pre-code checklist lists "lock files committed" and "`.env.example` provided": decide here whether they are created in Unit 1 or before it | `architecture.md` Development environment | Team | [ ] |
 | A6 | **Data model and schema**, filled and approved (I-01), keeping the model ready for team rotation | `data-model.md` (placeholder) and the marker in `architecture.md` | Team | [ ] |
-| A7 | **Build plan** and the **Unit 1 spec**, for the first slice (Individual stage, end to end). **Unit 1 is the foundation only** (repository, environment, CI, skeleton) | `specs/00-build-plan.md` (placeholder), then `specs/01-...` | Team | [ ] |
+| A7 | **Build plan** and the **Unit 1 spec**, for the first slice (Individual stage, end to end). **Unit 1 is the foundation only** (repository, environment, CI, skeleton) | `specs/00-build-plan.md` (placeholder) and `specs/01-foundation.md` (placeholder, feature-spec structure) | Team | [ ] |
 
-Coding may start when every A item is ticked **and** the data model and the Unit 1 spec are approved.
+Coding may start when every A item is ticked **and** the approvals in section E are done.
 
 ## B. Required before a specific unit — `FILL-BEFORE-UNIT` (the person can fill these)
 
@@ -56,9 +56,26 @@ These are still open. They are being answered through the question process, and 
 - Access rules (U-63, U-55) · the venue network and tablets (U-06) · risks, external systems, performance targets, scale ceiling, reliability (U-56 to U-61)
 - Look and brand, layouts, screen sizes, language switching, accessibility (U-65 to U-70) · authoring and a third language (U-45, U-51)
 
+## E. Approvals before coding (the methodology's gate)
+
+The methodology says each context file is shown for review and approved, and that coding starts only when all files and specs are approved. Record who approved and when.
+
+| What is approved | Approved by | Date | Done |
+|---|---|---|---|
+| `project-overview.md` filled and approved | ________ | ________ | [ ] |
+| `competition-rules.md` | ________ | ________ | [ ] |
+| `architecture.md` | ________ | ________ | [ ] |
+| `code-standards.md` | ________ | ________ | [ ] |
+| `ai-workflow-rules.md` | ________ | ________ | [ ] |
+| `ui-context.md`: the behaviour parts now; the visual parts (tokens, layouts) when the design is done, since the design comes after the first slice (BLD-009) | ________ | ________ | [ ] |
+| **Data model and schema** (`data-model.md`): the skeleton checkpoint | ________ | ________ | [ ] |
+| `specs/00-build-plan.md` and `specs/01-foundation.md` | ________ | ________ | [ ] |
+| **Quality chain agreed**: AI review, then automated checks, then human review. The decided workflow states CI and the other developer's review; it does not state an AI review step | ________ | ________ | [ ] |
+| **Requirements confirmed in writing by the stakeholders** (methodology Step 8, mandatory for client projects; question Q36 of the stakeholder question pack). The methodology places it before the specs are written | ________ | ________ | [ ] |
+
 ## How to work in parallel
 
-- The requirements questions are still being answered. New answers are recorded first in the working files (`context-working/`, **outside this folder; do not read them to decide what to build**), then reflected in the context files by the context builder.
+- The requirements questions are still being answered. New answers are recorded first in the working files (`context-feeders/working/`, **outside this folder; do not read them to decide what to build**), then reflected in the context files by the context builder.
 - **The person filling this checklist edits only the marked blanks** and ticks the boxes here. Everything else in the context files may change as new answers arrive.
 - When a blank is filled: replace the marker with the value, keep the status tag (`[T]` for a team or project-owner decision), and add a line to `progress-tracker.md`, "Context change log".
 - **Conflicts:** if a fill contradicts something already in the context files, or a new answer contradicts your fill, do not overwrite silently. Note the conflict in the "Context change log" and ask the project owner which to keep.
@@ -69,10 +86,10 @@ These are still open. They are being answered through the question process, and 
 ```text
 You are helping me complete the context folder of the project "Sudoku Arena" before any coding starts. Do NOT write code.
 
-Read, in this order: context/ENTRY_POINT.md, context/README.md, context/FILL-BEFORE-CODING.md, then every other file in context/ (including context/samples/README.md and the placeholders context/data-model.md and context/specs/00-build-plan.md).
-Do NOT read the folder context-working/. It holds superseded notes. Do NOT edit requirements/, decisions/ or archive/ (you may READ requirements/REQUIREMENTS.md section 12 and decisions/unmade-decisions.md only to look up items I-14 and I-15).
+Read, in this order: the root CLAUDE.md, context/README.md, context/FILL-BEFORE-CODING.md, then every other file in context/ (including context/samples/README.md and the placeholders context/data-model.md and context/specs/00-build-plan.md).
+Do NOT read the folder context-feeders/working/. It holds superseded notes. Do NOT edit context-feeders/requirements/, context-feeders/decisions/ or context-feeders/archive/ (you may READ context-feeders/requirements/REQUIREMENTS.md section 12 and context-feeders/decisions/unmade-decisions.md only to look up items I-14 and I-15).
 
-Step 1. Search all of context/ for these markers (ignore the DESCRIPTIONS of markers in FILL-BEFORE-CODING.md, README.md, ENTRY_POINT.md and ai-workflow-rules.md; they are not blanks) and list them ALL in a table with columns: number, marker type, file, section, what is needed, owner, what it blocks (first coding unit / a named unit / deployment):
+Step 1. Search all of context/ for these markers (ignore the DESCRIPTIONS of markers in FILL-BEFORE-CODING.md, README.md, the root CLAUDE.md and ai-workflow-rules.md; they are not blanks) and list them ALL in a table with columns: number, marker type, file, section, what is needed, owner, what it blocks (first coding unit / a named unit / deployment):
   [[FILL-BEFORE-CODING: ...]]   [[FILL-BEFORE-UNIT: ...]]   [[FILL-BEFORE-DEPLOYMENT: ...]]
 Also list every "TBD — to be decided by the project owner". Then list, separately and without asking me to fill them, the items tagged [O] or written "OPEN (U-xx)" that are waiting for stakeholder answers.
 
@@ -87,5 +104,5 @@ Step 5. If a value conflicts with anything already written in the context files,
 
 Step 6. Do not edit anything else. Do not resolve items waiting for stakeholder answers.
 
-Step 7. At the end, search context/ again for FILL-BEFORE-CODING and report the markers that remain. Coding may start only if none remain AND I have approved the data model and the Unit 1 spec. Follow the "Coding gate" in context/ai-workflow-rules.md.
+Step 7. At the end, search context/ again for FILL-BEFORE-CODING and report the markers that remain. Coding may start only if none remain AND I have approved the items in section E of context/FILL-BEFORE-CODING.md (including the data model and the Unit 1 spec). Follow the "Coding gate" in context/ai-workflow-rules.md.
 ```

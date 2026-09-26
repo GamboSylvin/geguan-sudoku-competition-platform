@@ -1,3 +1,5 @@
+> **[CONTEXT FEEDER NOTE]** Working file of the requirements process (interview record, open questions, question pack). It FEEDS the `context/` folder and contains superseded statements. Do NOT read it to decide what to build.
+
 # Stakeholder Question Pack — Sudoku Arena
 
 Prepared 2026-09-26 for the stakeholder round.

@@ -1,4 +1,4 @@
-# Code Standards (DRAFT v0 SKELETON, 2026-09-26)
+# Code Standards (DRAFT v1 SKELETON, 2026-09-26)
 
 > **Mostly blocked.** The backend language and framework are **TBD — to be decided by the project owner** (I-02), so language, framework, API and testing conventions cannot be written yet.
 > This file holds only what is already decided or comes from the agreed methodology. Everything else is marked OPEN. Do not invent conventions.

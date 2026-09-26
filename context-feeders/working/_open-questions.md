@@ -1,3 +1,5 @@
+> **[CONTEXT FEEDER NOTE]** Working file of the requirements process (interview record, open questions, question pack). It FEEDS the `context/` folder and contains superseded statements. Do NOT read it to decide what to build.
+
 # Open Questions — to ask again before the context files are final
 
 > Questions from the pre-build interview that were **not answered, or answered only with an assumption**.

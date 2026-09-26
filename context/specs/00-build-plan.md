@@ -17,13 +17,13 @@
 
 | # | Unit name | What it builds (one visible result) | Depends on | Done when (acceptance criteria) | Builder |
 |---|---|---|---|---|---|
-| 01 | ________ | ________ | ________ | ________ | ________ |
+| 01 | Foundation (guidance, to be confirmed): repository, environment, CI, skeleton; no feature | ________ | none | ________ (spec: `01-foundation.md`) | ________ |
 | 02 | ________ | ________ | ________ | ________ | ________ |
 | 03 | ________ | ________ | ________ | ________ | ________ |
 | 04 | ________ | ________ | ________ | ________ | ________ |
 | 05 | ________ | ________ | ________ | ________ | ________ |
 
-(Add rows as needed. Each unit needs its own spec in `specs/NN-unit-name.md` with: goal, context, implementation details, acceptance criteria, out of scope.)
+(Add rows as needed. **Each unit needs its own spec** in `specs/NN-unit-name.md`, written from `building-with-ai/templates/feature-spec.md` with: goal, context, implementation details, acceptance criteria, out of scope. Present the build plan and each spec for review before starting. The template itself stays blank; never write into it.)
 
 ## Definition of done (project-wide)
 

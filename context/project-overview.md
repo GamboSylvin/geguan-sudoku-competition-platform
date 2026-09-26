@@ -1,4 +1,4 @@
-# Sudoku Arena — Project Overview (DRAFT v0, 2026-09-26)
+# Sudoku Arena — Project Overview (DRAFT v1, 2026-09-26)
 
 > Status tags: [C] client-confirmed · [P] approved in blanket answer · [S] stated in client's document · [T] team/project-owner decision, not client-confirmed · [A] assumed · [O] open · [L] later. See `README.md`.
 

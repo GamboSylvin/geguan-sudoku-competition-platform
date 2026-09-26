@@ -1,3 +1,5 @@
+> **[CONTEXT FEEDER NOTE]** Archived source document, already merged into the requirements and decisions and, from there, into `context/`. Kept for reference only; do NOT use it to decide what to build. It is not maintained: the only edits are this note and the updated folder paths.
+
 # 数独赛事系统 · 完整设计脑图文档
 
 依据：第四届浙江省智力运动数独项目校际联赛规程 · 目标：支持 ≥1000 台设备在线 · 低网络 · 四端架构

@@ -1,3 +1,5 @@
+> **[CONTEXT FEEDER NOTE]** Archived source document, already merged into the requirements and decisions and, from there, into `context/`. Kept for reference only; do NOT use it to decide what to build. It is not maintained: the only edits are this note and the updated folder paths.
+
 # Sudoku Competition Platform — Player Requirements
 
 ## 1. Purpose
@@ -89,7 +91,7 @@ If the player finishes before the round time limit, the player can choose to sub
 
 Submission represents the player's final result for that round.
 
-The exact post-submission UI/state is not yet defined. **(Update 2026-09-23: resolved — puzzle becomes read-only, submission is confirmed as accepted, no immediate score shown; player waits for the next round. See `decisions/unmade-decisions.md` PL-18/PL-19.)**
+The exact post-submission UI/state is not yet defined. **(Update 2026-09-23: resolved — puzzle becomes read-only, submission is confirmed as accepted, no immediate score shown; player waits for the next round. See `context-feeders/decisions/unmade-decisions.md` PL-18/PL-19.)**
 
 ### 4.7 Automatic Submission at Time Expiry
 
@@ -187,7 +189,7 @@ These require clarification before detailed design.
 
 ## 8. Open Questions
 
-> **Update (2026-09-23):** most of the questions below are now answered by `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` and recorded in `decisions/unmade-decisions.md` §4 (each with a "Resolved" or "Still open" note). **Update (2026-09-24):** the three points that were still open are now resolved by the stakeholder — credentials are printed slips, a student has one active device and may continue on another tablet with the same login, and teammates do not communicate through the system (`decisions/project-decisions.md` §15.5–15.6). Students use Quark Browser on learning tablets; the individual answer screen is described in §15.7 (UI-001). Treat this section as historical context; `decisions/unmade-decisions.md` §4 is the current source of truth.
+> **Update (2026-09-23):** most of the questions below are now answered by `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` and recorded in `context-feeders/decisions/unmade-decisions.md` §4 (each with a "Resolved" or "Still open" note). **Update (2026-09-24):** the three points that were still open are now resolved by the stakeholder — credentials are printed slips, a student has one active device and may continue on another tablet with the same login, and teammates do not communicate through the system (`context-feeders/decisions/project-decisions.md` §15.5–15.6). Students use Quark Browser on learning tablets; the individual answer screen is described in §15.7 (UI-001). Treat this section as historical context; `context-feeders/decisions/unmade-decisions.md` §4 is the current source of truth.
 
 ### Competition Access
 

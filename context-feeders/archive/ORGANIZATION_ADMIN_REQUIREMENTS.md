@@ -1,3 +1,5 @@
+> **[CONTEXT FEEDER NOTE]** Archived source document, already merged into the requirements and decisions and, from there, into `context/`. Kept for reference only; do NOT use it to decide what to build. It is not maintained: the only edits are this note and the updated folder paths.
+
 # ORGANIZATION_ADMIN_REQUIREMENTS.md
 
 # Organization Admin Requirements
@@ -77,8 +79,8 @@ For each round, the admin should be able to configure at minimum:
 
 ## 4. Category
 
-### OA-030 — Category placement — **[Resolved 2026-09-23; modified 2026-09-24: an event holds several categories running in parallel, each ranked separately — `decisions/project-decisions.md` EVT-002]**
-~~It has not yet been determined whether a competition is dedicated to a single category or multi-category.~~ **Resolved:** one competition = one category (e.g. `U6`–`U20`). Different categories are separate competitions. Category is set at competition-creation time. See `decisions/project-decisions.md` PT-005.
+### OA-030 — Category placement — **[Resolved 2026-09-23; modified 2026-09-24: an event holds several categories running in parallel, each ranked separately — `context-feeders/decisions/project-decisions.md` EVT-002]**
+~~It has not yet been determined whether a competition is dedicated to a single category or multi-category.~~ **Resolved:** one competition = one category (e.g. `U6`–`U20`). Different categories are separate competitions. Category is set at competition-creation time. See `context-feeders/decisions/project-decisions.md` PT-005.
 
 This must be clarified with the client/developers before finalizing the domain model.
 
@@ -138,7 +140,7 @@ Creates/derives teams and participant grouping
 ```
 
 ### OA-053 — Participant access credentials — **[Resolved 2026-09-23]**
-~~The system should provide competition-specific participant access credentials, potentially an OTP, one-time credential, or account credential. The exact mechanism is undecided.~~ **Resolved:** ordinary system-generated username/password accounts. No OTP. See `decisions/project-decisions.md` §14.3 (PT-006).
+~~The system should provide competition-specific participant access credentials, potentially an OTP, one-time credential, or account credential. The exact mechanism is undecided.~~ **Resolved:** ordinary system-generated username/password accounts. No OTP. See `context-feeders/decisions/project-decisions.md` §14.3 (PT-006).
 
 ## 7. Judge Management
 
@@ -162,7 +164,7 @@ Specific Competition
 ```
 
 ### OA-063 — Judge competition access — **[Resolved 2026-09-23]**
-~~The system should provide assigned judges with competition-specific access credentials, potentially an OTP or other one-time credential. The exact mechanism remains undecided.~~ **Resolved:** same as OA-053 — username/password, system-generated at judge creation. **Still open:** how the credentials physically reach the judge from the admin (see `decisions/unmade-decisions.md` JD-7).
+~~The system should provide assigned judges with competition-specific access credentials, potentially an OTP or other one-time credential. The exact mechanism remains undecided.~~ **Resolved:** same as OA-053 — username/password, system-generated at judge creation. **Still open:** how the credentials physically reach the judge from the admin (see `context-feeders/decisions/unmade-decisions.md` JD-7).
 
 ## 8. Competition Access / Entry Links
 
@@ -173,12 +175,12 @@ After competition preparation, the admin may generate or obtain access informati
 ~~The access mechanism should establish the appropriate competition context without requiring users to navigate through unrelated competitions. Exact authentication/authorization remains undecided.~~ **Resolved:** one entry link/QR generated at publish, then role-specific username/password login scopes the user to that one competition.
 
 ### OA-072 — Big Screen access — **[Still genuinely unresolved — real gap]**
-A separate mechanism may be required for the Big Screen to access the competition environment. A competition-specific link/token was previously considered, but the exact mechanism is unresolved. **This remains true even after the newest Arena documents — no Big Screen authentication mechanism is described anywhere.** See `decisions/unmade-decisions.md` §15.2.
+A separate mechanism may be required for the Big Screen to access the competition environment. A competition-specific link/token was previously considered, but the exact mechanism is unresolved. **This remains true even after the newest Arena documents — no Big Screen authentication mechanism is described anywhere.** See `context-feeders/decisions/unmade-decisions.md` §15.2.
 
 ## 9. Big Screen Responsibility
 
 ### OA-080 — Big Screen control — **[Resolved 2026-09-24 by the stakeholder]**
-~~The Organization Admin has no control rights over the Big Screen.~~ **Resolved:** with **one** screen, judge and controller (admin) both control it; with **several** screens, only the controller does, and all screens show the same content. See `decisions/project-decisions.md` §15.3 (BSC-002).
+~~The Organization Admin has no control rights over the Big Screen.~~ **Resolved:** with **one** screen, judge and controller (admin) both control it; with **several** screens, only the controller does, and all screens show the same content. See `context-feeders/decisions/project-decisions.md` §15.3 (BSC-002).
 
 ### OA-081 — Big Screen access — **[Resolved 2026-09-24]**
 All screens open from **one shared link** with no per-screen login (BSC-001). The controller opens it and controls it.
@@ -204,7 +206,7 @@ This is a **conceptual principle, not an architecture decision**. The actual arc
 
 ## 11. Live Competition Data
 
-### OA-100 — Possible live-data access — **[Superseded 2026-09-24: the controller needs a real-time view of all progress and can take over — `decisions/project-decisions.md` ROL-004]**
+### OA-100 — Possible live-data access — **[Superseded 2026-09-24: the controller needs a real-time view of all progress and can take over — `context-feeders/decisions/project-decisions.md` ROL-004]**
 ~~It is undecided whether the Organization Admin should have access to live competition data.~~ **Resolved as: no.** The Arena documents give the Admin only pre/post-competition HTTP endpoints — no WebSocket channel exists for the Admin (only Player, Judge, and Big Screen do). No live view during an active competition.
 
 ## 12. Competition Editing and Locking
@@ -212,8 +214,8 @@ This is a **conceptual principle, not an architecture decision**. The actual arc
 ### OA-110 — Edit before publication
 The admin should be able to edit a competition while it is still being prepared.
 
-### OA-111 — Configuration lock point — **[Resolved 2026-09-23; partly superseded 2026-09-24: numeric values stay editable by the controller until each round starts, and participants can be edited at any time — `decisions/project-decisions.md` SCR-005, PAR-003]**
-~~The exact point at which configuration becomes immutable is unresolved.~~ **Resolved:** publication itself locks the configuration, immediately, with no exceptional post-publication edit path described. See `decisions/project-decisions.md` CA-004.
+### OA-111 — Configuration lock point — **[Resolved 2026-09-23; partly superseded 2026-09-24: numeric values stay editable by the controller until each round starts, and participants can be edited at any time — `context-feeders/decisions/project-decisions.md` SCR-005, PAR-003]**
+~~The exact point at which configuration becomes immutable is unresolved.~~ **Resolved:** publication itself locks the configuration, immediately, with no exceptional post-publication edit path described. See `context-feeders/decisions/project-decisions.md` CA-004.
 
 Possible factors:
 - Publication
@@ -257,10 +259,10 @@ Possible dimensions (original aspiration, mostly cut for MVP — see above):
 - Other basic competition statistics
 
 ### OA-133 — Team scoring information
-The admin can access team scoring information after the competition. **The exact team scoring formula is a genuine open conflict** — see `decisions/unmade-decisions.md` §14.4.
+The admin can access team scoring information after the competition. **The exact team scoring formula is a genuine open conflict** — see `context-feeders/decisions/unmade-decisions.md` §14.4.
 
 ### OA-134 — Export results — **[Resolved 2026-09-24: export of scores, rankings and answers is required (RES-002); the file format is still open]**
-The admin should be able to export competition results. Exact formats and fields remain to be specified. **The Arena Alignment Guideline's minimum API has no export endpoint at all** — only on-screen `GET` results/ranking. Whether an actual export/download feature is still planned needs an explicit answer. See `decisions/unmade-decisions.md` §15.4.
+The admin should be able to export competition results. Exact formats and fields remain to be specified. **The Arena Alignment Guideline's minimum API has no export endpoint at all** — only on-screen `GET` results/ranking. Whether an actual export/download feature is still planned needs an explicit answer. See `context-feeders/decisions/unmade-decisions.md` §15.4.
 
 ## 15. Responsibility Boundary
 
@@ -349,7 +351,7 @@ Both models include:
 
 ## 18. Open Questions for Client / Developer Discussion
 
-> **Update (2026-09-23):** most of the questions below are now answered by `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` and recorded in `decisions/unmade-decisions.md` §6 (each with a "Resolved" or "Still open" note). Notably: competition/stage/round structure is fixed, not admin-configurable (resolving most of §1 below); PDF/question-bank questions mostly resolved but surfaced a new incoherence (per-question point values vs. the flat scoring rule — see `decisions/unmade-decisions.md` §15.1); competition-config reuse and results export are **not addressed** by the newer documents at all — see §15.3/§15.4. Treat this section as historical context; `decisions/unmade-decisions.md` §6 is the current source of truth.
+> **Update (2026-09-23):** most of the questions below are now answered by `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` and recorded in `context-feeders/decisions/unmade-decisions.md` §6 (each with a "Resolved" or "Still open" note). Notably: competition/stage/round structure is fixed, not admin-configurable (resolving most of §1 below); PDF/question-bank questions mostly resolved but surfaced a new incoherence (per-question point values vs. the flat scoring rule — see `context-feeders/decisions/unmade-decisions.md` §15.1); competition-config reuse and results export are **not addressed** by the newer documents at all — see §15.3/§15.4. Treat this section as historical context; `context-feeders/decisions/unmade-decisions.md` §6 is the current source of truth.
 
 ### Competition
 1. Can one competition contain participants from multiple categories?
@@ -478,7 +480,7 @@ Do not prematurely decide:
 
 These belong to later project phases.
 
-> **Update — architectural style decided (team decision).** Since this document was written, the development team has decided the architectural **style**: a **modular monolith** with **in-process event-driven** communication in the competition/game subsystem. This was a team decision made ahead of requirements validation; it is recorded with its divergence notice in [`decisions/project-decisions.md`](../decisions/project-decisions.md) §8.1 and detailed in [`ARCHITECTURE_REQUIREMENTS.md`](./ARCHITECTURE_REQUIREMENTS.md).
+> **Update — architectural style decided (team decision).** Since this document was written, the development team has decided the architectural **style**: a **modular monolith** with **in-process event-driven** communication in the competition/game subsystem. This was a team decision made ahead of requirements validation; it is recorded with its divergence notice in [`context-feeders/decisions/project-decisions.md`](../decisions/project-decisions.md) §8.1 and detailed in [`ARCHITECTURE_REQUIREMENTS.md`](./ARCHITECTURE_REQUIREMENTS.md).
 >
 > Accordingly, **"Backend architecture"** and **"WebSocket/event architecture"** are no longer fully deferred: the *style/scope* is decided, while backend **technology**, real-time **transport technology**, and everything else in the list above remain Open.
 

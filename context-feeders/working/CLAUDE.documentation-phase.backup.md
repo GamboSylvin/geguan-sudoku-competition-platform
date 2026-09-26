@@ -1,48 +1,18 @@
+> **[CONTEXT FEEDER NOTE]** Backup of the previous root `CLAUDE.md` (documentation-phase version). Kept for reference only. It is NOT an instruction file; the current instructions are in the root `CLAUDE.md`.
+
 # Project Instructions
-
-## Application Building Context
-
-**Before anything else, read `context/FILL-BEFORE-CODING.md`.** Search `context/` for the blanks it describes (`FILL-BEFORE-CODING`). If any such blank remains, **do not write code**; report the blanks.
-
-Read the following files in order before implementing or making any architectural decision:
-
-1. `context/README.md` — what the files are, the status tags, the reading rules
-2. `context/project-overview.md` — product definition, goals, features, and scope
-3. `context/competition-rules.md` — the decided competition and scoring rules, and the open ones
-4. `context/architecture.md` — system structure, boundaries, storage model, and invariants
-5. `context/ui-context.md` — screens, states, and interaction rules
-6. `context/code-standards.md` — implementation rules and conventions
-7. `context/ai-workflow-rules.md` — development workflow, scoping rules, and delivery approach
-8. `context/progress-tracker.md` — current phase, blockers, open questions, and next steps
-9. `context/data-model.md` — the approved data model and schema (**placeholder, to be filled and approved**)
-10. `context/specs/00-build-plan.md` — full build order with dependencies (**placeholder, to be filled**)
-
-Before starting any unit, read its spec at `context/specs/NN-unit-name.md` for that unit's goal, implementation details, acceptance criteria, and scope (**only the placeholder `specs/01-foundation.md` exists so far; the other unit specs follow the build plan**).
-
-Update `context/progress-tracker.md` after each meaningful implementation change.
-
-If implementation changes the architecture, scope, or standards documented in the context files, ask, then update the relevant file before continuing.
-
-**Open-item gate.** Anything tagged **[O]** or marked OPEN is not decided. Do not implement it and do not guess it. If a unit depends on an open item, stop and report it.
-**Status gate.** **[C]** means the client's stakeholder confirmed it (on the date shown; a confirmed rule can change later, and the change is logged in `context/progress-tracker.md`). **[T]** decisions were made by the team or the project owner and are not stakeholder-confirmed.
-
-The working files live **outside** `context/`, in `context-feeders/working/`. They are not part of the context and contain superseded statements. Do not read them to decide what to build.
-
----
 
 ## Current Phase
 
-The project is in the **pre-build phase**: the requirements are still being confirmed (the documentation phase described below), and the `context/` folder is being completed.
+The project is currently in the **requirements and decision phase**.
 
 The requirement documents were consolidated on 2026-09-25 into two live documents (`context-feeders/requirements/REQUIREMENTS.md` and `context-feeders/requirements/ARCHITECTURE.md`), and the decision files are aligned with them. Consolidated does **not** mean final: many statements are proposals, assumptions or open, and each one carries a status tag.
 
 Do not assume that requirements, architecture, constraints, or technical decisions are final unless they are explicitly marked as confirmed.
 
-**Do not move into implementation unless it is explicitly requested, and the coding gate is passed.** The coding gate: no `FILL-BEFORE-CODING` blank remains in `context/`, and the approvals in `context/FILL-BEFORE-CODING.md` section E are done, including the data model and the Unit 1 spec.
+Do not move into implementation unless explicitly requested.
 
 Before any coding starts, the open items marked "needed before coding" in `context-feeders/requirements/REQUIREMENTS.md` §12 and `context-feeders/decisions/unmade-decisions.md` (in particular I-01, the revised domain model and API) must be dealt with.
-
-**Two sets of documents.** `context/` is what an agent builds from. `context-feeders/requirements/`, `context-feeders/decisions/` and `context-feeders/archive/` are the requirements record, governed by the rules below. If the two differ, do not resolve it silently: identify the difference and ask.
 
 ---
 
@@ -51,18 +21,10 @@ Before any coding starts, the open items marked "needed before coding" in `conte
 The project root contains:
 
 ```text
-CLAUDE.md            this file: the entry point
-context/             the deliverable: what an agent builds from
-building-with-ai/    the methodology (reference)
-context-feeders/     transit folder: files that only FEED context/
-    requirements/    the two live requirement documents
-    decisions/       the decision register
-    archive/         merged source documents
-    working/         working files of the requirements process
+context-feeders/requirements/
+context-feeders/decisions/
+context-feeders/archive/
 ```
-
-* `context/` — the context folder, read first (see above).
-* `context-feeders/` — everything that feeds `context/`. It is **not** what a coding agent builds from. Each file starts with a short note saying its role. `context-feeders/working/` holds the interview record, the open questions, the question pack, and a backup of the previous version of this file.
 
 ### `context-feeders/requirements/`
 
@@ -102,7 +64,7 @@ Holds the source documents whose content has already been merged into `context-f
 
 ## Mandatory Documentation Review
 
-Whenever creating, modifying, reviewing, or discussing a requirements or decision document (in `context-feeders/requirements/` or `context-feeders/decisions/`):
+Whenever creating, modifying, reviewing, or discussing a requirements or decision document:
 
 1. Read `context-feeders/requirements/REQUIREMENTS.md` and `context-feeders/requirements/ARCHITECTURE.md`.
 2. Read both files in `context-feeders/decisions/`.
@@ -110,8 +72,6 @@ Whenever creating, modifying, reviewing, or discussing a requirements or decisio
 4. Compare the new information with the existing documentation before proposing changes.
 
 Do not rely only on the most recently discussed information.
-
-(The `context/` folder has its own rules: `context/ai-workflow-rules.md`.)
 
 ---
 

@@ -1,3 +1,5 @@
+> **[CONTEXT FEEDER NOTE]** Archived source document, already merged into the requirements and decisions and, from there, into `context/`. Kept for reference only; do NOT use it to decide what to build. It is not maintained: the only edits are this note and the updated folder paths.
+
 # SUPER_ADMIN_REQUIREMENTS.md
 
 # Super Administrator Requirements
@@ -8,7 +10,7 @@
 
 > This document captures the current Super Administrator vision after comparison with the client's proposal and the existing requirements/decision records. It is a requirements-level document, not an architecture or technology decision. Open questions are intentionally preserved.
 
-> **Update (2026-09-23):** the MVP was deliberately scoped down to a **single organization** (one school/university, due to the 15-day timeline) — see `decisions/project-decisions.md` ENV-007/SA-005. The Super Administrator role, and multi-tenancy generally, is **deferred to a later growth phase, not cancelled**. This document remains the working spec for that future phase; none of it is active MVP scope right now. See `decisions/unmade-decisions.md` §1 and §14.1.
+> **Update (2026-09-23):** the MVP was deliberately scoped down to a **single organization** (one school/university, due to the 15-day timeline) — see `context-feeders/decisions/project-decisions.md` ENV-007/SA-005. The Super Administrator role, and multi-tenancy generally, is **deferred to a later growth phase, not cancelled**. This document remains the working spec for that future phase; none of it is active MVP scope right now. See `context-feeders/decisions/unmade-decisions.md` §1 and §14.1.
 
 ## 1. Role Definition
 

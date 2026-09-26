@@ -1,3 +1,5 @@
+> **[CONTEXT FEEDER NOTE]** Archived source document, already merged into the requirements and decisions and, from there, into `context/`. Kept for reference only; do NOT use it to decide what to build. It is not maintained: the only edits are this note and the updated folder paths.
+
 # ARCHITECTURE_REQUIREMENTS.md
 
 # Architecture Requirements
@@ -5,7 +7,7 @@
 **Status:** Working Draft — team decision, recorded; details open
 **Scope:** MVP
 **Method:** Problem → Requirements → Domain/System Model → Architecture Analysis → Architecture Decision → Technology Analysis → Stack Decisions → Detailed Design → Coding
-**Related documents:** `PROJECT_ANALYSIS_UPDATED.md`, `FLOW_REQUIREMENTS.md`, `STAGE_REQUIREMENTS.md`, `PLAYER_REQUIREMENTS.md`, `ORGANIZATION_ADMIN_REQUIREMENTS.md`, `SUPER_ADMIN_REQUIREMENTS.md`, `JUDGE_REQUIREMENTS_PROPOSAL.md`, `client-view.md`, `decisions/project-decisions.md`, `decisions/unmade-decisions.md`
+**Related documents:** `PROJECT_ANALYSIS_UPDATED.md`, `FLOW_REQUIREMENTS.md`, `STAGE_REQUIREMENTS.md`, `PLAYER_REQUIREMENTS.md`, `ORGANIZATION_ADMIN_REQUIREMENTS.md`, `SUPER_ADMIN_REQUIREMENTS.md`, `JUDGE_REQUIREMENTS_PROPOSAL.md`, `client-view.md`, `context-feeders/decisions/project-decisions.md`, `context-feeders/decisions/unmade-decisions.md`
 
 > This document records the **architectural style** the development team has chosen for the MVP: a **modular monolith**, with **event-driven communication at the level of the competition/game subsystem**.
 >
@@ -242,18 +244,18 @@ Explicitly **not** part of this architecture:
 
 ## 8. What This Document Does Not Decide
 
-> **Update (2026-09-24):** the stakeholder gave the real scale — about 600–720 students, 11 rooms, at least 30 judges, 10 synchronized big screens — and several new functions (per-question points, configurable values, score corrections with a log, archived scores on rematch, answers kept then purged after 15 days, participant numbering, copy). The architecture style is unchanged, but the domain model, API and plan in the Alignment Guideline must be revised before coding (`decisions/unmade-decisions.md` §16, I-01).
+> **Update (2026-09-24):** the stakeholder gave the real scale — about 600–720 students, 11 rooms, at least 30 judges, 10 synchronized big screens — and several new functions (per-question points, configurable values, score corrections with a log, archived scores on rematch, answers kept then purged after 15 days, participant numbering, copy). The architecture style is unchanged, but the domain model, API and plan in the Alignment Guideline must be revised before coding (`context-feeders/decisions/unmade-decisions.md` §16, I-01).
 >
-> **Update (2026-09-23):** several of these have since been named by `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` and recorded in `decisions/project-decisions.md` §14.4 — struck through below. Backend language/framework is now the one major technology choice still genuinely unnamed.
+> **Update (2026-09-23):** several of these have since been named by `Sudoku_Arena_Final_MVP_Alignment_Guideline.md` and recorded in `context-feeders/decisions/project-decisions.md` §14.4 — struck through below. Backend language/framework is now the one major technology choice still genuinely unnamed.
 
 Still **Open** and still to be derived from requirements:
 
-- **Backend technology / language / framework — still genuinely open** (the only major one left; see `decisions/unmade-decisions.md` §12).
+- **Backend technology / language / framework — still genuinely open** (the only major one left; see `context-feeders/decisions/unmade-decisions.md` §12).
 - ~~Frontend technology / framework.~~ **Resolved: React with TypeScript.**
 - ~~Database technology and data modeling.~~ **Resolved: PostgreSQL (durable) + Redis (runtime/cache).**
 - ~~Real-time communication technology.~~ **Resolved: WebSocket.**
 - ~~Caching / state-management technology.~~ **Resolved: Redis.**
-- Authentication and authorization implementation — **partially resolved**: username/password for Player/Judge/Admin; Big Screen auth still fully undefined (`decisions/unmade-decisions.md` §15.2).
+- Authentication and authorization implementation — **partially resolved**: username/password for Player/Judge/Admin; Big Screen auth still fully undefined (`context-feeders/decisions/unmade-decisions.md` §15.2).
 - Deployment architecture and infrastructure — still open.
 - External dependencies and libraries — still open.
 - PDF/OCR/extraction technology — **partially resolved**: no OCR, predefined format, narrowest parser needed; specific library still open.

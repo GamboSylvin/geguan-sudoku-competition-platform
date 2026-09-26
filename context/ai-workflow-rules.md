@@ -1,4 +1,4 @@
-# AI Workflow Rules (DRAFT v0, 2026-09-26)
+# AI Workflow Rules (DRAFT v1, 2026-09-26)
 
 > Direct instructions to the coding agent. Status tags: [T] team decision · [O] open. See `README.md`.
 > The git, CI and review rules are decided (BLD-002); team roles and sync rhythm are still open. The structure below follows the agreed `building-with-ai` methodology.
@@ -72,8 +72,8 @@ If a change cannot be verified end to end quickly, the scope is too broad. Split
 
 Do not modify the following unless explicitly instructed:
 
-- `requirements/`, `decisions/` and `archive/` at the project root. They belong to the documentation phase and are governed by the root `CLAUDE.md`.
-- The working files in `context-working/` (outside this folder). They are the record of the requirements process, not part of the context; do not read them to decide what to build (they contain superseded statements). Changes to them go through the answer-recording process, not through code work.
+- `context-feeders/requirements/`, `context-feeders/decisions/` and `context-feeders/archive/` (in the transit folder `context-feeders/`, outside this folder). They belong to the documentation phase and are governed by the root `CLAUDE.md`.
+- The working files in `context-feeders/working/` (outside this folder). They are the record of the requirements process, not part of the context; do not read them to decide what to build (they contain superseded statements). Changes to them go through the answer-recording process, not through code work.
 - Generated UI-library components and third-party internals (once a UI library is chosen, I-20): generated output can be overwritten and vendor code is updated upstream; project customization lives in the app layer.
 
 ## Change management

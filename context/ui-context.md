@@ -1,4 +1,4 @@
-# UI Context (DRAFT v0, 2026-09-26)
+# UI Context (DRAFT v1, 2026-09-26)
 
 > **Partial draft.** Behaviour and content of the screens are documented; the visual design is not. Do not invent colours, layouts, fonts or component choices.
 > Status tags: [C] client-confirmed · [S] client's document · [T] team/project-owner decision, not client-confirmed · [O] open. See `README.md`.
@@ -11,11 +11,57 @@
 
 None recorded.
 
-## Colors, typography, border radius, spacing
+The design comes **after the first slice** (the Individual stage, end to end) [C] (BLD-009). The token tables below are empty structures until the visual language (U-65) is answered. When defined, every component must use named tokens, never raw values.
 
-**OPEN.** Depend on the visual language (U-65). No tokens exist yet. When defined, every component must use named tokens, never raw values.
+## Colors
 
-## Component library and icons
+**OPEN (U-65).** Define the color tokens as named variables.
+
+| Role | Variable name | Value |
+|---|---|---|
+| Page background | ________ | ________ |
+| Surface | ________ | ________ |
+| Primary text | ________ | ________ |
+| Muted text | ________ | ________ |
+| Primary accent | ________ | ________ |
+| Border | ________ | ________ |
+| Error | ________ | ________ |
+| Success | ________ | ________ |
+
+(Add levels and states as the UI needs them: background layers, text levels, hover and selected variants, warning and info.)
+
+## Typography
+
+**OPEN (I-20, U-70).**
+
+| Role | Font | Variable |
+|---|---|---|
+| UI text | ________ | ________ |
+| Code / mono | ________ | ________ |
+
+## Border Radius / Rounding
+
+**OPEN.**
+
+| Context | Value |
+|---|---|
+| Inline / small UI | ________ |
+| Cards / panels | ________ |
+| Modals / overlays | ________ |
+
+## Spacing Scale
+
+**OPEN.**
+
+| Scale | Variable | Value |
+|---|---|---|
+| Extra small | ________ | ________ |
+| Small | ________ | ________ |
+| Medium | ________ | ________ |
+| Large | ________ | ________ |
+| Extra large | ________ | ________ |
+
+## Component Library
 
 **OPEN (I-20).** [[FILL-BEFORE-UNIT: first UI unit — UI component library = ________ ; icon set = ________ ; fonts (including Chinese) = ________ ; owner: the person completing the context]] The frontend is React with TypeScript [T]. No UI library, icon set or font is documented (team decision). Chinese text rendering on the tablets is undocumented and depends on the tablet model and Quark version (U-06); font and Chinese-display requirements: **OPEN (U-70).**
 
@@ -41,7 +87,7 @@ None recorded.
 
 The interface is **English and Chinese**, not one or the other; the translation mechanism must be planned in from the start [C] (ARCH-026). Messages such as the pause notice are written in both languages [T]. Whether the language is per user, per event or both shown at once, and the default: **OPEN (U-68).**
 
-## Screens and states
+## Pages / Screens
 
 ### Player
 - **States [T]:** competition room; preparation room (the round's rules and a countdown); active round; read-only after submitting; waiting.

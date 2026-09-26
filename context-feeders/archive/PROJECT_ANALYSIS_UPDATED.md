@@ -1,3 +1,5 @@
+> **[CONTEXT FEEDER NOTE]** Archived source document, already merged into the requirements and decisions and, from there, into `context/`. Kept for reference only; do NOT use it to decide what to build. It is not maintained: the only edits are this note and the updated folder paths.
+
 # Sudoku Competition Platform — Project Analysis
 
 ## 1. Problem Definition
@@ -315,7 +317,7 @@ The following have not yet been sufficiently defined:
 
 ## 6. Decision Status
 
-> **Update (2026-09-23):** the multi-tenant SaaS platform below remains the confirmed **long-term** product vision, but the current MVP build is deliberately scoped to a **single organization** (one school/university) due to the 15-day implementation timeline — deferred, not abandoned. See `decisions/project-decisions.md` ENV-007/ENV-008.
+> **Update (2026-09-23):** the multi-tenant SaaS platform below remains the confirmed **long-term** product vision, but the current MVP build is deliberately scoped to a **single organization** (one school/university) due to the 15-day implementation timeline — deferred, not abandoned. See `context-feeders/decisions/project-decisions.md` ENV-007/ENV-008.
 
 ### Confirmed
 
@@ -335,7 +337,7 @@ The following have not yet been sufficiently defined:
 - A round automatically submits the player's current state when its time limit expires.
 - Repeated submission must not alter the player's result.
 - From the player's perspective, rounds and stages proceed sequentially with waiting states between them.
-- Team-based rounds are a possible competition category, but their detailed interaction rules are not yet defined. **(Update 2026-09-23: since resolved — see `STAGE_REQUIREMENTS.md` §4.3 and `decisions/unmade-decisions.md` §4.5 for the confirmed rotation mechanic.)**
+- Team-based rounds are a possible competition category, but their detailed interaction rules are not yet defined. **(Update 2026-09-23: since resolved — see `STAGE_REQUIREMENTS.md` §4.3 and `context-feeders/decisions/unmade-decisions.md` §4.5 for the confirmed rotation mechanic.)**
 
 ### Not Yet Decided
 

@@ -1,3 +1,5 @@
+> **[CONTEXT FEEDER NOTE]** Working file of the requirements process (interview record, open questions, question pack). It FEEDS the `context/` folder and contains superseded statements. Do NOT read it to decide what to build.
+
 # Interview Notes (working draft)
 
 > Raw answers from the pre-build interview (building-with-ai protocol).
@@ -103,7 +105,7 @@ The only documented point is the team's proposal to build the Individual stage f
 
 ### Part 1 decisions by the project owner: Q1 to Q4 of the pack (2026-09-26)
 Decided by the project owner, answering in the stakeholder's role. Decisions to build from, tagged [T]; **not yet confirmed by the client's own stakeholder** (do not present them as such). They supersede the group 2 section below for Q1 to Q4.
-Full text: "Resolved items" in `_open-questions.md`. Register rows: SCR-006 to SCR-012, SUB-001 to SUB-007 (decisions/project-decisions.md §15.8; not touched here).
+Full text: "Resolved items" in `_open-questions.md`. Register rows: SCR-006 to SCR-012, SUB-001 to SUB-007 (context-feeders/decisions/project-decisions.md §15.8; not touched here).
 - **Terms:** an event has categories; a category has two stages (Individual, Team); each stage has 2 rounds; an Individual round has 6 puzzles.
 - **Points and total:** the controller defines the puzzle points before a round; no default split of the 100 is imposed (U-71); the round total is the sum of the question points, calculated; warning before an Individual round if the total is not 100, not blocked; team rounds have no fixed maximum (team score = correct answers times points per question), no warning (U-72).
 - **Submission:** once per whole round; free movement and editing; read-only and final after submitting (U-33); confirmation before the final submit, blank puzzles allowed (score 0, the confirmation gives the count) (U-74); after submitting the student sees "accepted" and no immediate score.
@@ -334,4 +336,4 @@ The user sent corrections to earlier answers. Each item below was applied above 
   Exact judge powers beyond their own students: OPEN (new U-55).
 - **Group 2:** A3's readings "both individual rounds" and "every puzzle of the round" were inferred and are withdrawn (U-47 now asks both). A1 and A2: treat as "don't know".
 - **IDs:** the corrections cite U-45 for puzzle authoring (earlier cited as U-43) and U-47 for both A3 items (earlier cited for the cap). Verify the IDs against the source register.
-- **Not touched:** `requirements/` and `decisions/`. The correction about a statement in `REQUIREMENTS.md` concerns those files and was not applied here.
+- **Not touched:** `context-feeders/requirements/` and `context-feeders/decisions/`. The correction about a statement in `REQUIREMENTS.md` concerns those files and was not applied here.

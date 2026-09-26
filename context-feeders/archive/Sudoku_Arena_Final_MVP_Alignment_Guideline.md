@@ -1,3 +1,5 @@
+> **[CONTEXT FEEDER NOTE]** Archived source document, already merged into the requirements and decisions and, from there, into `context/`. Kept for reference only; do NOT use it to decide what to build. It is not maintained: the only edits are this note and the updated folder paths.
+
 # Sudoku Arena — Final MVP Alignment & Engineering Guideline
 
 **Document status:** Final pre-implementation alignment  
