@@ -13,22 +13,22 @@ Search the whole `context/` folder for these markers. Each one has a blank (`___
 - `[[FILL-BEFORE-UNIT: ... ]]` — required before the named unit only.
 - `[[FILL-BEFORE-DEPLOYMENT: ... ]]` — needed to deploy, not to start coding.
 
-The descriptions of the markers in this file, `README.md`, the root `CLAUDE.md` and `ai-workflow-rules.md` are not blanks. The real blanks are in `architecture.md`, `code-standards.md`, `project-overview.md`, `ui-context.md`, `data-model.md`, `specs/00-build-plan.md`, `specs/01-foundation.md` and `samples/README.md`.
+The descriptions of the markers in this file, `README.md`, the root `CLAUDE.md` and `ai-workflow-rules.md` are not blanks. The real blanks are in `architecture.md`, `code-standards.md`, `project-overview.md`, `ui-context.md` and `samples/README.md`.
 `TBD — to be decided by the project owner` marks a value left blank on purpose; it is filled through a marker above.
-Placeholders: `data-model.md`, `specs/00-build-plan.md` and `samples/` are empty structures to fill.
+Placeholders: `samples/` is an empty structure to fill.
 Items tagged `[O]` or written `OPEN (U-xx)` that are **not** in this checklist are **waiting for stakeholder answers**: do **not** fill them (see section D).
 
 ## A. Required before the first coding unit — `FILL-BEFORE-CODING`
 
 | # | What to fill | Where | Owner | Done |
 |---|---|---|---|---|
-| A1 | **Backend language and framework** = ________ (I-02) | `architecture.md` Stack table; `code-standards.md` Language and Framework | Project owner | [ ] |
-| A2 | **Developers' skills** = ________ (I-18): what each knows well; experience with real-time apps, PostgreSQL, Redis | `project-overview.md` Client and team | Project owner | [ ] |
-| A3 | **Names and roles** of developer 1, developer 2, project owner, business lead; **who builds what** = ________ (I-17, I-23) | `project-overview.md` Client and team | Project owner | [ ] |
-| A4 | **I-14 and I-15**: what they are and how they are resolved = ________. **Where to look:** `context-feeders/requirements/REQUIREMENTS.md` §12 and `context-feeders/decisions/unmade-decisions.md` (search for I-14 and I-15) | `architecture.md` Open technical decisions | Project owner | [ ] |
-| A5 | **Development environment** = ________ (I-24): reproducible setup, dependency lock files, `.env.example`, containers if the stack needs them. The methodology's pre-code checklist lists "lock files committed" and "`.env.example` provided": decide here whether they are created in Unit 1 or before it | `architecture.md` Development environment | Team | [ ] |
-| A6 | **Data model and schema**, filled and approved (I-01), keeping the model ready for team rotation | `data-model.md` (placeholder) and the marker in `architecture.md` | Team | [ ] |
-| A7 | **Build plan** and the **Unit 1 spec**, for the first slice (Individual stage, end to end). **Unit 1 is the foundation only** (repository, environment, CI, skeleton) | `specs/00-build-plan.md` (placeholder) and `specs/01-foundation.md` (placeholder, feature-spec structure) | Team | [ ] |
+| A1 | **Backend language and framework** = **Node.js with TypeScript, Express.js** [T] (I-02) | `architecture.md` Stack table; `code-standards.md` Language and Framework | Project owner | [x] |
+| A2 | **Developers' skills** = recorded 2026-09-27 (I-18): both junior — Sylvin (a little more React, a little Express, some PostgreSQL, a little Redis); Louise (a little Express and React, more PostgreSQL). Real-time: both little, Socket.io the tool they know best | `project-overview.md` Client and team | Project owner | [x] |
+| A3 | **Names and roles** of developer 1, developer 2, project owner, business lead; **who builds what** = recorded 2026-09-27 (I-17, I-23): Sylvin (developer 1), Louise (developer 2), project owner the Sudoku team, business lead Ma Laoshi; work split by module, ~70/30 (Sylvin backend-leaning, Louise frontend-leaning), contract first | `project-overview.md` Client and team | Project owner | [x] |
+| A4 | **I-14 and I-15**: what they are and how they are resolved = both are already resolved by decisions confirmed 2026-09-26. **I-14 = answer check:** the submitted grid is compared with the stored solution, no rule checker per variant (BLD-010; leaves U-90, unique solutions, to the stakeholder). **I-15 = grid model:** generic rows/columns/regions, never 9x9 (BLD-011; the shapes follow the sample PDF, U-01). Recorded in `architecture.md`, Technical decision records | `architecture.md` Technical decision records | Project owner | [x] |
+| A5 | **Development environment** = decided 2026-09-29 [T]: **Docker with Docker Compose** — the whole codebase containerized, so development and deployment share one environment (PostgreSQL and Redis as Compose services); **npm with `package-lock.json` committed**; versions pinned (Node.js LTS, PostgreSQL 16, Redis 7); `.env.example` committed, real `.env` git-ignored. **Created in Unit 1** (I-24) | `architecture.md` Development environment | Team | [x] |
+| A6 | **Data model and schema**, filled and approved (I-01), keeping the model ready for team rotation | `data-model.md` and the marker in `architecture.md` | Team | [x] |
+| A7 | **Build plan** and the **Unit 1 spec**, for the first slice (Individual stage, end to end). **Unit 1 is the foundation only** (repository, environment, CI, skeleton) = approved 2026-09-30 [T] (A7) | `specs/00-build-plan.md` and `specs/01-foundation.md` | Team | [x] |
 
 Coding may start when every A item is ticked **and** the approvals in section E are done.
 
@@ -59,19 +59,20 @@ These are still open. They are being answered through the question process, and 
 ## E. Approvals before coding (the methodology's gate)
 
 The methodology says each context file is shown for review and approved, and that coding starts only when all files and specs are approved. Record who approved and when.
+The rows below were approved by the **project owner (the Sudoku team)** on **2026-09-30** (recorded on that date; no other date was given). The project owner is not the client's stakeholder, so these approvals are **[T]**, not stakeholder confirmations. The last row (the stakeholders' written confirmation) is a separate, stakeholder-level item: the project owner confirmed it is being handled as the order confirmation.
 
 | What is approved | Approved by | Date | Done |
 |---|---|---|---|
-| `project-overview.md` filled and approved | ________ | ________ | [ ] |
-| `competition-rules.md` | ________ | ________ | [ ] |
-| `architecture.md` | ________ | ________ | [ ] |
-| `code-standards.md` | ________ | ________ | [ ] |
-| `ai-workflow-rules.md` | ________ | ________ | [ ] |
-| `ui-context.md`: the behaviour parts now; the visual parts (tokens, layouts) when the design is done, since the design comes after the first slice (BLD-009) | ________ | ________ | [ ] |
-| **Data model and schema** (`data-model.md`): the skeleton checkpoint | ________ | ________ | [ ] |
-| `specs/00-build-plan.md` and `specs/01-foundation.md` | ________ | ________ | [ ] |
-| **Quality chain agreed**: AI review, then automated checks, then human review. The decided workflow states CI and the other developer's review; it does not state an AI review step | ________ | ________ | [ ] |
-| **Requirements confirmed in writing by the stakeholders** (methodology Step 8, mandatory for client projects; question Q36 of the stakeholder question pack). The methodology places it before the specs are written | ________ | ________ | [ ] |
+| `project-overview.md` filled and approved | project owner (Sudoku team) | 2026-09-30 | [x] |
+| `competition-rules.md` | project owner (Sudoku team) | 2026-09-30 | [x] |
+| `architecture.md` | project owner (Sudoku team) | 2026-09-30 | [x] |
+| `code-standards.md` | project owner (Sudoku team) | 2026-09-30 | [x] |
+| `ai-workflow-rules.md` | project owner (Sudoku team) | 2026-09-30 | [x] |
+| `ui-context.md`: the behaviour parts now; the visual parts (tokens, layouts) when the design is done, since the design comes after the first slice (BLD-009) | project owner (Sudoku team) | 2026-09-30 | [x] |
+| **Data model and schema** (`data-model.md`): the skeleton checkpoint | team / project owner | 2026-09-30 | [x] |
+| `specs/00-build-plan.md` and `specs/01-foundation.md` | team / project owner | 2026-09-30 | [x] |
+| **Quality chain agreed**: AI review, then automated checks, then human review. The decided workflow states CI and the other developer's review; it does not state an AI review step | project owner (Sudoku team) | 2026-09-30 | [x] |
+| **Requirements confirmed in writing by the stakeholders** (methodology Step 8, mandatory for client projects; question Q36 of the stakeholder question pack). The methodology places it before the specs are written | project owner (Sudoku team) | 2026-09-30 | [x] |
 
 ## How to work in parallel
 
@@ -86,7 +87,7 @@ The methodology says each context file is shown for review and approved, and tha
 ```text
 You are helping me complete the context folder of the project "Sudoku Arena" before any coding starts. Do NOT write code.
 
-Read, in this order: the root CLAUDE.md, context/README.md, context/FILL-BEFORE-CODING.md, then every other file in context/ (including context/samples/README.md and the placeholders context/data-model.md and context/specs/00-build-plan.md).
+Read, in this order: the root CLAUDE.md, context/README.md, context/FILL-BEFORE-CODING.md, then every other file in context/ (including context/samples/README.md and the specs in context/specs/).
 Do NOT read the folder context-feeders/working/. It holds superseded notes. Do NOT edit context-feeders/requirements/, context-feeders/decisions/ or context-feeders/archive/ (you may READ context-feeders/requirements/REQUIREMENTS.md section 12 and context-feeders/decisions/unmade-decisions.md only to look up items I-14 and I-15).
 
 Step 1. Search all of context/ for these markers (ignore the DESCRIPTIONS of markers in FILL-BEFORE-CODING.md, README.md, the root CLAUDE.md and ai-workflow-rules.md; they are not blanks) and list them ALL in a table with columns: number, marker type, file, section, what is needed, owner, what it blocks (first coding unit / a named unit / deployment):

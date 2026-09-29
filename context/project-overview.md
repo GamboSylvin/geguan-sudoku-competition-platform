@@ -28,13 +28,15 @@ Four ends [S]:
 - **Judges**: at least 30, each with a range of participant numbers [C]. They supervise their own students' status and can restart one student's round [P].
 - **Big screens**: 10 of them, passive displays for rankings and close-ups [C].
 
-**OPEN:** which end is the primary user is not documented (U-52). Names and roles of the two developers, the business lead and the project owner: **TBD — to be decided by the project owner** (I-17).
+**OPEN:** which end is the primary user is not documented (U-52). Names and roles are recorded (I-17, recorded 2026-09-27): see "Client and team".
 
 ## Client and team
 
 - **Client side:** one stakeholder answers the business questions. They gave the second-round answers, approved the team's proposals as a whole (the "blanket answer", which makes those items [P]), and set the working principle **"make customizable whatever can be customized, and operate the rest directly"** [C].
-- **Project owner:** made the single-tenant decision [C] (ENV-007). Some answers were later given by the project owner in the stakeholder's role; those are [T] (see `competition-rules.md`).
-- **Team:** two developers, about 15 days, a junior team, so the design must stay easy to understand [T]. Names, roles and skills: **TBD — to be decided by the project owner** (I-17, I-18). [[FILL-BEFORE-CODING: developer 1 = ________ ; developer 2 = ________ ; project owner = ________ ; business lead = ________ ; each developer's skills = ________ ; who builds what = ________ ; owner: project owner]]
+- **Project owner:** the **Sudoku team** [T] (I-17, named 2026-09-27). Made the single-tenant decision [C] (ENV-007). Some answers were later given by the project owner in the stakeholder's role; those are [T] (see `competition-rules.md`).
+- **Team:** two developers, about 15 days, a junior team, so the design must stay easy to understand [T]. **Sylvin** (developer 1) and **Louise** (developer 2) [T] (I-17, recorded 2026-09-27); the numbering is cosmetic. The team is called Alpha (informal). **Business lead:** Ma Laoshi.
+- **Work split** [T] (I-23, recorded 2026-09-27): ownership is **by module, one owner per module**, so neither developer waits on the other's code. Roughly **70/30** — Sylvin's way on the backend, Louise's way on the frontend; a guide, not a strict rule (the frontend has 8 feature folders, so it lands near 60/40). **Backend** — Sylvin: Competition, Stage/Round, Orchestrator, Gameplay/Player State, Scoring, Big Screen, Judge/Corrections; Louise: Participant/Identity, Question, Ranking. **Frontend** — Louise: player, gameplay, judge, admin, ranking; Sylvin: auth, competition, big-screen. Cross-help is allowed where skills differ, and not knowing a skill does not exempt anyone from a task. **Contract first:** every module that must talk to another (frontend↔backend, API↔API, module↔module) has its contract agreed before either side starts, following dependency inversion. The module list is provisional (I-01) and will grow.
+- **Developers' skills** [T] (I-18, recorded 2026-09-27): the team is junior. **Sylvin** — a little more React experience than Louise, a little Express, some PostgreSQL, a little Redis. **Louise** — a little Express and a little React, more PostgreSQL experience than Sylvin. **Real-time (WebSocket / Socket.io):** both have little experience; Socket.io is the tool they know best. Louise's Redis experience: not stated.
 
 ## Business goal
 

@@ -1,7 +1,7 @@
 # AI Workflow Rules (DRAFT v1, 2026-09-26)
 
 > Direct instructions to the coding agent. Status tags: [T] team decision · [O] open. See `README.md`.
-> The git, CI and review rules are decided (BLD-002); team roles and sync rhythm are still open. The structure below follows the agreed `building-with-ai` methodology.
+> The git, CI and review rules are decided (BLD-002); team roles are recorded (I-17) and the team sync rhythm is still open (I-28). The structure below follows the agreed `building-with-ai` methodology.
 
 ## Approach
 
@@ -99,7 +99,7 @@ Decided [C] (BLD-002):
 - **The other developer reviews each pull request.**
 
 Methodology rules that still apply (not contradicted): delete a feature branch after merge; write commit messages that say what changed and why; quality layers are AI review, then automated checks, then human review; the developer must read and understand AI-generated code before closing a unit.
-Team roles: **TBD — to be decided by the project owner** (I-17). Team sync rhythm: **OPEN (I-28).**
+Team roles are recorded (I-17, 2026-09-27): Sylvin (developer 1) and Louise (developer 2); project owner the Sudoku team; business lead Ma Laoshi. Team sync rhythm: **OPEN (I-28).**
 
 ## Before moving to the next unit
 
