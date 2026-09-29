@@ -17,7 +17,13 @@
   - Round 2: variant Sudoku (diagonal, killer, jigsaw), 6 questions, 30 minutes, 100 points.
 - **Team stage**: teams of 4 on tablets.
   - Round 1: rotation relay [C] (TEM-001).
-  - Round 2: partition collaboration, very probably the stakeholder's "齐心协力". **OPEN (U-05, U-21): what it is, how it is scored, how many puzzles, what time limit. Do not implement.**
+  - Round 2: partition collaboration ("齐心协力"): one puzzle split into blocks, one block per tablet/member, each member seeing and editing only their own block [C] (TEM-005, resolves TEM-003, U-21, U-05). The earlier guess of a shared full-grid board is dropped.
+    - **Block split** [C] (TEM-005, resolves U-91): the grid is cut into contiguous horizontal row-bands, one band per active member (2 to 6), as equal as possible; extra rows go to the first bands. Works for any grid shape or variant, never assuming 9x9.
+    - **Puzzles per round:** 3, customizable [T] (TEM-006), a working position built from surrounding patterns, **not read from any source**. The real number should come from the 4th Zhejiang league regulation (pack ref R9). **Flag for replacement once the regulation numbers arrive.**
+    - **Total round time:** 30 minutes, customizable [T] (TEM-007), a working position anchored to the Individual stage's 30-minute variant round, **not read from any source**. Flag for replacement.
+    - **Points:** the controller sets one "points per puzzle" value for the whole round, default 20, customizable [T] (TEM-008), a working position following the same one-value-per-round pattern as rotation, **not read from any source**. Flag for replacement.
+    - **Scoring:** all-or-nothing per puzzle once the blocks are combined, no early bonus, the same rules as everywhere else [C] (SCR-001, SCR-002).
+    - **Needed on the event day:** yes, because the school total counts both team rounds. Rules are needed by about day 8 of the build if required on competition day.
 - **School total** = individual part x coefficient + team part [C] (SCR-004). Each school has exactly one team per category [C].
 
 ## 2. Points, totals and the values the controller can set
@@ -86,10 +92,10 @@
 | Item | Open point |
 |---|---|
 | U-03 (second part), U-01 | Does the question PDF carry the points? The sample question PDF and participant Excel have not been sent |
-| U-05, U-21 | The second team round: what it is, scoring, puzzles, time |
 | U-24, U-88 | What "publish results" means and when students see their score |
 | U-27, U-89 | Awards after an early finish; reset of a finished competition |
 | U-32 | Whether each category has its own question file |
+| TEM-006 to TEM-008 | Working positions (puzzle count 3, time 30 min, points 20/puzzle) for the second team round, not sourced; replace with the 4th Zhejiang league regulation numbers once available |
 | U-90 | Whether every puzzle has a unique solution |
 | U-59, U-62 | Whether archived scores, the correction log and the uploaded participant Excel follow the 15-day deletion |
 | U-49 | How long an interruption during a round is acceptable |

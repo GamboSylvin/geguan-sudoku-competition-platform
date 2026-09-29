@@ -44,12 +44,16 @@ If the controller finishes the competition early, the results carry a visible "f
 - Can the controller reset (rematch) after the competition has finished? *(ref U-89)*
 Your answer: _______________
 
-**Q7. The second team round ("齐心协力")**
-The team stage has a rotation round first. Your own words suggest a shared board where the whole team sees and edits each other's entries. The client's document describes a partition round: one puzzle split into blocks, one tablet per block, and the team scores when the whole puzzle is complete.
-- Are these the same round, or two different ones?
-- How is it played, how is it scored, how many puzzles, and how much time?
-- Is it needed on the event day?
-Your answer: _______________ *(ref U-05, U-21)*
+**Q7. The second team round ("齐心协力") — RESOLVED (2026-09-29), as a team decision. Stakeholder confirmation pending: see R29 in Part 6.**
+Answer: it is the client document's partition round. One puzzle is split into blocks (contiguous row-bands, one per active member, 2 to 6, as equal as possible), each member sees and edits only their own block, and the puzzle is scored all-or-nothing once the blocks are combined, with no early bonus. It is needed on the event day, since the school total counts both team rounds.
+The puzzle count (3), total round time (30 minutes) and points per puzzle (20) are **working positions, not taken from the regulation**. Please confirm or correct them with the actual numbers from the 4th Zhejiang league regulation.
+*(ref U-05, U-21, U-91)*
+
+**Q7b. Still to answer: the second team round's numbers**
+- How many puzzles per round? *(working position: 3)*
+- What is the total round time? *(working position: 30 minutes)*
+- What are the points per puzzle? *(working position: 20)*
+Your answer: _______________ *(ref TEM-006, TEM-007, TEM-008)*
 
 ---
 
@@ -230,6 +234,7 @@ These were proposed by the team and approved in your general answer, or come fro
 | R26 | (Q5) The "total is not 100" warning is checked per category and per round (individual rounds only) and names the category and the round. The controller sees it on the setup screen, next to the points and updated as they are typed, and as a summary when starting the stage, listing every category and round whose total is not 100. It never blocks; the controller can start anyway. | |
 | R27 | (Q6) The next stage does not start by itself. When a stage finishes, players see the "waiting for the next stage" state and the controller starts the next stage with the same start command, which starts all categories together. Rounds inside a stage follow each other automatically. After the last round of the last stage, the competition finishes by itself once that round's scoring is final; the controller does not need to press Finish at the normal end (the "finish" command exists for finishing early, ending the running round the same way). While waiting for the next stage, students see a waiting message with no score or rank, and the big screens keep the ranking cycle, now including the final ranking of the stage that just ended. | |
 | R28 | (Q6) If the competition is finished early: unplayed rounds have no scores and add nothing; the school total is the individual part x 0.6 plus the team part actually played (0 if the team stage never started); the running round is scored on the students' latest saved state; the results and the export carry a visible "finished early" mark. It counts as a normal finished competition (the controller keeps access to the results and can export them). A finished competition cannot continue; for an interruption such as a fire alarm the controller uses pause and then resume. | |
+| R29 | (Q7) The second team round is the client document's partition round: one puzzle split into row-band blocks, one block per member (2 to 6), each editing only their own block, scored all-or-nothing once combined, no early bonus. It is needed on the event day. The puzzle count (3), total time (30 minutes) and points per puzzle (20) are working positions, not taken from the regulation (see Q7b). | |
 
 ---
 

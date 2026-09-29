@@ -16,10 +16,11 @@ Close the few blockers left, draft the data model and the build plan for approva
 - Open questions were collected in `context-feeders/working/_open-questions.md`; the client-facing questions are in `context-feeders/working/_stakeholder-question-pack.md`.
 - Part 1 of the pack (Q1 to Q6, scoring and round rules) and the builder's blocking questions were answered on 2026-09-26. The answers were transferred from `decisions-for-the-context-builder.md` (removed after transfer) into these files. That file stated they were **confirmed by the stakeholder**, which reverses their earlier [T] status.
 - First draft of the context folder written and updated to v1.
+- 2026-09-29: Q7 of the pack (the second team round, "齐心协力") answered. It is the client document's partition collaboration: one puzzle split into row-band blocks, one block per member (2 to 6), each editing only their own block, scored all-or-nothing once combined, no early bonus. Which mode and the block split are a direct answer [C] (TEM-005, resolves TEM-003, U-21, U-05, U-91). Puzzle count (3), total time (30 min) and points per puzzle (20/puzzle) are **working positions, not sourced** [T] (TEM-006 to TEM-008); flag for replacement once the 4th Zhejiang league regulation numbers arrive (pack ref R9). Needed on the event day, since the school total counts both team rounds; needed by about day 8 of the build if required on competition day. Recorded in `competition-rules.md` §1 and §8, and `architecture.md` (Data model).
 
 ## In Progress
 
-- Answering the rest of the pack: Q7 (the second team round, "齐心协力") and Parts 2 to 7, minus what the 2026-09-26 decisions already answered.
+- Answering the rest of the pack: Parts 2 to 7, minus what the 2026-09-26 decisions already answered. Q7 (the second team round) was answered 2026-09-29, see Completed.
 
 ## Minimum to start coding
 
@@ -42,7 +43,7 @@ The full checklist, with the blanks to fill and who owns each, is `FILL-BEFORE-C
 | Format of judge and controller credentials (I-30); session length (I-16) | Authentication unit |
 | Unique solution of every puzzle (U-90); grid shapes from the sample PDF (U-01) | Question, answer check and runtime units |
 | When students see scores (U-24, U-88); awards and reset after an early finish (U-89, U-27) | Results and finish units |
-| The second team round (U-05, U-21); question files per category (U-32) | Team stage (later slice) |
+| Question files per category (U-32); replace the working-position numbers (TEM-006 to TEM-008) with the regulation's real puzzle count, time and points | Team stage (later slice) |
 | Hosting (**TBD — to be decided by the project owner**, U-46); names, roles and who builds what (**TBD — to be decided by the project owner**, I-17, I-23) | Deployment; assignment of units. Not needed to start coding |
 | Client confirmation of the requirements in writing (methodology Step 8, A14) | The methodology makes it mandatory before specs are written (see `FILL-BEFORE-CODING.md`, section E). Whether it can wait until after Unit 1 is a decision for the project owner |
 
@@ -71,6 +72,7 @@ The person completing the context and the context builder both add lines. If two
 
 - 2026-09-26: context folder created (v1). Working files moved out to `context-feeders/working/`. Sample files folder `samples/` added.
 - 2026-09-26: `requirements/`, `decisions/`, `archive/` and the working files were moved into one transit folder, `context-feeders/` (with `working/` for the working files). 307 paths inside the documents were updated, a role note was added at the top of each of the 23 files, and `context-feeders/README.md` was added. Contents were not changed otherwise. A full backup was taken before the move.
+- 2026-09-29: Q7 (the second team round) answered by the user; recorded in `competition-rules.md`, `architecture.md`, `context-feeders/working/_open-questions.md` and `_stakeholder-question-pack.md`. No follow-up questions were needed.
 - 2026-09-26: the entry point was merged into the root `CLAUDE.md` (as the methodology requires). The documentation-phase rules of the previous `CLAUDE.md` were kept in full; the "do not implement" line now says coding needs an explicit request and the coding gate. Backup of the previous file: `context-feeders/working/CLAUDE.documentation-phase.backup.md`. `context/ENTRY_POINT.md` was removed.
 
 ## Known Issues
@@ -99,7 +101,7 @@ Full list: `context-feeders/working/_open-questions.md`. The client-facing subse
 - U-01, U-03, U-40: the sample files, points in the PDF, extra Excel columns.
 - U-90: unique solutions.
 - U-24, U-88: when students see their score. U-89, U-27: awards and reset after an early finish.
-- U-05, U-21: the second team round. U-32: question files per category.
+- U-32: question files per category. TEM-006 to TEM-008: replace the second team round's working-position numbers with the regulation's real ones.
 - U-62, U-59: what the 15-day deletion covers. U-49: acceptable interruption length.
 - U-63, U-55: access rules. I-30: judge and controller credentials. I-16: session length.
 - U-06, U-46: tablets, Quark version, venue network.
@@ -129,4 +131,5 @@ No database exists. The schema is not designed (I-01).
 
 ## Last Updated
 
+2026-09-29: Q7 (the second team round) recorded across `competition-rules.md`, `architecture.md` and `progress-tracker.md`.
 2026-09-26: context folder updated to v1 with the 2026-09-26 decisions (scoring and round rules; build and engineering decisions). `decisions-for-the-context-builder.md` transferred and removed.

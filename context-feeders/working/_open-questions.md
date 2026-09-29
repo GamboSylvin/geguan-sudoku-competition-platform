@@ -63,14 +63,20 @@ Pack Q1 to Q4 (points and total, submission, early-finish bonus, late submit) we
 - **Still OPEN (U-49):** how long an interruption during a round is acceptable.
 - Answer: _
 
-**A10. Team round 2, "齐心协力" (U-21)** — Priority 2 — OPEN (deferred)
-- Question: What exactly is the second team round? Is it the partition-collaboration round (team members each solve part of one grid)? How does scoring work?
-- Suggestion on record (NOT an answer, not used): build the rotation round first; treat this round as a later phase.
-- Answer (2026-09-25): **"Don't know."** Still OPEN (U-05, U-21).
-- Known, and it is not settled whether these two are the same round:
-  - The stakeholder's own words suggest a shared board where the whole team sees and edits each other's entries. [O] (TEM-003)
-  - The client's partition collaboration splits one puzzle into blocks, one tablet per block, and the team scores when the whole puzzle is complete. [S]
-- Not defined anywhere: scoring, number of puzzles, time limit.
+**A10. Team round 2, "齐心协力" (U-21)** — Priority 2 — RESOLVED 2026-09-29
+- Earlier answer (2026-09-25): "Don't know." Superseded.
+- **Answer (2026-09-29):** it is the client document's partition collaboration: one puzzle split into blocks, one block per tablet/member, each member seeing and editing only their own block [C] (TEM-005, resolves TEM-003, U-21, U-05). The earlier guess of a shared full-grid board (TEM-003) is dropped.
+  - **Block split** [C] (TEM-005, resolves U-91): contiguous horizontal row-bands, one band per active member (2 to 6), as equal as possible, extra rows to the first bands; works for any grid shape, never assuming 9x9.
+  - **Puzzles per round:** 3, customizable — working position [T] (TEM-006), not sourced; the real number should come from the 4th Zhejiang league regulation (pack ref R9).
+  - **Total round time:** 30 minutes, customizable — working position [T] (TEM-007), anchored to the Individual stage's 30-minute variant round, not sourced.
+  - **Points:** one "points per puzzle" value for the whole round, default 20, customizable — working position [T] (TEM-008), same one-value-per-round pattern as rotation, not sourced.
+  - **Scoring:** all-or-nothing per puzzle once the blocks are combined, no early bonus, same rules as everywhere else [C] (SCR-001, SCR-002).
+  - **Needed on the event day:** yes, the school total counts both team rounds; needed by about day 8 of the build if required on competition day.
+- Recorded in `competition-rules.md` §1 and §8, and `architecture.md` (Data model). TEM-006 to TEM-008 remain flagged for replacement once the regulation numbers arrive — see new item **A10b**.
+
+**A10b. Regulation numbers for the second team round (TEM-006 to TEM-008)** — OPEN, stakeholder / project owner
+- The puzzle count (3), total time (30 min) and points per puzzle (20) are working positions, not read from any source. Replace with the 4th Zhejiang league regulation's actual numbers once available (pack ref R9).
+- Answer: _
 
 ### Priority 3 — confirmations
 
@@ -259,7 +265,7 @@ Which questions were re-asked, and the outcome. A question stays OPEN until a cl
   - To ask the stakeholder at the end.
 - **2026-09-25, group 3 (event behaviour):** asked A5 to A10. **Answered, with "don't know" where unknown.**
   - Answered: next round inside a stage starts by itself [T] (part of A6); after a network or server failure the round is replayed, triggered by judge or controller [C] (part of A8).
-  - Still OPEN: A5 (countdown length), A6 (next stage), A7 (event-day features), A8 (exact continuation, tolerable interruption), A9 (question delivery risk), A10 (what 齐心协力 is and its scoring).
+  - Still OPEN at the time: A5 (countdown length), A6 (next stage), A7 (event-day features), A8 (exact continuation, tolerable interruption), A9 (question delivery risk), A10 (what 齐心协力 is and its scoring). A10 was later resolved 2026-09-29 (see above).
   - Two new stakeholder items named by the user: tolerable interruption length (U-49) and accepted early-viewing risk (U-50).
   - To ask the stakeholder at the end.
 - **2026-09-25, corrections received from the user:** many earlier statements withdrawn (see "Corrections received" in `_interview-notes.md`).
@@ -318,7 +324,7 @@ If the stakeholder or the venue must clarify it, log it here and return to it at
 
 **Only the stakeholder can settle it (log and return at the end):**
 - A1c question PDF carries points (U-03) · A4d when students see scores (U-24, U-88) · A6d awards and reset after an early finish (U-27, U-89) · A5f question files per category (U-32) · A8 acceptable interruption length (U-49) · K2 extra Excel columns (U-40) · K3 unique solutions (U-90) · K6 15-day deletion scope (U-59, U-62)
-- A10 what 齐心协力 is (U-05, U-21) · A11 to A19 remaining (authoring U-45, third language U-51, primary user U-52, link and slips U-54, judge powers U-55) · D1 to D6 (U-56 risks, U-57 external systems, U-58 performance, U-59 data protection, U-37 anti-cheating, U-60 scale, U-61 reliability) · H2 and H3 (U-62 archived scores, U-63 read/change rules, U-55 judge powers) · I1 to I6 (U-65 brand and look, U-70 fonts and Chinese display, U-66 layouts, U-67 screen sizes, U-68 language switching, U-69 accessibility) · E2 to E6 re-confirmations
+- A10b regulation numbers for the second team round (TEM-006 to TEM-008, pack ref R9) · A11 to A19 remaining (authoring U-45, third language U-51, primary user U-52, link and slips U-54, judge powers U-55) · D1 to D6 (U-56 risks, U-57 external systems, U-58 performance, U-59 data protection, U-37 anti-cheating, U-60 scale, U-61 reliability) · H2 and H3 (U-62 archived scores, U-63 read/change rules, U-55 judge powers) · I1 to I6 (U-65 brand and look, U-70 fonts and Chinese display, U-66 layouts, U-67 screen sizes, U-68 language switching, U-69 accessibility) · E2 to E6 re-confirmations
 - Client confirmation of the 2026-09-26 decisions: stated as given (see `competition-rules.md`); verify with the project owner.
 
 **Venue or school (stakeholder to obtain):**
@@ -486,6 +492,10 @@ Resolved 2026-09-26: git branching, pull requests, CI and review (I-25 to I-27, 
 
 **K7. Blank on purpose: TBD — to be decided by the project owner**
 - Backend language and framework (I-02), the developers' skills (I-18), names and roles (I-17), who builds what (I-23), and where the server runs on the event day (I-03, U-46). Do not choose a value.
+
+---
+
+- **2026-09-29, answer to pack Q7 (the second team round) received:** resolved (A10). Which mode and the block split are a direct answer [C] (TEM-005, resolves TEM-003, U-91). Puzzle count, total time and points are working positions, not sourced [T] (TEM-006 to TEM-008); new item A10b tracks replacing them with the regulation's real numbers (pack ref R9). No follow-up questions were needed. Recorded in `competition-rules.md`, `architecture.md`, `progress-tracker.md` and the pack (Q7 replaced by a resolved summary and new Q7b).
 
 ---
 
