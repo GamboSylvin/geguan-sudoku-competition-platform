@@ -10,7 +10,7 @@
 
 | Layer | Technology | Role | Status |
 |---|---|---|---|
-| Frontend | React with TypeScript, one application with role-based areas (ARCH-020) | All four ends: player, judge, controller/admin, big screen | [T] register status "Confirmed 2026-09-23"; not stakeholder-decided |
+| Frontend | React with TypeScript, one application with role-based areas (ARCH-020); built with **Vite**, styled with **Tailwind CSS** [T] (BLD-023) | All four ends: player, judge, controller/admin, big screen | [T] register status "Confirmed 2026-09-23"; not stakeholder-decided. Build tool and styling decided 2026-09-30 |
 | Backend | **Node.js with TypeScript, using Express.js as the framework** [T] (I-02, ARCH-024) | Server-owned state, timer, scoring, ranking | Decided 2026-09-27 by the project owner. Same language as the frontend; Express.js is the framework |
 | Durable data | PostgreSQL (ARCH-021) | Durable results, setup, accounts, round state changes | [T] |
 | ORM and migrations | **Prisma** [T] (I-31) | The PostgreSQL schema (the single source of truth for the database) and the versioned migrations; used by the backend | Decided 2026-09-29 by the team |
@@ -39,7 +39,7 @@ One deployable backend organized as a modular monolith [T] (ARCHITECTURE §3 of 
 | Big Screen | Big-screen state, ranking projection, player and team projection, display mode |
 
 - The client's "control hub" takes commands from judges and the controller, applies the arbitration rule and broadcasts state. It lives inside the Orchestrator and Big Screen modules [S].
-- Frontend folders, by feature [T]: `auth`, `competition`, `player`, `judge`, `admin`, `big-screen`, `ranking`, `gameplay`.
+- **Frontend folders, by feature** [T]: `auth`, `competition`, `player`, `judge`, `admin`, `big-screen`, `ranking`, `gameplay`. The frontend is a **Vite** project (React with TypeScript) styled with **Tailwind CSS** [T] (BLD-023, decided 2026-09-30).
 
 **OPEN (I-01, module list): the module list is not final.** It was written for one judge and one category. It has **no module** for team rotation, score corrections, the 15-day purge, import and export, competition copy, participant numbering, judge ranges and takeover, or several synchronized big screens. **Keep the data model ready for team rotation** even though the Individual stage is built first [C] (BLD-009). The **data model part of I-01 is decided** (2026-09-30, `data-model.md`); the module list is revised with the build plan (A7).
 **OPEN (I-08):** whether modules talk through events or direct calls.
@@ -186,6 +186,7 @@ None described in the documents (no SMS, email or student-ID system mentioned). 
   - **Containers:** **Docker with Docker Compose**, with a **Dockerfile per service** (backend, frontend). PostgreSQL and Redis run as Compose services in development, and the application (backend and frontend) is containerized too; the **same containers are the deployment target**, not just local development. Where the containers run on the event day is still open (I-03, U-46).
   - **Package manager and lock file:** **npm**, with **`package-lock.json` committed**.
   - **ORM and migrations:** **Prisma** (I-31); the Prisma schema is the single source of truth for the PostgreSQL database and the migrations are versioned in the repository, applied in CI and on deployment.
+  - **Frontend build tool and styling** [T] (BLD-023, decided 2026-09-30): **Vite** builds and serves the React frontend; **Tailwind CSS** is the styling approach. Created in Unit 1 with the frontend skeleton.
   - **Versions pinned:** **Node.js LTS, PostgreSQL 16, Redis 7**, recorded in `docker-compose.yml` and `.env.example`; the exact patch numbers are fixed at setup.
   - **`.env.example`** is committed and lists every required variable with placeholder values; the real `.env` is git-ignored and never committed.
   - **Created in Unit 1**, the foundation (repository, environment, CI, skeleton); see `specs/01-foundation.md`.
@@ -253,6 +254,7 @@ None described in the documents (no SMS, email or student-ID system mentioned). 
 - **Docker and Docker Compose, with a Dockerfile per service** [T] (I-24, decided 2026-09-29): the same containers are used in development and deployment, so the two developers cannot drift apart in versions or environment (the problem the team had before). PostgreSQL and Redis run as Compose services.
 - **Jest as the test framework** [T] (I-32, decided 2026-09-29): one runner for both the React frontend and the Node.js/TypeScript backend (through `ts-jest`), wired into the CI pipeline of BLD-002. Scope: the necessary minimum for the MVP.
 - **Module-first backend folder structure** [T] (I-02, decided 2026-09-30): `backend/src/modules/<module>/` with one folder per module, each holding its controller, service, repository, types and barrel; plus `realtime/` (Socket.io gateway and handlers), `infra/` (Prisma, Redis, file store, logger), `shared/` (errors, middleware, validation, i18n, clock), `config/`, and `prisma/`. The structure mirrors the module boundaries so that invariant 4 (one owner per piece of state, internals reachable only through the public interface) is expressed in the code layout, and it fits the decided stack (Express.js, Prisma, Docker, WebSocket). Resolves the folder-structure gap left by the backend stack decision (I-02); see "Backend folder structure" above.
+- **Vite and Tailwind CSS for the frontend** [T] (BLD-023, decided 2026-09-30 by the project owner): **Vite** is the frontend build tool and dev server (fast, the standard for a React + TypeScript app, no framework lock-in), and **Tailwind CSS** is the styling approach (utility-first, keeps the styling in one system and avoids a heavy component library while the visual design is still open, BLD-009/U-65). The choice is about *how* the frontend is built and styled, not *what* it looks like: the visual language (U-65), the component library, the icon set and the fonts stay open (I-20) and are decided in the design phase. Recorded as BLD-023; see `code-standards.md`, Framework/library and File organization, and `ui-context.md`, Component Library.
 
 ## Open technical decisions (do not implement until decided)
 
@@ -263,7 +265,7 @@ None described in the documents (no SMS, email or student-ID system mentioned). 
 | I-01 | **Data model: decided 2026-09-30** — approved in `data-model.md` (checklist item A6). The **final module list** and the **API** remain open |
 | I-08 | Events vs direct calls between modules |
 | I-16 | Session length |
-| I-20 | UI component library, icons, fonts |
+| I-20 | UI component library, icons, fonts. **Styling approach decided 2026-09-30 — Tailwind CSS** [T] (BLD-023). **Still open:** the component library, the icon set and the fonts (the visual design comes after the first slice, BLD-009/U-65) |
 | I-30 | Format of judge and controller credentials |
 | U-01, U-03, U-40 | Sample PDF and Excel not yet sent; whether the PDF carries points; extra Excel columns |
 | U-90 | Whether every puzzle has a unique solution |

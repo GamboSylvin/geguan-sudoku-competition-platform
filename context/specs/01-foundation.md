@@ -17,6 +17,7 @@ Goal in one testable sentence: **on a fresh clone, `docker compose up` starts th
 - ORM and migrations (I-31, decided 2026-09-29): **Prisma**; the Prisma schema is the single source of truth for the PostgreSQL schema; migrations are versioned in the repository and applied in CI and on deployment.
 - Test framework (I-32, decided 2026-09-29): **Jest** (through `ts-jest`), one runner for the frontend and the backend, in the CI pipeline.
 - Casing (I-33, decided 2026-09-29): `camelCase` variables and functions, `PascalCase` types/classes/components, `UPPER_SNAKE_CASE` constants (see `../code-standards.md`).
+- Frontend build tool and styling (BLD-023, decided 2026-09-30): **Vite** (the React + TypeScript app is a Vite project; `npm run build` is Vite's production build) and **Tailwind CSS** (utility-first styling, configured through `tailwind.config.js` and a global stylesheet). See `../code-standards.md`, Framework/library and File organization.
 - Workflow already decided [C] (BLD-002): one branch per unit; a pull request before every merge; lint, type check, tests and build in CI must pass before a merge; the other developer reviews each pull request.
 - The first slice is the Individual stage, end to end [C] (BLD-009). This unit delivers none of it; it is the base the next units build on.
 - What already exists before this unit: nothing is built.
@@ -26,7 +27,7 @@ Goal in one testable sentence: **on a fresh clone, `docker compose up` starts th
 The methodology's pre-code checklist lists these artifacts. Each is produced in this unit:
 
 1. **Repository skeleton:** folders by module and by feature (see `../architecture.md`, System boundaries, and "Backend folder structure"). The backend folder structure is decided (I-02, 2026-09-30): **module-first** — `backend/src/modules/<module>/` (one folder per module, each with controller, service, repository, types and barrel), plus `realtime/`, `infra/`, `shared/`, `config/` and `prisma/`. The frontend folders by feature are decided (`auth`, `competition`, `player`, `judge`, `admin`, `big-screen`, `ranking`, `gameplay`).
-2. **Reproducible development environment** (I-24): **npm with `package-lock.json` committed**; `.env.example` listing every required variable with placeholder values (the real `.env` git-ignored); **Docker with Docker Compose and a Dockerfile per service**; PostgreSQL 16 and Redis 7 as Compose services with a named volume for PostgreSQL and persistence on for Redis; Node.js LTS pinned.
+2. **Reproducible development environment** (I-24): **npm with `package-lock.json` committed**; `.env.example` listing every required variable with placeholder values (the real `.env` git-ignored); **Docker with Docker Compose and a Dockerfile per service**; PostgreSQL 16 and Redis 7 as Compose services with a named volume for PostgreSQL and persistence on for Redis; Node.js LTS pinned. The frontend service is a **Vite** dev server (BLD-023).
 3. **CI pipeline:** lint, type check, tests and build — **the four checks of BLD-002 run in CI and must pass before a merge**; the test step runs **Jest** (I-32); the pipeline runs against the Compose services (or service containers) for PostgreSQL and Redis.
 4. **Git setup:** branch and pull-request rules as decided [C] (BLD-002) — one branch per unit, a pull request before every merge, the other developer reviews each pull request; a PR template and the CI checks configured as required status checks.
 5. **Translation mechanism for English and Chinese** planned in from the start [C] (ARCH-026): set up the i18n scaffold here (locale files, a translation function, the language switch hook), with **English and Chinese as the only locales**; the actual strings come with each screen. Any third language is OPEN (U-51) and is **not** set up.
@@ -50,7 +51,7 @@ The methodology's pre-code checklist lists these artifacts. Each is produced in 
 
 - **Infrastructure:** `docker-compose.yml`, a Dockerfile per service, `.env.example`, the pinned versions.
 - **Backend skeleton:** the Express.js app entry, the health-check route, the empty module folders, the Prisma schema and the first migration.
-- **Frontend skeleton:** the React app entry, the empty feature folders, the i18n scaffold, a placeholder route.
+- **Frontend skeleton:** the React app entry (a **Vite** project, BLD-023), the empty feature folders, **Tailwind CSS** configured (BLD-023), the i18n scaffold, a placeholder route.
 - **CI:** the pipeline definition with the four checks of BLD-002.
 
 ### Error Cases

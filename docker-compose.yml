@@ -1,0 +1,97 @@
+# Sudoku Arena — Docker Compose (Unit 01 foundation)
+#
+# One command starts the whole codebase: `docker compose up`.
+# The same containers are the development environment and the deployment target
+# (BLD-016 / I-24), so the two developers cannot drift apart in versions.
+#
+# Services: backend (Express.js), frontend (Vite), PostgreSQL 16, Redis 7.
+# Versions are pinned here and in `.env.example`.
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: sudoku-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sudoku}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: ${POSTGRES_DB:-sudoku}
+      TZ: ${TZ:-Asia/Shanghai}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # Named volume: durable data survives container recreation.
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sudoku} -d ${POSTGRES_DB:-sudoku}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    container_name: sudoku-redis
+    restart: unless-stopped
+    # Persistence turned on (BLD-007): working grids survive a restart.
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sudoku-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # In-container hostnames override the .env values (Compose network).
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
+      STORAGE_ROOT: /app/storage
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    volumes:
+      - ./backend:/app
+      - backend-node-modules:/app/node_modules
+      - ./storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # Applies the Prisma migrations, then starts the server (spec 01-foundation, AC 3).
+    command: ["sh", "-c", "npx prisma migrate deploy && npm run dev"]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sudoku-frontend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3000}
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+    depends_on:
+      - backend
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+volumes:
+  postgres-data:
+  redis-data:
+  backend-node-modules:
+  frontend-node-modules:

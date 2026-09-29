@@ -2,6 +2,26 @@
 node_modules/
 .claude/
 .cowork-temp/
+dist/
+build/
+coverage/
+.nyc_output/
 
 # environmental variables
 .env
+.env.*
+!.env.example
+
+# local file storage (BLD-001: files live on the server's disk, in a mounted folder)
+storage/
+
+# logs
+*.log
+npm-debug.log*
+
+# editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

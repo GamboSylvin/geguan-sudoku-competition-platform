@@ -63,7 +63,7 @@ The design comes **after the first slice** (the Individual stage, end to end) [C
 
 ## Component Library
 
-**OPEN (I-20).** [[FILL-BEFORE-UNIT: first UI unit — UI component library = ________ ; icon set = ________ ; fonts (including Chinese) = ________ ; owner: the person completing the context]] The frontend is React with TypeScript [T]. No UI library, icon set or font is documented (team decision). Chinese text rendering on the tablets is undocumented and depends on the tablet model and Quark version (U-06); font and Chinese-display requirements: **OPEN (U-70).**
+**OPEN (I-20).** [[FILL-BEFORE-UNIT: first UI unit — UI component library = ________ ; icon set = ________ ; fonts (including Chinese) = ________ ; owner: the person completing the context]] The frontend is React with TypeScript [T]. **The styling approach is decided: Tailwind CSS** [T] (BLD-023, decided 2026-09-30) — utility-first classes; every component still uses named design tokens (the token tables above) once the visual language (U-65) is answered, never raw values scattered through the markup. **The frontend build tool is Vite** [T] (BLD-023). No UI component library, icon set or font is documented (team decision); the visual design comes after the first slice [C] (BLD-009). Chinese text rendering on the tablets is undocumented and depends on the tablet model and Quark version (U-06); font and Chinese-display requirements: **OPEN (U-70).**
 
 ## Layout patterns
 
@@ -113,4 +113,4 @@ The interface is **English and Chinese**, not one or the other; the translation 
 
 ## Icons
 
-**OPEN (I-20).**
+**OPEN (I-20).** No icon set is documented. The styling approach is decided (Tailwind CSS, BLD-023); the icon set is not.
