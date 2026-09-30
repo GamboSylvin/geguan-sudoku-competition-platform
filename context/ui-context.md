@@ -91,7 +91,7 @@ The interface is **English and Chinese**, not one or the other; the translation 
 
 ### Player
 - **States [T]:** competition room; preparation room (the round's rules and a countdown); active round; read-only after submitting; waiting.
-- Waiting for the next stage: a message that the stage is over and the next stage is coming, with no score or rank [T]. Students see their own score and rank **only when the whole competition reaches `FINISHED`** — not after each round, not after each stage [C] (BLD-017, resolves U-24, U-88). Whether the controller also gets a separate manual "publish" action at that moment is a minor residual detail, not addressed yet.
+- Waiting for the next stage: a message that the stage is over and the next stage is coming, with no score or rank [T]. Students see their own score and rank **only when the whole competition reaches `FINISHED`** — not after each round, not after each stage [C] (BLD-029, resolves U-24, U-88). Whether the controller also gets a separate manual "publish" action at that moment is a minor residual detail, not addressed yet.
 
 ### Judge
 - Content (not layout): the status of their own students, the stage, round and remaining time, and the live ranking. Also how many times a student left the answer page, as information only, with no penalty [P]. Can restart one student's round [P]. Judge powers beyond that: **OPEN (U-55).**

@@ -34,7 +34,7 @@
 
 | Unit area | Waits for |
 |---|---|
-| Import (participant Excel, question Excel — not PDF, BLD-012) | Sample files placed in `../samples/`, extra participant Excel columns (U-40) |
+| Import (participant Excel, question Excel — not PDF, BLD-024) | Sample files placed in `../samples/`, extra participant Excel columns (U-40) |
 | Authentication | Judge and controller credential format (I-30), session length (I-16) |
 | Answer check | Unique solutions (U-90), the missing complete-solution column (U-94) |
 | Results and finishing | Awards after an early finish (U-89, narrowed; U-27) — reset is settled: never |
