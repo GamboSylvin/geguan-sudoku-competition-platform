@@ -1,0 +1,707 @@
+// Sudoku Arena — Prisma schema
+//
+// The single source of truth for the PostgreSQL schema (I-31 / BLD-017). It is the
+// concrete form of the approved data model in `context/data-model.md` (A6,
+// 2026-09-30). Migrations are versioned in the repository and applied in CI and on
+// deployment.
+//
+// FIELDS THAT DEPEND ON AN OPEN ITEM ARE NOT CREATED (data-model.md, "Open points
+// flagged in this model"). Deliberately omitted here:
+//   - PurgeSchedule.includesArchivedScores / includesCorrectionLog /
+//     includesParticipantExcel   (U-59, U-62 — the 15-day purge scope)
+//   - Account.sessionExpiresAt    (I-16 — session length and idle behaviour)
+// The second team round (齐心协力 / partition collaboration) is NOT modelled as
+// gameplay (U-05, U-21); only the TeamRotationState state container exists.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enumerations
+// ---------------------------------------------------------------------------
+
+enum CompetitionStatus {
+  CREATED
+  PUBLISHED
+  WAITING
+  PREPARATION
+  ROUND_ACTIVE
+  PAUSED
+  ROUND_FINISHED
+  STAGE_FINISHED
+  FINISHED
+  CANCELLED
+}
+
+enum StageType {
+  INDIVIDUAL
+  TEAM
+}
+
+enum StageStatus {
+  WAITING
+  PREPARATION
+  ACTIVE
+  PAUSED
+  FINISHED
+}
+
+enum RoundStatus {
+  WAITING
+  PREPARATION
+  ACTIVE
+  PAUSED
+  FINISHED
+}
+
+enum AccountRole {
+  CONTROLLER
+  JUDGE
+  PLAYER
+}
+
+enum RoundParticipationState {
+  WAITING
+  ACTIVE
+  SUBMITTED
+  AUTO_SUBMITTED
+  RESTARTED
+}
+
+enum SubmissionType {
+  MANUAL
+  TIMEOUT
+  CONTROLLER_END
+  AUTO
+}
+
+enum QuestionType {
+  STANDARD
+  VARIANT
+}
+
+enum ScoreCorrectionTargetType {
+  PARTICIPANT
+  TEAM
+  SCHOOL
+}
+
+enum RankingScope {
+  INDIVIDUAL
+  TEAM
+  SCHOOL
+}
+
+enum StoredFileKind {
+  PARTICIPANT_EXCEL
+  QUESTION_PDF
+  CREDENTIAL_SLIPS
+  EXPORT
+}
+
+enum ImportBatchKind {
+  PARTICIPANT_EXCEL
+  QUESTION_PDF
+}
+
+enum ImportBatchStatus {
+  VALIDATED
+  REJECTED
+  COMMITTED
+}
+
+enum BigScreenMode {
+  RANKING
+  PLAYER_CLOSEUP
+  TEAM_SPLIT
+  PAUSED
+  FINAL
+}
+
+// ---------------------------------------------------------------------------
+// Competition and structure
+// ---------------------------------------------------------------------------
+
+model Competition {
+  id          String            @id @default(uuid())
+  name        String
+  description String?
+  status      CompetitionStatus @default(CREATED)
+
+  createdAt   DateTime  @default(now())
+  publishedAt DateTime?
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  cancelledAt DateTime?
+
+  // The RND-007 "finished early" mark.
+  finishedEarly Boolean @default(false)
+
+  // Publish generates the entry link/QR and the separate big-screen link (§7.2.8).
+  entryLinkToken      String @unique @default(uuid())
+  bigScreenLinkToken  String @unique @default(uuid())
+
+  // Copy keeps settings/questions/judges, not results (CMP-100). What exactly a copy
+  // carries is partly open (U-10); kept as a plain reference to avoid inventing a
+  // self-relation's shape before that is answered.
+  copiedFromCompetitionId String?
+
+  categories         CompetitionCategory[]
+  stages             Stage[]
+  schools            School[]
+  teams              Team[]
+  participants       Participant[]
+  questionSets       QuestionSet[]
+  judgeAssignments   CompetitionJudgeAssignment[]
+  storedFiles        StoredFile[]
+  importBatches      ImportBatch[]
+  scoreCorrections   ScoreCorrection[]
+  rankingSnapshots   RankingSnapshot[]
+  purgeSchedules     PurgeSchedule[]
+  auditLogs          AuditLog[]
+
+  scoringConfiguration ScoringConfiguration?
+  runtimeState         CompetitionRuntimeState?
+  bigScreenDisplay     BigScreenDisplayState?
+
+  @@index([status])
+}
+
+model CompetitionCategory {
+  id            String @id @default(uuid())
+  competitionId String
+  code          String // e.g. U6 .. U20
+  name          String
+  sequence      Int
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+
+  questionSets        QuestionSet[]
+  teams               Team[]
+  participants        Participant[]
+  roundParticipations RoundParticipation[]
+  individualResults   IndividualRoundResult[]
+  teamResults         TeamRoundResult[]
+  rankingSnapshots    RankingSnapshot[]
+
+  @@unique([competitionId, code])
+  @@index([competitionId])
+}
+
+model Stage {
+  id            String      @id @default(uuid())
+  competitionId String
+  type          StageType
+  sequence      Int
+  status        StageStatus @default(WAITING)
+  startedAt     DateTime?
+  endedAt       DateTime?
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  rounds      Round[]
+  rankingSnapshots RankingSnapshot[]
+
+  @@index([competitionId])
+}
+
+model Round {
+  id         String      @id @default(uuid())
+  stageId    String
+  sequence   Int
+  name       String
+  status     RoundStatus @default(WAITING)
+  // An early end cannot be undone (§7.4).
+  earlyEnded Boolean     @default(false)
+  startedAt  DateTime?
+  endedAt    DateTime?
+
+  stage Stage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  settings            RoundSettings?
+  questions           Question[]
+  participations      RoundParticipation[]
+  individualResults   IndividualRoundResult[]
+  teamResults         TeamRoundResult[]
+  rotationStates      TeamRotationState[]
+
+  @@index([stageId])
+}
+
+model RoundSettings {
+  roundId String @id
+
+  // Set once per round for the whole event, not per category (RND-005). Editable
+  // only before that round's preparation begins (RND-002, RND-004).
+  durationSeconds          Int
+  preparationSeconds       Int  @default(60)
+  earlyBonusRate           Int  @default(3)
+  earlyBonusCap            Int? // empty = no cap (SCR-009)
+  teamPointsPerQuestion    Int  @default(10)
+  rotationPeriodSeconds    Int  @default(60)
+  teamQuestionCount        Int  @default(10)
+  teamTotalTimeSeconds     Int?
+  individualTotalWarning   Int? @default(100)
+
+  round Round @relation(fields: [roundId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Questions
+// ---------------------------------------------------------------------------
+
+model QuestionSet {
+  id            String  @id @default(uuid())
+  competitionId String
+  // nullable = a shared set across categories (BLD-005)
+  categoryId    String?
+  name          String
+  // Whether each category has its own question file is OPEN (U-32).
+  sourceFileId  String?
+
+  competition Competition          @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  category    CompetitionCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  sourceFile  StoredFile?          @relation(fields: [sourceFileId], references: [id], onDelete: SetNull)
+  questions   Question[]
+
+  @@index([competitionId])
+}
+
+model Question {
+  id            String       @id @default(uuid())
+  questionSetId String
+  roundId       String
+  sequence      Int
+  // Sub-types are OPEN; only the generic kinds are modelled.
+  type          QuestionType @default(STANDARD)
+
+  // Generic grid model: rows, columns and regions — never assume 9x9 (BLD-011).
+  gridRows     Int
+  gridColumns  Int
+  regions      Json
+  startingGrid Json
+  // The solution is stored with the question; the answer check compares against it
+  // (BLD-010). This relies on a unique solution (U-90).
+  solution     Json
+
+  // Points are a whole number >= 1 (SCR-014); they belong to the question, so they
+  // follow the category's set (RND-005). Whether the PDF carries them is OPEN (U-03).
+  points Int
+
+  questionSet QuestionSet @relation(fields: [questionSetId], references: [id], onDelete: Cascade)
+  round       Round       @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  answers     Answer[]
+
+  @@index([questionSetId])
+  @@index([roundId])
+}
+
+model ImportBatch {
+  id            String            @id @default(uuid())
+  competitionId String
+  kind          ImportBatchKind
+  fileId        String
+  status        ImportBatchStatus
+  // Validation is atomic: an invalid file commits nothing, and errors name the
+  // problem and the row (§7.2.3-4, §7.2.6).
+  errors        Json?
+  importedAt    DateTime          @default(now())
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  file        StoredFile  @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  @@index([competitionId])
+}
+
+// ---------------------------------------------------------------------------
+// People and access
+// ---------------------------------------------------------------------------
+
+model School {
+  id            String @id @default(uuid())
+  competitionId String
+  name          String
+  sequence      Int
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  teams       Team[]
+  participants Participant[]
+
+  @@unique([competitionId, name])
+  @@index([competitionId])
+}
+
+model Team {
+  id            String @id @default(uuid())
+  competitionId String
+  categoryId    String
+  schoolId      String
+  name          String
+  sequence      Int
+
+  competition Competition         @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  category    CompetitionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  school      School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  participants Participant[]
+  roundResults TeamRoundResult[]
+  rotationStates TeamRotationState[]
+
+  // Exactly one team per school per category (SCR-004).
+  @@unique([competitionId, categoryId, schoolId])
+  @@index([competitionId])
+}
+
+model Participant {
+  id            String  @id @default(uuid())
+  competitionId String
+  categoryId    String
+  schoolId      String
+  teamId        String?
+  name          String
+  // Generated on import per PAR-001: schools in file order, students in row order,
+  // unique across the event, a team's numbers consecutive.
+  participantNumber Int
+  sequence          Int
+  // Reflects removal from the active set (§7.2.4).
+  active            Boolean @default(true)
+
+  competition Competition         @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  category    CompetitionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  school      School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  team        Team?               @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  account            Account?
+  roundParticipations RoundParticipation[]
+  individualResults   IndividualRoundResult[]
+
+  @@unique([competitionId, participantNumber])
+  @@index([competitionId])
+}
+
+model Account {
+  id           String      @id @default(uuid())
+  username     String      @unique
+  passwordHash String
+  // One role per account; several controller accounts allowed (BLD-004).
+  role         AccountRole
+  participantId String?    @unique
+  judgeId       String?
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  lastLoginAt   DateTime?
+  // One active device per account; the newest login takes over (PAR-005).
+  activeDeviceId String?
+
+  // Session length and idle behaviour are OPEN (I-16): `sessionExpiresAt` is
+  // deliberately NOT created here.
+
+  participant Participant? @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  judge       Judge?       @relation(fields: [judgeId], references: [id], onDelete: SetNull)
+
+  devices                 Device[]
+  judgeAssignmentsMade    CompetitionJudgeAssignment[]
+  scoreCorrections        ScoreCorrection[]
+  uploadedFiles           StoredFile[]
+  auditLogs               AuditLog[]
+
+  @@index([role])
+}
+
+model Device {
+  id           String   @id @default(uuid())
+  accountId    String
+  deviceLabel  String?
+  userAgent    String?
+  firstSeenAt  DateTime @default(now())
+  lastSeenAt   DateTime @default(now())
+  isActive     Boolean  @default(true)
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+}
+
+model Judge {
+  id        String   @id @default(uuid())
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  accounts    Account[]
+  assignments CompetitionJudgeAssignment[]
+}
+
+model CompetitionJudgeAssignment {
+  id                    String   @id @default(uuid())
+  competitionId         String
+  judgeId               String
+  fromParticipantNumber Int
+  toParticipantNumber   Int
+  assignedAt            DateTime @default(now())
+  assignedByAccountId   String?
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  judge       Judge       @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+  assignedBy  Account?    @relation(fields: [assignedByAccountId], references: [id], onDelete: SetNull)
+
+  // Range assigned by the controller during setup, changeable during the event (BLD-008).
+  @@unique([competitionId, judgeId])
+  @@index([competitionId])
+}
+
+// ---------------------------------------------------------------------------
+// Participation, attempts and scoring
+// ---------------------------------------------------------------------------
+
+model RoundParticipation {
+  id            String                   @id @default(uuid())
+  roundId       String
+  participantId String
+  categoryId    String
+  state         RoundParticipationState  @default(WAITING)
+  currentAttemptId String?
+  // Keeps the number of restarts visible (SUB-008).
+  attemptCount  Int                      @default(0)
+  // Judge-visible, info-only counter with no penalty (PAR-005).
+  leftAnswerPageCount Int                @default(0)
+
+  round       Round               @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  participant Participant         @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  category    CompetitionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  attempts Attempt[]
+
+  @@unique([roundId, participantId])
+  @@index([roundId])
+}
+
+model Attempt {
+  id                   String         @id @default(uuid())
+  roundParticipationId String
+  attemptNumber        Int
+  // Archived, never deleted, on restart or rematch (SUB-005, ROL-005).
+  isArchived           Boolean        @default(false)
+  submissionType       SubmissionType
+  submittedAt          DateTime       @default(now())
+  // Marks data lost and filled as wrong (RES-001).
+  autoFilled           Boolean        @default(false)
+  score                Int            @default(0)
+  // The bonus is part of totalScore (SCR-010).
+  bonus                Int            @default(0)
+  totalScore           Int            @default(0)
+  completionTimeSeconds Int           @default(0)
+
+  roundParticipation RoundParticipation @relation(fields: [roundParticipationId], references: [id], onDelete: Cascade)
+
+  answers             Answer[]
+  individualResults   IndividualRoundResult[]
+
+  @@index([roundParticipationId])
+}
+
+model Answer {
+  id             String  @id @default(uuid())
+  attemptId      String
+  questionId     String
+  submittedGrid  Json
+  correct        Boolean @default(false)
+  pointsAwarded  Int     @default(0)
+  autoFilled     Boolean @default(false)
+
+  attempt  Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, questionId])
+  @@index([attemptId])
+}
+
+model IndividualRoundResult {
+  id                    String         @id @default(uuid())
+  roundId               String
+  participantId         String
+  categoryId            String
+  attemptId             String
+  score                 Int            @default(0)
+  bonus                 Int            @default(0)
+  totalScore            Int            @default(0)
+  submissionType        SubmissionType
+  submittedAt           DateTime       @default(now())
+  completionTimeSeconds Int            @default(0)
+
+  round       Round               @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  participant Participant         @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  category    CompetitionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  attempt     Attempt             @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@index([roundId])
+}
+
+model TeamRoundResult {
+  id                    String  @id @default(uuid())
+  roundId               String
+  teamId                String
+  categoryId            String
+  correctCount          Int     @default(0)
+  score                 Int     @default(0)
+  completionTimeSeconds Int?
+
+  round    Round               @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  team     Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  category CompetitionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([roundId])
+}
+
+model ScoreCorrection {
+  id                 String                    @id @default(uuid())
+  competitionId      String
+  targetType         ScoreCorrectionTargetType
+  targetId           String
+  roundId            String?
+  oldScore           String
+  newScore           String
+  // Mandatory reason and a change log (RES-003).
+  reason             String
+  correctedByAccountId String?
+  correctedAt        DateTime                  @default(now())
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  correctedBy Account?    @relation(fields: [correctedByAccountId], references: [id], onDelete: SetNull)
+
+  @@index([competitionId])
+}
+
+model RankingSnapshot {
+  id            String        @id @default(uuid())
+  competitionId String
+  stageId       String?
+  categoryId    String?
+  scope         RankingScope
+  isFinal       Boolean       @default(false)
+  // Ordered ranks; the school total inside is an exact decimal (SCR-013).
+  payload       Json
+  computedAt    DateTime      @default(now())
+
+  competition Competition          @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  stage       Stage?               @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  category    CompetitionCategory? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([competitionId])
+}
+
+model ScoringConfiguration {
+  id                  String  @id @default(uuid())
+  competitionId       String  @unique
+  // Exact decimal, decimals allowed (SCR-004, SCR-012); default 0.6.
+  schoolCoefficient   Decimal @default(0.6) @db.Decimal(10, 4)
+  // The big-screen ranking cycle, a customizable numeric value (SCR-005).
+  rankingCycleSeconds Int     @default(180)
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Operations, files and lifecycle
+// ---------------------------------------------------------------------------
+
+model TeamRotationState {
+  id            String   @id @default(uuid())
+  roundId       String
+  teamId        String
+  // The refill queue and which question each tablet holds. Fast-changing state
+  // lives in Redis (BLD-007); only the settled result is durable (TeamRoundResult).
+  refillQueue   Json?
+  tabletHolds   Json?
+  rotationIndex Int      @default(0)
+  lastRotationAt DateTime?
+
+  round Round @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  team  Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([roundId, teamId])
+}
+
+model CompetitionRuntimeState {
+  id                    String   @id @default(uuid())
+  competitionId         String   @unique
+  currentStageId        String?
+  currentRoundId        String?
+  phase                 String
+  pausedAt              DateTime?
+  remainingSecondsAtPause Int?
+  updatedAt             DateTime @updatedAt
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+}
+
+model BigScreenDisplayState {
+  id              String        @id @default(uuid())
+  competitionId   String        @unique
+  mode            BigScreenMode @default(RANKING)
+  targetId        String?
+  rotationEnabled Boolean       @default(false)
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+}
+
+model StoredFile {
+  id                  String         @id @default(uuid())
+  competitionId       String
+  kind                StoredFileKind
+  // Path template: {STORAGE_ROOT}/competitions/{competitionId}/{kind}/{fileId}-{originalName}
+  path                String
+  originalName        String
+  mimeType            String
+  sizeBytes           Int
+  checksum            String
+  uploadedByAccountId String?
+  uploadedAt          DateTime       @default(now())
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  uploadedBy  Account?    @relation(fields: [uploadedByAccountId], references: [id], onDelete: SetNull)
+
+  importBatches ImportBatch[]
+  questionSets  QuestionSet[]
+
+  @@index([competitionId])
+}
+
+model PurgeSchedule {
+  id            String    @id @default(uuid())
+  competitionId String
+  // Competition end + 15 days (RES-004).
+  purgeAt       DateTime
+  scope         Json
+  executedAt    DateTime?
+  status        String    @default("SCHEDULED")
+
+  // The three retention flags (includesArchivedScores, includesCorrectionLog,
+  // includesParticipantExcel) are OPEN (U-59, U-62) and are deliberately NOT
+  // created until the stakeholder answers.
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+
+  @@index([competitionId])
+}
+
+model AuditLog {
+  id              String   @id @default(uuid())
+  competitionId   String?
+  actorAccountId  String?
+  action          String
+  targetType      String?
+  targetId        String?
+  payload         Json?
+  at              DateTime @default(now())
+
+  competition Competition? @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  actor       Account?     @relation(fields: [actorAccountId], references: [id], onDelete: SetNull)
+
+  @@index([competitionId])
+}

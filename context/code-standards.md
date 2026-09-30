@@ -1,6 +1,6 @@
 # Code Standards (DRAFT v1 SKELETON, 2026-09-26)
 
-> **Mostly blocked.** The backend language and framework are **TBD — to be decided by the project owner** (I-02), so language, framework, API and testing conventions cannot be written yet.
+> **Partly written.** The backend language and framework are decided: **Node.js with TypeScript, Express.js** [T] (I-02, 2026-09-27). The ORM and migration tool is decided: **Prisma** [T] (I-31, 2026-09-29). The test framework is decided: **Jest** [T] (I-32, 2026-09-29). The frontend build tool is decided: **Vite** [T] (BLD-023, 2026-09-30). The styling approach is decided: **Tailwind CSS** [T] (BLD-023, 2026-09-30). The API, the routing/state/data-fetching conventions and the remaining testing conventions are still to be written on top of the decided stack.
 > This file holds only what is already decided or comes from the agreed methodology. Everything else is marked OPEN. Do not invent conventions.
 > Status tags: [T] team decision · [O] open. See `README.md`.
 
@@ -15,14 +15,15 @@
 ## Language
 
 - **Frontend:** TypeScript [T] (ARCH-020).
-- **Backend:** **TBD — to be decided by the project owner** (I-02). [[FILL-BEFORE-CODING: backend language = ________ ; owner: project owner]] Do not write backend code or conventions until decided.
+- **Backend:** Node.js with TypeScript [T] (I-02).
 - Validate unknown external input at system boundaries before trusting it (the client is never trusted [T]).
 
 ## Framework / library
 
-- **Frontend:** React [T]. Project conventions (routing, state, data fetching, styling): **OPEN**.
-- **Backend framework:** **OPEN (I-02).** [[FILL-BEFORE-CODING: backend framework = ________ ; owner: project owner]]
-- **UI component library, icons, fonts:** **OPEN (I-20).**
+- **Frontend:** React [T]. The **build tool is Vite** [T] (BLD-023, decided 2026-09-30) — the frontend is a Vite project (React with TypeScript); `npm run build` runs Vite's production build and the dev server is Vite's. **Styling is Tailwind CSS** [T] (BLD-023, decided 2026-09-30) — utility-first classes, configured through `tailwind.config` and a global stylesheet; do not introduce a second styling system. Project conventions (routing, state, data fetching): **OPEN**.
+- **Backend framework:** Express.js [T] (I-02).
+- **ORM and migrations:** **Prisma** [T] (I-31, decided 2026-09-29) — the ORM for the PostgreSQL schema and the migration system. Migrations are versioned in the repository and applied in CI and on deployment; the schema is the single source of truth for the database. Do not write raw SQL migrations by hand.
+- **UI component library, icons, fonts:** **OPEN (I-20).** The styling *approach* is decided (Tailwind CSS, BLD-023), but no component library, icon set or font is documented; the visual design comes after the first slice [C] (BLD-009).
 
 ## Error handling
 
@@ -31,7 +32,8 @@
 
 ## Naming conventions
 
-- Name things after the responsibility they contain, not the technology used. Use the module names in `architecture.md` for module and folder names. Casing rules: **OPEN** until the language is chosen.
+- Name things after the responsibility they contain, not the technology used. Use the module names in `architecture.md` for module and folder names.
+- **Casing** (TypeScript, both ends) [T] (I-33, decided 2026-09-29): `camelCase` for variables and functions; `PascalCase` for types, classes, interfaces and React components; `UPPER_SNAKE_CASE` for true constants. Files and folders follow the module and feature names in `architecture.md`.
 
 ## API conventions
 
@@ -40,7 +42,7 @@ Decided behaviour that affects the API: separate login endpoints per role [T]; a
 
 ## Testing
 
-CI runs lint, type check, tests and build, and must pass before a merge [C] (BLD-002). Test framework and coverage rules: **OPEN** (depend on the backend language). Documented: a failure and edge-case test list [T]: disconnect and reconnect, timer expiry, manual and duplicate submission, pause and resume, early round end, early finish, many players at once, team scoring, tie-breaks, big-screen synchronization, invalid participant or question file (REQUIREMENTS §13). Extended cases still to add: rematch, takeover, corrections, several categories, the 15-day purge.
+CI runs lint, type check, tests and build, and must pass before a merge [C] (BLD-002). **Test framework: Jest** [T] (I-32, decided 2026-09-29) — one runner for both the frontend (React) and the backend (Node.js with TypeScript, through `ts-jest`); it runs in the CI pipeline of BLD-002. **Coverage rules: OPEN**, to be written with the first unit. **Scope** [T] (2026-09-29): keep the tests to the necessary minimum for the MVP — cover what the event depends on, do not go deep. Documented: a failure and edge-case test list [T]: disconnect and reconnect, timer expiry, manual and duplicate submission, pause and resume, early round end, early finish, many players at once, team scoring, tie-breaks, big-screen synchronization, invalid participant or question file (REQUIREMENTS §13). Extended cases still to add: rematch, takeover, corrections, several categories, the 15-day purge.
 
 ## Comments
 
@@ -60,8 +62,8 @@ CI runs lint, type check, tests and build, and must pass before a merge [C] (BLD
 
 ## File organization
 
-- Frontend by feature: `auth`, `competition`, `player`, `judge`, `admin`, `big-screen`, `ranking`, `gameplay` [T].
-- Backend: **OPEN (I-02).**
+- Frontend by feature: `auth`, `competition`, `player`, `judge`, `admin`, `big-screen`, `ranking`, `gameplay` [T]. The frontend is a **Vite** project with **Tailwind CSS** [T] (BLD-023): feature folders live under `frontend/src/features/<feature>/`, with the app entry and router in `frontend/src/`, the Tailwind entry stylesheet in `frontend/src/`, and `frontend/tailwind.config.js` + `frontend/vite.config.ts` at the frontend root.
+- Backend: **module-first** [T] (I-02, decided 2026-09-30; see `architecture.md`, "Backend folder structure"). One folder per module under `backend/src/modules/` (the modules in `architecture.md`), each holding `<name>.controller.ts` (HTTP), `<name>.service.ts` (domain rules and the public interface), `<name>.repository.ts` (Prisma access), `<name>.types.ts` and `index.ts` (barrel exposing only the public interface). Around the modules: `realtime/` (the Socket.io gateway, event constants and per-module handlers), `infra/` (Prisma, Redis, the disk file store, the logger), `shared/` (errors, middleware, validation, i18n, clock), `config/` and `prisma/`. The repository root stays `backend/`, `frontend/`, `docker-compose.yml`.
 
 ## Forbidden / restricted practices
 
