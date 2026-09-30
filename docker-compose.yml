@@ -58,7 +58,7 @@ services:
       REDIS_HOST: redis
       STORAGE_ROOT: /app/storage
     ports:
-      - "${BACKEND_PORT:-3000}:3000"
+      - "${BACKEND_PORT:-3000}:${BACKEND_PORT:-3000}"
     volumes:
       - ./backend:/app
       - backend-node-modules:/app/node_modules
