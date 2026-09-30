@@ -17,7 +17,7 @@ This folder is the single source of truth a coding agent reads before it builds 
 | `progress-tracker.md` | Phase, blockers, open items, next steps | Written |
 | `FILL-BEFORE-CODING.md` | The checklist of every blank to fill before coding, with owners | Written |
 | `data-model.md` | The data model and schema | Written and **approved** 2026-09-30 (A6); the Prisma schema is its concrete form |
-| `specs/00-build-plan.md` | Units, order, dependencies, definition of done | **Approved** 2026-09-30 (A7): 14 units; a 15th (team-round-2, TEM-005) added during the `main`/`louise` merge |
+| `specs/00-build-plan.md` | Units, order, dependencies, definition of done | **Approved** 2026-09-30 (A7): 14 units; a 15th added during the `main`/`louise` merge — team-round-2 (TEM-005) inserted as Unit 14 right after rotation relay; school ranking shifted to Unit 15, now depending on both team rounds |
 | `specs/01-foundation.md` | The spec of Unit 1 (foundation), in the feature-spec structure | **Approved** 2026-09-30 (A7) |
 | `samples/` | Where the sample participant Excel and question PDF are placed | Empty, to be filled |
 
