@@ -46,10 +46,10 @@ The event flow (not a list of build units).
 
 **Setup (controller)**
 1. Log in with username and password [T].
-2. Create the competition: name, description, categories, participant Excel, question PDF [T]. One event can hold several categories at once [P].
-3. Validate the participant Excel as a whole; an invalid file commits nothing [T]. The system then creates participants, teams and accounts and generates participant numbers and credentials [T]/[P]. The Excel columns are Name, School, Category, Team; the participant number is generated (schools in Excel order, then students in row order, unique across the event, a team's numbers consecutive); the username is the participant number and the password a short random code [C] (BLD-003). Extra columns: **OPEN (U-40)**; the sample files are still to be sent (U-01).
+2. Create the competition: name, description, categories, participant Excel, question Excel [T]. One event can hold several categories at once [P].
+3. Validate the participant Excel as a whole; an invalid file commits nothing [T]. The system then creates participants, teams and accounts and generates participant numbers and credentials [T]/[P]. The Excel columns are Name, School, Category, Team; the participant number is generated (schools in Excel order, then students in row order, unique across the event, a team's numbers consecutive); the username is the participant number and the password a short random code [C] (BLD-003). Extra columns: **OPEN (U-40)**.
 4. Export the credential slips, which are printed [C].
-5. Import the question PDF: strict predefined format, no OCR; any failure rejects the whole import [T].
+5. Import the question Excel (**not PDF** [C], BLD-012, resolves U-93): structured fields read from cells, no OCR; any failure rejects the whole import [T]. One file per category, not shared [C] (BLD-016). Points are customizable regardless of what the file carries [C] (BLD-013). Categories: U6 to U20, the original scheme [C] (BLD-015).
 6. Judges (at least 30) each get a range of participant numbers [C]/[P]. The **controller assigns them during setup, before publishing, and can change them during the event** [C] (BLD-008).
 7. Publish. The system refuses if anything is missing. Publishing generates the entry link/QR and the big-screen link, and locks the structure [T]/[S].
 
@@ -76,7 +76,7 @@ The event flow (not a list of build units).
 - Competition creation with several categories
 - Participant Excel import with whole-file validation
 - Participant, team and account creation with generated numbers and credentials; credential slip export
-- Question PDF import in a strict format
+- Question Excel import, one file per category (not PDF)
 - Judge accounts with participant ranges
 - Publish with completeness check, entry link/QR, big-screen link, structure lock
 

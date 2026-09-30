@@ -8,8 +8,9 @@
 
 - The event has categories; a category has two stages (Individual, Team); each stage has 2 rounds; an Individual round has 6 puzzles [C].
 - **Round settings** (times, points, bonus rate and cap, countdown length, counts) are set **once per round for the whole event**, not per category [C]. Question points belong to the questions [C].
-- **Questions are modelled per category**; a category may point to a shared set. Whether each category has its own question file is open (U-32) [C].
-- **Grid model is generic** (rows, columns, regions), never assuming 9x9. The **solution is stored with the question**; the answer check compares against it [C].
+- **One question file per category, not a shared pool** [C]: each category is uploaded and imported separately, even when categories run the same round in parallel.
+- **Question import file is Excel (.xlsx), not PDF** [C]. It carries a starting points value per question, but points stay fully controller-customizable everywhere.
+- **Grid model is generic** (rows, columns, regions), never assuming 9x9. The **solution is stored with the question**; the answer check compares against it [C]. **A complete-solution column is currently missing from the source files** [T]: general automated import of the solution is blocked until the source adds one; a small hand-transcribed starter set unblocks building and testing the answer-check unit. **OPEN (U-94):** re-asking the stakeholder for a clearer answer.
 - **Scores are whole numbers**; the **school total is an exact decimal**, neither rounded nor truncated [C]. The round score includes the bonus and can exceed the round maximum [C].
 - **Attempts are archived, never deleted**, on a judge restart or rematch, and the number of restarts stays visible [C]/[P].
 - **One role per account**; several controller accounts allowed; one person with several roles is two accounts [C]. Participant username = participant number; the password is a short random code [C].
@@ -24,11 +25,11 @@
 | Entity | Fields | Relationships | Notes |
 |---|---|---|---|
 | Competition (event) | ________ | ________ | ________ |
-| Category | ________ | ________ | U6 to U20 [T]; how many are used is open (U-02) |
+| Category | ________ | ________ | U6 to U20, the original scheme [C]; how many are used is open (U-02) |
 | Stage | ________ | ________ | Individual, Team |
 | Round | ________ | ________ | Numeric settings once per event |
-| Question set | ________ | ________ | Per category; may be shared |
-| Question / puzzle | ________ | ________ | Generic grid, points at least 1, stored solution |
+| Question set | ________ | ________ | One per category, not shared [C] |
+| Question / puzzle | ________ | ________ | Generic grid, points at least 1 and controller-editable, stored solution (column missing from source today, U-94 open) |
 | School | ________ | ________ | |
 | Team | ________ | ________ | One per school per category |
 | Participant | ________ | ________ | Name, School, Category, Team; generated number |
@@ -45,7 +46,7 @@
 
 ## Storage conventions
 
-- File path template and the reference column on the parent record for the participant Excel, question PDF, credential slips and exports (files live on the server's disk in a mounted folder [C]): ________
+- File path template and the reference column on the parent record for the participant Excel, question Excel, credential slips and exports (files live on the server's disk in a mounted folder [C]): ________
 - What lives in Redis vs PostgreSQL, and how a round's state changes are persisted: ________
 
 ## Approval

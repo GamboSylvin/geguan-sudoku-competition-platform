@@ -19,7 +19,7 @@ This folder is the single source of truth a coding agent reads before it builds 
 | `data-model.md` | The data model and schema | **Placeholder**, to be filled and approved |
 | `specs/00-build-plan.md` | Units, order, dependencies, definition of done | **Placeholder**, to be filled |
 | `specs/01-foundation.md` | The spec of Unit 1 (foundation), in the feature-spec structure | **Placeholder**, to be filled and approved |
-| `samples/` | Where the sample participant Excel and question PDF are placed | Empty, to be filled |
+| `samples/` | Where the sample participant Excel and question Excel are placed | Empty, to be filled |
 
 Not yet written: the specs of the later units (`specs/NN-unit-name.md`). They follow the build plan.
 

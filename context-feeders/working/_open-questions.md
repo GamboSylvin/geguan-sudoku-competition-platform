@@ -24,6 +24,7 @@
 ## Resolved items
 
 Resolved points were moved out of this file on 2026-09-26. The decisions are in `competition-rules.md` (tagged [T], not client-confirmed); the client's confirmation of them is carried by rows R15 to R28 of `_stakeholder-question-pack.md`. This file now lists only what is still open.
+On 2026-09-30, Part 1's remaining five items (A1c, A4d, A5f, A6d, A10b) were answered directly by the client's stakeholder (marked ✅) or given as team working positions where the stakeholder's answer was unclear or missing (marked 🔶). ✅ items are tagged [C]; 🔶 items are tagged [T]. Their decisions are in `competition-rules.md`; client confirmation of the ✅ items is carried by rows R30 to R34 of `_stakeholder-question-pack.md`.
 
 Last updated: 2026-09-26, after the resolved points were removed (they live in `competition-rules.md`). All interview steps asked; readiness check not passed.
 
@@ -41,21 +42,24 @@ Pack Q1 to Q4 (points and total, submission, early-finish bonus, late submit) we
 
 **Still open from this part**
 
-**A1c. Do the question PDFs carry the points? (U-03, second part)** — OPEN, project owner
-- The project owner will come back with a sample PDF. Do not assume the PDF carries the points.
-- Answer: _
+**A1c. Does the question import file carry the points? — RESOLVED 2026-09-30, folded into the format correction**
+- **Answer:** the question import file is **Excel (.xlsx), not PDF** [C] (BLD-012, resolves U-93). It does carry a points value per question, but that is only a starting value: points stay fully controller-customizable everywhere [C] (BLD-013, resolves U-92). Recorded in `competition-rules.md` §2.
 
-**A4d. When may students see their score? (U-24, U-88)** — OPEN, stakeholder
-- What does "publish results" mean, and when exactly do results count as published? (Decided: students see their own score and rank after the results are published, and no score right after a submit, U-23.)
-- Answer: _
+**A4d. When may students see their score? — RESOLVED 2026-09-30**
+- **Answer:** only when the whole competition reaches `FINISHED` — not after each round, not after each stage [C] (BLD-017, resolves U-24, U-88). Whether a separate manual "publish" click by the controller is also wanted at that same moment was not addressed; treated as a minor residual detail, not blocking. Recorded in `competition-rules.md` §4.
 
 ### Priority 2 — event behaviour
 
-**A5f. Do the categories have their own question files? (U-32)** — OPEN, stakeholder
+**A5f. Do the categories have their own question files? — RESOLVED 2026-09-30**
+- **Answer:** one file per category, not a shared pool [C] (BLD-016, resolves U-32); each category (e.g. U8, U12) is uploaded and imported separately, even when running the same round in parallel. Recorded in `competition-rules.md` §2 and `architecture.md` Data model.
+
+**A6d. Finished early: awards, and reset after finishing — PARTLY RESOLVED 2026-09-30**
+- **Reset: resolved, was never actually open.** A finished competition, early or not, cannot continue — already stated directly in the documents (REQUIREMENTS §7.7). Not a separate question.
+- **Awards: still OPEN (U-89, narrowed; U-27).** Working position [T] (BLD-018): scores are still computed and marked as usual, with the "finished early" mark shown alongside; the school decides by hand whether to grant awards. The first reply to this question showed the scenario wasn't understood — re-asking with a fire-alarm-style example spelled out.
 - Answer: _
 
-**A6d. Finished early: awards, and reset after finishing (U-27, U-89)** — OPEN, stakeholder
-- Do awards apply when a competition is finished early? Can the controller reset (rematch) after the competition has finished?
+**A6e. Follow-up: awards after an early finish, re-asked with the scenario (U-89, U-27)** — OPEN, stakeholder (sent as pack Q38)
+- Picture the individual stage running, and the controller ends the competition early because of a fire alarm. The school total still gets computed from whatever was played, and the result is marked "finished early". Does the school still give out its usual awards (medals, certificates, whatever it normally does) based on that early-finish result, or are awards withheld when a competition didn't run to its normal end?
 - Answer: _
 
 **A8. Server restart during a round (I-10)** — Priority 2 — PARTLY RESOLVED (2026-09-26)
@@ -76,12 +80,12 @@ Pack Q1 to Q4 (points and total, submission, early-finish bonus, late submit) we
 
 **A10b. Regulation numbers for the second team round (TEM-006 to TEM-008)** — OPEN, stakeholder / project owner
 - The puzzle count (3), total time (30 min) and points per puzzle (20) are working positions, not read from any source. Replace with the 4th Zhejiang league regulation's actual numbers once available (pack ref R9).
-- Answer: _
+- **Answer (2026-09-30): no reply came back.** These stay exactly as they were. Since every one of these values is fully customizable in the product, whatever real numbers arrive later just get typed in — no rebuild needed. **Decision (2026-09-30, the user, general principle):** a working position may be used to build against now, exactly as if it were a stakeholder answer; it can still be changed later, like any [C] or [T] decision, at any time, without special process. TEM-006 to TEM-008 are now in active use on that basis. Not blocking.
 
 ### Priority 3 — confirmations
 
 **A11. Puzzle authoring/generation (U-45; earlier cited as U-43)** — Priority 3 — OPEN
-- Question: Is creating, generating or editing puzzles inside the app in scope or out of scope? Documented [T]: questions are imported from the predefined PDF, with no OCR.
+- Question: Is creating, generating or editing puzzles inside the app in scope or out of scope? Documented [T]: questions are imported from the predefined question Excel (corrected from PDF, 2026-09-30), with no OCR.
 - Suggestion on record: none. The earlier "authoring is out" was withdrawn.
 - Answer: _
 
@@ -305,7 +309,7 @@ Which questions were re-asked, and the outcome. A question stays OPEN until a cl
 - **2026-09-26, Part 1 of the pack (Q1 to Q6) answered on the project side.** All resolved entries were removed from this log. The decisions are in `competition-rules.md` ([T], not client-confirmed) and their client confirmation is carried by pack rows R15 to R28. The open items that came out of them stay in the sections above (A1c, A4d, A5f, A6d).
 - **2026-09-26, decisions file transferred (`decisions-for-the-context-builder.md`, removed after transfer).** It stated that Q1 to Q6 and the builder's blocking questions were **confirmed by the stakeholder** on 2026-09-26, which reverses their earlier [T] status; the context files now carry them as [C]. Verify with the project owner.
   - Resolved and removed from this file: essential features on the event day (first slice = Individual stage), the server-restart behaviour except its duration (U-49 stays), question delivery, judge ranges, file storage, live-state placement, roles (one role per account, several controllers), workflow and CI.
-  - New open items (section K): sample files (U-01), extra Excel columns (U-40), unique solutions (U-90), judge and controller credentials (I-30), what I-14 and I-15 are, and the scope of the 15-day deletion (U-59, U-62).
+  - New open items (section K): sample files (U-01), extra Excel columns (U-40), unique solutions (U-90), judge and controller credentials (I-30), what I-14 and I-15 are, and the scope of the 15-day deletion (U-59, U-62). (K1 later resolved 2026-09-30: question file is Excel, not PDF.)
   - Left blank on purpose (TBD — to be decided by the project owner): backend language and framework, developers' skills, names and roles, who builds what, where the server runs on the event day.
 
 ---
@@ -323,7 +327,7 @@ If the stakeholder or the venue must clarify it, log it here and return to it at
 - C5 session length (I-16) · H1 final module list (I-01) and how modules communicate (I-08) · I2 component library, icons, fonts (I-20) · J5 environment (I-24) · J9 team sync (I-28) · J1 to J3 build units, order and definition of done · K4 judge and controller credentials (I-30) · C7 status-tag format · E1 the [T] team decisions
 
 **Only the stakeholder can settle it (log and return at the end):**
-- A1c question PDF carries points (U-03) · A4d when students see scores (U-24, U-88) · A6d awards and reset after an early finish (U-27, U-89) · A5f question files per category (U-32) · A8 acceptable interruption length (U-49) · K2 extra Excel columns (U-40) · K3 unique solutions (U-90) · K6 15-day deletion scope (U-59, U-62)
+- A6e awards after an early finish, re-asked with a scenario (U-89, U-27) · A8 acceptable interruption length (U-49) · A10b regulation numbers for the second team round, in use as working positions (TEM-006 to TEM-008) · K2 extra Excel columns (U-40) · K3 unique solutions (U-90) · K3b the missing complete-solution column, re-asking (U-94) · K6 15-day deletion scope (U-59, U-62)
 - A10b regulation numbers for the second team round (TEM-006 to TEM-008, pack ref R9) · A11 to A19 remaining (authoring U-45, third language U-51, primary user U-52, link and slips U-54, judge powers U-55) · D1 to D6 (U-56 risks, U-57 external systems, U-58 performance, U-59 data protection, U-37 anti-cheating, U-60 scale, U-61 reliability) · H2 and H3 (U-62 archived scores, U-63 read/change rules, U-55 judge powers) · I1 to I6 (U-65 brand and look, U-70 fonts and Chinese display, U-66 layouts, U-67 screen sizes, U-68 language switching, U-69 accessibility) · E2 to E6 re-confirmations
 - Client confirmation of the 2026-09-26 decisions: stated as given (see `competition-rules.md`); verify with the project owner.
 
@@ -466,9 +470,8 @@ Resolved 2026-09-26: git branching, pull requests, CI and review (I-25 to I-27, 
 
 ## K. New open items from the 2026-09-26 decisions
 
-**K1. The sample question PDF and participant Excel (U-01)** — OPEN, project owner
-- Not yet sent. Blocks the import units and the grid shapes.
-- Answer: _
+**K1. The sample question Excel and participant Excel (U-01)** — RESOLVED (partly) 2026-09-30
+- **Answer:** the material has been examined; the question import file is **Excel (.xlsx), not PDF** [C] (BLD-012, resolves U-93), which corrects the earlier "sample question PDF" wording throughout. Physical files are **still not placed in `context/samples/`**; that placement step (renamed `question-sample.xlsx`) remains open as pack item B1 in `FILL-BEFORE-CODING.md`.
 
 **K2. Extra participant Excel columns (U-40)** — OPEN
 - The columns are Name, School, Category, Team. Are there any others?
@@ -476,6 +479,11 @@ Resolved 2026-09-26: git branching, pull requests, CI and review (I-25 to I-27, 
 
 **K3. Unique solution of every puzzle (U-90)** — OPEN
 - The answer check compares the submitted grid with the solution stored with the question and relies on every puzzle having a unique solution. Is that guaranteed?
+- Answer: _
+
+**K3b. The missing complete-solution column (U-94)** — OPEN, re-asking, stakeholder (sent as pack Q37)
+- The source files have no column for the complete solved grid. The stakeholder's reply ("需要一个") was too short to read as a full answer. Working position in the meantime [T] (BLD-014): ask the source to add one more column, the complete solved grid (or at minimum the given cells) as plain text, in the same array format as the existing answer column; until it exists, hand-transcribe the given cells for a small starter set to build and test the answer-check unit, and keep general automated import of the solution blocked.
+- Re-asked question: could you say more clearly — should the source add a "solution" column to the question Excel with the fully solved grid written out cell by cell, the same way the existing answer column is written? If not that, what would work instead?
 - Answer: _
 
 **K4. Format of judge and controller credentials (I-30)** — OPEN
@@ -498,6 +506,13 @@ Resolved 2026-09-26: git branching, pull requests, CI and review (I-25 to I-27, 
 - **2026-09-29, answer to pack Q7 (the second team round) received:** resolved (A10). Which mode and the block split are a direct answer [C] (TEM-005, resolves TEM-003, U-91). Puzzle count, total time and points are working positions, not sourced [T] (TEM-006 to TEM-008); new item A10b tracks replacing them with the regulation's real numbers (pack ref R9). No follow-up questions were needed. Recorded in `competition-rules.md`, `architecture.md`, `progress-tracker.md` and the pack (Q7 replaced by a resolved summary and new Q7b).
 
 ---
+
+- **2026-09-30, Part 1's remaining five items received (import format, points, solution column, categories, question files per category, score visibility, awards/reset for an early finish, second team round numbers):**
+  - ✅ **Resolved, [C], stakeholder-confirmed:** question import format is Excel not PDF (A1c, BLD-012, U-93); points stay fully customizable everywhere (BLD-013, U-92); categories are U6 to U20, the original scheme (BLD-015, U-95); one question file per category, not shared (A5f, BLD-016, U-32); students see scores only when the competition reaches `FINISHED` (A4d, BLD-017, U-24, U-88); reset after finishing is never allowed, already documented, not actually open (part of A6d).
+  - 🔶 **Working position, [T], not confirmed — re-asking:** the missing complete-solution column, stakeholder's reply too short (K3b, BLD-014, U-94); awards after an early finish, stakeholder didn't understand the question, re-asked with a scenario (A6e, BLD-018, U-89 narrowed, U-27).
+  - **Unchanged working position, no reply, now in active use for building (per the user's 2026-09-30 general instruction that working positions, like confirmed decisions, can be revised later at any time without a rebuild):** the second team round's puzzle count, time and points (A10b, TEM-006 to TEM-008).
+  - Recorded across `competition-rules.md`, `architecture.md`, `data-model.md`, `project-overview.md`, `ui-context.md`, `code-standards.md`, `README.md`, `samples/README.md`, `specs/00-build-plan.md`, `progress-tracker.md`, `FILL-BEFORE-CODING.md` and this pack.
+  - **Part 1 of the stakeholder question pack is now fully closed out.** Every question in it has either a confirmed answer, a working position, or an explicit "no reply, in use as a working position" status — none is left blank with no status. Its resolved questions were removed from the pack (see below); the still-open items (K2, K3, K3b, A6e, A8) stay in this file to revisit.
 
 ## Not yet asked
 

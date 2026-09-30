@@ -16,6 +16,7 @@ Close the few blockers left, draft the data model and the build plan for approva
 - Open questions were collected in `context-feeders/working/_open-questions.md`; the client-facing questions are in `context-feeders/working/_stakeholder-question-pack.md`.
 - Part 1 of the pack (Q1 to Q6, scoring and round rules) and the builder's blocking questions were answered on 2026-09-26. The answers were transferred from `decisions-for-the-context-builder.md` (removed after transfer) into these files. That file stated they were **confirmed by the stakeholder**, which reverses their earlier [T] status.
 - First draft of the context folder written and updated to v1.
+- 2026-09-30: Part 1 of the pack closed out — its remaining five items answered. **Question import format corrected from PDF to Excel** [C] (BLD-012, resolves U-93): every earlier "question PDF" statement is replaced. Points stay fully customizable regardless of what the file carries [C] (BLD-013, resolves U-92). Categories confirmed as U6 to U20, the original scheme [C] (BLD-015, resolves U-95). One question file per category, not shared [C] (BLD-016, resolves U-32). Students see scores only when the whole competition reaches `FINISHED` [C] (BLD-017, resolves U-24, U-88). Reset after finishing is settled — never, already documented (REQUIREMENTS §7.7) — and awards after an early finish is narrowed to a working position pending a clearer re-ask (U-89, U-27; BLD-018). The complete-solution column is missing from the source files; a working position asks the source to add one, with hand-transcription as a stopgap (BLD-014, U-94 open, re-asking). TEM-006 to TEM-008 (second team round numbers) got no reply and stay as working positions **now treated as usable for building**, since working positions (and even stakeholder-confirmed rules) can be revised later without a rebuild. Recorded across `competition-rules.md`, `architecture.md`, `data-model.md`, `project-overview.md`, `ui-context.md`, `code-standards.md`, `README.md`, `samples/README.md`, `specs/00-build-plan.md`, `FILL-BEFORE-CODING.md` and the working files.
 - 2026-09-29: Q7 of the pack (the second team round, "齐心协力") answered. It is the client document's partition collaboration: one puzzle split into row-band blocks, one block per member (2 to 6), each editing only their own block, scored all-or-nothing once combined, no early bonus. Which mode and the block split are a direct answer [C] (TEM-005, resolves TEM-003, U-21, U-05, U-91). Puzzle count (3), total time (30 min) and points per puzzle (20/puzzle) are **working positions, not sourced** [T] (TEM-006 to TEM-008); flag for replacement once the 4th Zhejiang league regulation numbers arrive (pack ref R9). Needed on the event day, since the school total counts both team rounds; needed by about day 8 of the build if required on competition day. Recorded in `competition-rules.md` §1 and §8, and `architecture.md` (Data model).
 
 ## In Progress
@@ -39,11 +40,11 @@ The full checklist, with the blanks to fill and who owns each, is `FILL-BEFORE-C
 
 | Item | Blocks |
 |---|---|
-| Sample participant Excel and question PDF (U-01); extra Excel columns (U-40); whether the PDF carries points (U-03) | Setup and import units |
+| Sample participant Excel and question Excel placed in `context/samples/` (question file is **Excel, not PDF**, corrected 2026-09-30); extra participant Excel columns (U-40) | Setup and import units |
 | Format of judge and controller credentials (I-30); session length (I-16) | Authentication unit |
-| Unique solution of every puzzle (U-90); grid shapes from the sample PDF (U-01) | Question, answer check and runtime units |
-| When students see scores (U-24, U-88); awards and reset after an early finish (U-89, U-27) | Results and finish units |
-| Question files per category (U-32); replace the working-position numbers (TEM-006 to TEM-008) with the regulation's real puzzle count, time and points | Team stage (later slice) |
+| Unique solution of every puzzle (U-90); the missing complete-solution column (U-94, re-asking) | Question, answer check and runtime units |
+| Awards after an early finish (U-89 narrowed, U-27) — reset is settled: never | Results and finish units |
+| Replace the working-position numbers (TEM-006 to TEM-008) with the regulation's real puzzle count, time and points, once available (pack ref R9) — **not blocking**, they are in use for building now | Team stage (later slice) |
 | Hosting (**TBD — to be decided by the project owner**, U-46); names, roles and who builds what (**TBD — to be decided by the project owner**, I-17, I-23) | Deployment; assignment of units. Not needed to start coding |
 | Client confirmation of the requirements in writing (methodology Step 8, A14) | The methodology makes it mandatory before specs are written (see `FILL-BEFORE-CODING.md`, section E). Whether it can wait until after Unit 1 is a decision for the project owner |
 
@@ -51,7 +52,7 @@ The full checklist, with the blanks to fill and who owns each, is `FILL-BEFORE-C
 
 1. The project owner supplies items 1 and 2 above (backend language and framework; what I-14 and I-15 are).
 2. I draft the **data model**, the **build plan** and the **Unit 1 spec** for the team to approve. First slice: the **Individual stage, end to end** [C] (BLD-009), keeping the model ready for team rotation.
-3. Send the sample participant Excel and question PDF (U-01).
+3. Place the sample participant Excel and the sample question Excel (**not PDF**) in `context/samples/`.
 4. Continue the pack (Q7 and Parts 2 to 7), updating these files as answers arrive.
 
 ## Blocked
@@ -98,10 +99,10 @@ The person completing the context and the context builder both add lines. If two
 Full list: `context-feeders/working/_open-questions.md`. The client-facing subset: `context-feeders/working/_stakeholder-question-pack.md`. Highest impact now:
 
 - I-14 and I-15: what are they?
-- U-01, U-03, U-40: the sample files, points in the PDF, extra Excel columns.
-- U-90: unique solutions.
-- U-24, U-88: when students see their score. U-89, U-27: awards and reset after an early finish.
-- U-32: question files per category. TEM-006 to TEM-008: replace the second team round's working-position numbers with the regulation's real ones.
+- U-40: extra participant Excel columns.
+- U-90: unique solutions. U-94: the missing complete-solution column (re-asking, first reply too short).
+- U-89, U-27: awards after an early finish (narrowed; reset is settled: never).
+- TEM-006 to TEM-008: no reply on the real numbers yet; working positions stay in use for building, no rebuild needed when they arrive.
 - U-62, U-59: what the 15-day deletion covers. U-49: acceptable interruption length.
 - U-63, U-55: access rules. I-30: judge and controller credentials. I-16: session length.
 - U-06, U-46: tablets, Quark version, venue network.
@@ -131,5 +132,6 @@ No database exists. The schema is not designed (I-01).
 
 ## Last Updated
 
+2026-09-30: Part 1 of the pack closed out (five remaining items answered: import format corrected PDF to Excel, points customizable, categories confirmed, one file per category, score visibility, awards narrowed, solution column open). Q1c, Q4c, Q5b, Q6b, Q7b removed from the pack; the five items the stakeholder answered directly need no confirmation round-trip; the solution column and awards carry forward as Q37 and Q38 for a clearer stakeholder re-ask; the second team round's numbers stay a working position, already in use, tracked via R29.
 2026-09-29: Q7 (the second team round) recorded across `competition-rules.md`, `architecture.md` and `progress-tracker.md`.
 2026-09-26: context folder updated to v1 with the 2026-09-26 decisions (scoring and round rules; build and engineering decisions). `decisions-for-the-context-builder.md` transferred and removed.

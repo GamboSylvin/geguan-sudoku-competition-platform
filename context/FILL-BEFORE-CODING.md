@@ -36,8 +36,8 @@ Coding may start when every A item is ticked **and** the approvals in section E 
 
 | # | What to fill | Unit | Where | Done |
 |---|---|---|---|---|
-| B1 | **Sample files placed** in `context/samples/`: `participants-sample.xlsx` and `question-sample.pdf` | Import units | `samples/README.md`; marker in `architecture.md` (Import formats) | [ ] |
-| B2 | From the samples: **extra Excel columns** = ________ (U-40); **does the question PDF carry the points** = ________ (U-03); **grid shapes** in the PDF = ________ (U-01); **is a unique solution guaranteed for every puzzle** = ________ (U-90) | Import; answer check | marker in `architecture.md` (Import formats) | [ ] |
+| B1 | **Sample files placed** in `context/samples/`: `participants-sample.xlsx` and `question-sample.xlsx` (**Excel, not PDF** — corrected 2026-09-30) | Import units | `samples/README.md`; marker in `architecture.md` (Import formats) | [ ] |
+| B2 | From the samples: **extra participant Excel columns** = ________ (U-40); **is a unique solution guaranteed for every puzzle** = ________ (U-90) | Import; answer check | marker in `architecture.md` (Import formats) | [ ] |
 | B3 | **Session length** = ________ (I-16); **judge and controller credential format** = ________ (I-30) | Authentication | marker in `architecture.md` (Auth and access model) | [ ] |
 | B4 | **UI component library** = ________ ; **icon set** = ________ ; **fonts, including Chinese** = ________ (I-20) | First UI unit | marker in `ui-context.md` | [ ] |
 
@@ -51,10 +51,10 @@ Coding may start when every A item is ticked **and** the approvals in section E 
 
 These are still open. They are being answered through the question process, and the context builder updates the files. Do not fill them. If a unit depends on one, stop and report it.
 
-- When students see their score (U-24, U-88) · awards and reset after an early finish (U-27, U-89)
-- The second team round (U-05, U-21) · question files per category (U-32) · acceptable interruption length (U-49) · scope of the 15-day deletion (U-59, U-62)
+- Awards after an early finish (U-27, U-89 narrowed) · the missing complete-solution column (U-94) · acceptable interruption length (U-49) · scope of the 15-day deletion (U-59, U-62)
 - Access rules (U-63, U-55) · the venue network and tablets (U-06) · risks, external systems, performance targets, scale ceiling, reliability (U-56 to U-61)
 - Look and brand, layouts, screen sizes, language switching, accessibility (U-65 to U-70) · authoring and a third language (U-45, U-51)
+- Real numbers for the second team round (TEM-006 to TEM-008): working positions are already in use for building; replace later if the regulation gives different numbers — no rebuild needed, only re-typing values
 
 ## E. Approvals before coding (the methodology's gate)
 
@@ -93,7 +93,7 @@ Step 1. Search all of context/ for these markers (ignore the DESCRIPTIONS of mar
   [[FILL-BEFORE-CODING: ...]]   [[FILL-BEFORE-UNIT: ...]]   [[FILL-BEFORE-DEPLOYMENT: ...]]
 Also list every "TBD — to be decided by the project owner". Then list, separately and without asking me to fill them, the items tagged [O] or written "OPEN (U-xx)" that are waiting for stakeholder answers.
 
-Step 2. Ask me for the values, one group at a time (do not dump every question at once). Suggested groups: (a) backend language and framework, developers' skills, names and roles, who builds what; (b) I-14 and I-15 (tell me where to look); (c) development environment; (d) the data model and the build plan; (e) the sample files, extra Excel columns, whether the question PDF carries points, grid shapes, unique solutions; (f) session length and judge and controller credential format; (g) UI library, icons, fonts; (h) hosting on the event day.
+Step 2. Ask me for the values, one group at a time (do not dump every question at once). Suggested groups: (a) backend language and framework, developers' skills, names and roles, who builds what; (b) I-14 and I-15 (tell me where to look); (c) development environment; (d) the data model and the build plan; (e) the sample files (Excel, not PDF), extra participant Excel columns, unique solutions; (f) session length and judge and controller credential format; (g) UI library, icons, fonts; (h) hosting on the event day.
 Never invent a value. If I say I do not know, leave the marker in place and tell me what it blocks.
 
 Step 3. For the data model and the build plan, propose a draft based ONLY on the constraints already written in the context files, and wait for my explicit approval. Never mark anything approved yourself. The first unit is the foundation only (repository, environment, CI, skeleton).

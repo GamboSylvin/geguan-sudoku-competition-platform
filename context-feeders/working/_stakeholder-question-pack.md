@@ -19,41 +19,13 @@ Every question ends with a short reference (for example *ref U-03*) for our own 
 
 ---
 
-## Part 1 — Scoring and round rules (highest priority)
+## Part 1 — Scoring and round rules (highest priority) — CLOSED 2026-09-30
 
-*Q1 to Q4 were answered on 2026-09-26 by the project owner, answering in the stakeholder's role. They are decisions to build from and are **not yet confirmed by the client's stakeholder**. Please confirm them with Yes / No / Change in Part 6 (R15 to R21).*
+Every question in this part now has either a confirmed answer or a working position in active use. Nothing here still blocks building. Team/project-owner decisions from this part are listed for your confirmation in Part 6 (R15 to R29); five items you answered yourself directly on 2026-09-30 are already confirmed and need no round-trip (see the note above R15).
 
-**Q1c. Still to answer: do the question PDFs carry the points?**
-- The project owner will come back with a sample PDF. Please do not assume the PDF carries points.
-Your answer: _______________ *(ref U-03, second part; U-01, the sample files)*
+**Corrected while closing this part: the question import file is Excel (.xlsx), not PDF.** Every earlier reference to a "question PDF" in this pack was wrong and is now Excel throughout.
 
-*Q1 (points and total), Q2 (submission), Q3 (early-finish bonus), Q4 (late submit) and Q4b (team rotation timing) were answered by the project owner and are clear. They are listed in Part 6 for your confirmation (R15 to R19, R21 to R27). Only their open sub-questions remain in this part.*
-
-**Q4c. Still to answer: when may students see their score?**
-Students see their own score and rank after the results are published; right after a submit they see no score.
-- What does "publish results" mean, and when exactly do results count as published?
-Your answer: _______________ *(ref U-24, U-88)*
-
-**Q5b. Still to answer: question files per category**
-- Does each category have its own question file? *(ref U-32)*
-Your answer: _______________
-
-**Q6b. Still to answer: finishing the competition early**
-If the controller finishes the competition early, the results carry a visible "finished early" mark (see R28).
-- Do awards apply to a competition that was finished early? *(ref U-27, U-89)*
-- Can the controller reset (rematch) after the competition has finished? *(ref U-89)*
-Your answer: _______________
-
-**Q7. The second team round ("齐心协力") — RESOLVED (2026-09-29), as a team decision. Stakeholder confirmation pending: see R29 in Part 6.**
-Answer: it is the client document's partition round. One puzzle is split into blocks (contiguous row-bands, one per active member, 2 to 6, as equal as possible), each member sees and edits only their own block, and the puzzle is scored all-or-nothing once the blocks are combined, with no early bonus. It is needed on the event day, since the school total counts both team rounds.
-The puzzle count (3), total round time (30 minutes) and points per puzzle (20) are **working positions, not taken from the regulation**. Please confirm or correct them with the actual numbers from the 4th Zhejiang league regulation.
-*(ref U-05, U-21, U-91)*
-
-**Q7b. Still to answer: the second team round's numbers**
-- How many puzzles per round? *(working position: 3)*
-- What is the total round time? *(working position: 30 minutes)*
-- What are the points per puzzle? *(working position: 20)*
-Your answer: _______________ *(ref TEM-006, TEM-007, TEM-008)*
+Two items are being **re-asked** to you directly, because your first reply either didn't fully answer the question or showed the scenario wasn't clear. They are carried forward as **Q37** and **Q38**, after Part 7, rather than left here, so Part 1 can close.
 
 ---
 
@@ -203,6 +175,7 @@ Your answer: _______________ *(ref U-69)*
 
 These were proposed by the team and approved in your general answer, or come from the client's original document, or are our assumptions. Please tell us **Yes**, **No** or **Change**, so that we can treat them as confirmed.
 *Note: a later document of 2026-09-26 states that the rules in rows R15 to R28 were confirmed by the stakeholder. The rows are kept until the project owner verifies that.*
+*Note: five answers given directly by you on 2026-09-30 do not appear as rows below, because they are already confirmed and need no round-trip — the question import file is Excel not PDF; points stay fully customizable; categories are U6 to U20; each category has its own question file; and students see their score only once the whole competition finishes. See `competition-rules.md` for the exact wording if you'd like to double-check any of them.*
 
 | # | Statement | Yes / No / Change |
 |---|---|---|
@@ -225,7 +198,7 @@ These were proposed by the team and approved in your general answer, or come fro
 | R17 | (Q3) Bonus: 3 points per whole minute early, changeable by the controller before a round, in both individual rounds, none in team rounds. Earned when the student submits before time ends with every puzzle of the round fully correct. Optional maximum bonus in points per individual round (empty = no cap). The bonus is part of the round score (which can exceed the round maximum) and is used in the individual ranking and the school total. Measured on the server round timer, which stops during a pause; fixed at the student's own manual submit; automatic submissions (time expiry, or the controller ending the round early) get no bonus. | |
 | R18 | (Q4) The server clock decides. A manual submit reaching the server after the round timer has ended is not counted as manual; the latest autosaved answers are submitted automatically instead. No grace period. The student sees the same as any expired student, with no separate lateness message. Individual rounds only. | |
 | R19 | (Q4b) Team rotation: the 60 seconds is the interval for moving questions to the next seat, not a deadline. A partly filled grid goes with the question. A submit for a question the tablet no longer holds is rejected. If a total round time is set, only answers already submitted and correct count when it ends. | |
-| R20 | (Q4c) Students see their own score and rank after the results are published; right after a submit they see no score. | |
+| R20 | (superseded by R33 below — students see their own score and rank only once the whole competition finishes) | |
 | R21 | (Q2) A judge's restart of one student is a one-person rematch: the earlier submission and score are archived, not deleted; a judge can restart a student only while the round is running; the restarted round starts with a blank grid and the remaining round time on the shared server timer (same deadline as everyone), and the bonus is measured on the round timer as for everyone else. If a restart would come too late, the remedy is the replay of the round. A judge may restart the same student as many times as needed while the round is running, with no separate limit and no controller approval; each restart archives the earlier attempt, so the number of restarts stays visible, and the remaining round time keeps getting shorter. A round has no automatic end when everyone has submitted; it runs until its timer ends or the controller ends it. Controller-entered values are whole numbers (a question's points are at least 1; the bonus rate may be 0; times and counts above 0); the school coefficient may have decimals (default 0.6). The school total is stored as an exact decimal, neither rounded nor truncated, and schools are ranked on the exact value. | |
 | R22 | (Q5) The preparation countdown before each round lasts 60 seconds by default. The controller can change it for each round before that round starts. The preparation screen shows the round's rules and the countdown. The "3, 2, 1, Start" countdown after a pause is separate and does not use round time. When the countdown reaches zero the puzzles appear immediately and the round timer starts (no extra "3, 2, 1, Start"). A pause during preparation stops the countdown; on resume the "3, 2, 1, Start" shows first and then the countdown continues from where it stopped, not from the beginning. The controller cannot end the preparation early: the countdown always runs to zero, and a shorter wait is set with a shorter countdown length for that round. | |
 | R23 | (Q5) Numeric values (points, bonus, times, counts, countdown length) can be changed only before that round's preparation begins. Once the preparation countdown has started, no numeric value of that round can be changed; a change applies to the next round. | |
@@ -234,7 +207,7 @@ These were proposed by the team and approved in your general answer, or come fro
 | R26 | (Q5) The "total is not 100" warning is checked per category and per round (individual rounds only) and names the category and the round. The controller sees it on the setup screen, next to the points and updated as they are typed, and as a summary when starting the stage, listing every category and round whose total is not 100. It never blocks; the controller can start anyway. | |
 | R27 | (Q6) The next stage does not start by itself. When a stage finishes, players see the "waiting for the next stage" state and the controller starts the next stage with the same start command, which starts all categories together. Rounds inside a stage follow each other automatically. After the last round of the last stage, the competition finishes by itself once that round's scoring is final; the controller does not need to press Finish at the normal end (the "finish" command exists for finishing early, ending the running round the same way). While waiting for the next stage, students see a waiting message with no score or rank, and the big screens keep the ranking cycle, now including the final ranking of the stage that just ended. | |
 | R28 | (Q6) If the competition is finished early: unplayed rounds have no scores and add nothing; the school total is the individual part x 0.6 plus the team part actually played (0 if the team stage never started); the running round is scored on the students' latest saved state; the results and the export carry a visible "finished early" mark. It counts as a normal finished competition (the controller keeps access to the results and can export them). A finished competition cannot continue; for an interruption such as a fire alarm the controller uses pause and then resume. | |
-| R29 | (Q7) The second team round is the client document's partition round: one puzzle split into row-band blocks, one block per member (2 to 6), each editing only their own block, scored all-or-nothing once combined, no early bonus. It is needed on the event day. The puzzle count (3), total time (30 minutes) and points per puzzle (20) are working positions, not taken from the regulation (see Q7b). | |
+| R29 | (Q7) The second team round is the client document's partition round: one puzzle split into row-band blocks, one block per member (2 to 6), each editing only their own block, scored all-or-nothing once combined, no early bonus. It is needed on the event day. The puzzle count (3), total time (30 minutes) and points per puzzle (20) are working positions, not taken from the regulation, and are already in use for building; if you have the real numbers from the 4th Zhejiang league regulation, please give them and we will swap them in. | |
 
 ---
 
@@ -245,6 +218,24 @@ Once the answers are in, we will send you a written summary of the requirements.
 - Will you approve it in writing before development starts?
 - Who signs, and by when?
 Your answer: _______________ *(ref A14)*
+
+---
+
+## Part 1, carried forward — two answers we'd like made clearer
+
+Your first replies on these two didn't quite answer what we asked. Nothing is blocked by them — we're building with a stopgap in the meantime — but we'd like a clearer answer when you have a moment.
+
+**Q37. The missing solution column**
+Our question files (Excel) don't currently have a column with the complete solved grid, only the given starting cells and, separately, the answer. Your reply ("需要一个") was too short for us to be sure what you meant.
+- Would it help if we asked whoever prepares these files to add one more column — the complete solved grid, written out cell by cell, the same way the answer column already is?
+- Or did you have something else in mind?
+Your answer: _______________ *(ref U-94)*
+
+**Q38. Awards after an early finish**
+Picture the individual stage running, and the controller ends the competition early — a fire alarm, say. We still compute a school total from whatever was played, and the result is marked "finished early".
+- Does the school still hand out its usual awards (medals, certificates, whatever it normally gives) based on that early-finish result?
+- Or are awards withheld when the competition didn't run to its normal end?
+Your answer: _______________ *(ref U-89, U-27)*
 
 ---
 

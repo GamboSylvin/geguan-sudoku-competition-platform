@@ -54,7 +54,7 @@ CI runs lint, type check, tests and build, and must pass before a merge [C] (BLD
 
 - Durable results belong in PostgreSQL, never only in Redis [T]. Redis holds runtime state [T].
 - Question and round scores are stored as **integers**; the school total is an **exact decimal** (not floating point), neither rounded nor truncated [T].
-- Do not store large files in the database. Files (participant Excel, question PDF, credential slips, exports) live on the server's disk, in a mounted folder, not in object storage [C] (BLD-001).
+- Do not store large files in the database. Files (participant Excel, question Excel, credential slips, exports) live on the server's disk, in a mounted folder, not in object storage [C] (BLD-001).
 - The grid model is generic (rows, columns, regions); never assume 9x9 [C] (BLD-011). The answer check compares the submitted grid with the solution stored with the question [C] (BLD-010).
 - Never delete scores or attempts on a restart or rematch; archive them [P].
 

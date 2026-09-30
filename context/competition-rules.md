@@ -35,8 +35,10 @@
 - **Editable numbers:** points, the bonus rate and counts are whole numbers, so scores are stored as integers. Zero is allowed for the bonus (no bonus). Times and question counts must be above zero. The school coefficient accepts decimals (default 0.6). No maximum, except the optional bonus cap [C] (SCR-012).
 - **When values can change** [C] (RND-002, RND-004): "before a round starts" means before that round's **preparation begins**. Once it has begun, no numeric value of that round can be changed, including the countdown length; a change applies to the next round. A later round's values can be changed at any time before its preparation begins; for round 2 that includes while round 1 is running, and the window closes when round 1 ends.
 - **Values are set once per round for the whole event, not per category** (20 minutes applies to both U8 and U12). Question points belong to the questions, so they follow each category's question set [C] (RND-005).
-- **OPEN (U-03, second part):** whether the question PDF also carries the points. The sample PDF is still to be sent (U-01). **Do not assume the PDF carries points.**
-- **OPEN (U-32):** whether each category has its own question file. The data model is per category regardless (see `architecture.md`).
+- **Question import format** [C] (BLD-012, resolves U-93): the question import file is **Excel (.xlsx), not PDF**. Replaces every earlier "PDF, strictly predefined format" statement. No-OCR still holds: structured fields (instructions, category, points, dimensions, blank-cell answers) are read from cells, never recognized from an image. The file **does** carry a points value per question, but that is only a starting value: points stay **fully customizable** by the controller everywhere they appear, including to reach the 100-per-round total [C] (BLD-013, resolves U-92).
+- **One question file per category, not a shared pool** [C] (BLD-016, resolves U-32): each category (for example U8, U12) is uploaded and imported separately, even when they run the same round in parallel.
+- **Categories: U6 to U20, the original scheme** [C] (BLD-015, resolves U-95).
+- **Missing complete-solution column:** see `architecture.md`, Data model. **OPEN (U-94):** the stakeholder's reply was too short to read as an answer; re-asking with a clearer question.
 
 ## 3. Lifecycle and timing
 
@@ -51,7 +53,8 @@
 - **Ending a round early** cannot be undone [T]. The students' latest saved state is submitted automatically, with no bonus.
 - **Finishing:** after the last round of the last stage the competition **finishes by itself**, once that round's scoring is final. The controller's "finish" command is for finishing **early** [C] (RND-006).
   - **Finishing early:** the running round is ended the same way as an early end, then the competition finishes. Unplayed rounds have no scores and add nothing (the same as counting them as 0); the school total is the individual part x the coefficient plus the team part actually played. The running round is scored on the students' latest saved state. The results and the export carry a visible **"finished early"** mark. It is in the same finished state as a normal finish: the controller keeps access to the results and can export them. It **cannot be resumed**; for an interruption such as a fire alarm the controller uses **pause** (stops the timer, preserves the exact state) and then resumes [C] (RND-007).
-  - **OPEN (U-89, U-27):** whether awards apply after an early finish, and whether a reset can still be applied to a finished competition.
+  - **Reset after finishing: settled, not open.** A finished competition, early or not, **cannot continue** — this is the rule already stated above (RND-007, from REQUIREMENTS §7.7), not a separate open question.
+  - **OPEN (U-89, narrowed to awards only; U-27):** working position [T] (BLD-018): scores are still computed and marked as usual, with the "finished early" mark shown alongside; the school decides by hand whether to actually grant awards. Re-asking the stakeholder with the scenario spelled out (a fire alarm or similar forcing an early end), since the first reply showed the question wasn't understood.
 
 ## 4. Player rules (Individual stage)
 
@@ -60,7 +63,8 @@
 - **Late submit** [C] (SUB-003): the **server clock decides.** A manual submit arriving after the timer ended is not counted as manual; the student's latest autosaved answers are submitted automatically, as at any time expiry. **No grace period.** The student sees the same state as any student whose time expired (read-only, submission received, no score), with **no separate message**. This is for the Individual rounds.
 - **Time expiry** [T]: the latest saved state for the whole round is submitted automatically. An empty grid scores 0. No penalty for a zero score, no moves, never submitting, or disconnection.
 - **Reconnection** [T]: the saved grid is restored and the timer keeps running. A student whose tablet fails can continue on another tablet with the same login, keeping saved answers and remaining time [P] (PAR-005). One active device per account; the newest login takes over [P].
-- **Seeing scores** [C] (SUB-007): students see their own score and rank after the results are published. Right after a submit the student sees "submission accepted" and no score. **OPEN (U-24, U-88):** when results count as "published", and whether that is after each round, each stage or only at the end.
+- **Seeing scores** [C] (SUB-007, narrowed by BLD-017, resolves U-24, U-88): students see their own score and rank **only when the whole competition reaches `FINISHED`** — not after each round, not after each stage. Right after a submit, and for the rest of the competition until it finishes, the student sees "submission accepted" and no score.
+  Whether a separate manual "publish" click by the controller is also wanted at that same moment was **not addressed** by this answer; treat as a minor residual detail, not blocking.
 
 ## 5. Scoring
 
@@ -91,10 +95,8 @@
 
 | Item | Open point |
 |---|---|
-| U-03 (second part), U-01 | Does the question PDF carry the points? The sample question PDF and participant Excel have not been sent |
-| U-24, U-88 | What "publish results" means and when students see their score |
-| U-27, U-89 | Awards after an early finish; reset of a finished competition |
-| U-32 | Whether each category has its own question file |
+| U-89 (narrowed), U-27 | Awards after an early finish (reset is already settled: never) |
+| U-94 | The missing complete-solution column in the question Excel |
 | TEM-006 to TEM-008 | Working positions (puzzle count 3, time 30 min, points 20/puzzle) for the second team round, not sourced; replace with the 4th Zhejiang league regulation numbers once available |
 | U-90 | Whether every puzzle has a unique solution |
 | U-59, U-62 | Whether archived scores, the correction log and the uploaded participant Excel follow the 15-day deletion |

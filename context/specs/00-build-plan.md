@@ -34,8 +34,8 @@
 
 | Unit area | Waits for |
 |---|---|
-| Import (participant Excel, question PDF) | Sample files (U-01), extra Excel columns (U-40), points in the PDF (U-03) |
+| Import (participant Excel, question Excel — not PDF, BLD-012) | Sample files placed in `../samples/`, extra participant Excel columns (U-40) |
 | Authentication | Judge and controller credential format (I-30), session length (I-16) |
-| Answer check | Unique solutions (U-90), grid shapes from the sample PDF (U-01) |
-| Results and finishing | When students see scores (U-24, U-88), awards and reset (U-89, U-27) |
-| Team stage | The second team round (U-05, U-21), question files per category (U-32) |
+| Answer check | Unique solutions (U-90), the missing complete-solution column (U-94) |
+| Results and finishing | Awards after an early finish (U-89, narrowed; U-27) — reset is settled: never |
+| Team stage | Real numbers for the second team round (TEM-006 to TEM-008, working positions in use for now) |

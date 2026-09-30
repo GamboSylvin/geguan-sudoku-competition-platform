@@ -17,7 +17,7 @@
 | Real-time | WebSocket (ARCH-022) | Commands and state to tablets, judges, controller, big screens | [T] |
 | Architectural style | Modular monolith, one deployable system (ARC-001, ARC-002) | Single backend | "Working Position" [T]; both developers still to record acceptance (I-08) |
 | API contract and data model | (ARCH-023) | Starting point | "Working Position", not final [T] |
-| File storage | **The server's disk, in a mounted folder**, not object storage [C] (BLD-001) | Participant Excel, question PDF, credential slips, exports | Decided |
+| File storage | **The server's disk, in a mounted folder**, not object storage [C] (BLD-001) | Participant Excel, question Excel, credential slips, exports | Decided |
 | Hosting | **TBD — to be decided by the project owner** [[FILL-BEFORE-DEPLOYMENT: where the server runs on the event day = ________ ; owner: project owner]] (I-03, U-46) | Where the server runs on the event day | Blank on purpose |
 
 ## System boundaries
@@ -73,7 +73,7 @@ Documented:
 
 - **PostgreSQL:** durable data and round state changes. Durable results live in PostgreSQL, **never only in Redis** [T].
 - **Redis (persistence on):** the working grids [C] (BLD-007).
-- **Files:** the server's disk, in a mounted folder [C] (BLD-001). Path and reference conventions (a path template and a reference column on the parent record): **still to be written** with the data model. The original question PDF is kept with the competition [A].
+- **Files:** the server's disk, in a mounted folder [C] (BLD-001). Path and reference conventions (a path template and a reference column on the parent record): **still to be written** with the data model. The original question Excel is kept with the competition [A].
 - **Purge:** 15 days after the competition, answers, scores and student accounts are permanently deleted; setup, questions and judges are kept [P]. **OPEN (U-62, U-59):** archived scores, the correction log and the uploaded participant Excel.
 
 ## Data model — NOT DESIGNED (OPEN, I-01)
@@ -83,8 +83,9 @@ Documented:
 There is no approved data model. The list below is only what the decided rules **imply**, to help draft the schema for approval. It is **not** a schema.
 
 - Competition (event), Category, Stage, Round (with numeric round settings, set once per round for the whole event)
-- **Question set per category** (a category may point to a shared set); whether each category has its own question file is OPEN (U-32) [C] (BLD-005)
-- Question/puzzle: **generic grid** (rows, columns and regions; never assume 9x9), points, the **stored solution**; the shapes supported first are those in the sample question PDF, still to be sent (U-01) [C] (BLD-011)
+- **Question set per category, one file per category, not a shared pool** [C] (BLD-016, resolves U-32): each category (for example U8, U12) is uploaded and imported separately, even when categories run the same round in parallel. Categories: **U6 to U20, the original scheme** [C] (BLD-015, resolves U-95) — a sample folder's grade-band grouping was only how that particular sample happened to be organized, not the real category scheme.
+- Question/puzzle: **generic grid** (rows, columns and regions; never assume 9x9), points (customizable by the controller regardless of what the import file carries [C], BLD-013, resolves U-92), the **stored solution**; the shapes supported first are those seen in the sample question Excel [C] (BLD-011, BLD-015).
+  A **complete-solution column is missing from the source files today**: the plan is to ask the source to add one (the fully solved grid, or at minimum the given cells, as plain text in the same array format as the existing answer column) [T] (BLD-014). Until it exists, a small starter set is hand-transcribed to build and test the answer-check unit; general automated import of the solution **stays blocked**. **OPEN (U-94, re-asking for a clearer answer):** the stakeholder's reply ("需要一个") was too short to read as a full answer.
 - School, Team (one per school per category), Participant (name, school, category, team; a generated number)
 - **Team-round-2 block split** (partition collaboration, "齐心协力") [C] (TEM-005): a puzzle divided into contiguous horizontal row-bands, one band per active team member (2 to 6, as equal as possible, extra rows to the first bands), each member restricted to editing only their own band; the puzzle is scored all-or-nothing once the bands are combined. The model must keep this distinct from the rotation round's one-question-per-member pattern. Puzzle count (3), total time (30 min) and points per puzzle (20) are working positions [T] (TEM-006 to TEM-008), not sourced; do not treat as final.
 - **Account with exactly one role** (player, judge, controller, big screen); several controller accounts are allowed; one person with several roles is handled as two accounts [C] (BLD-004)
@@ -97,9 +98,11 @@ Data rules already decided: question and round scores are whole numbers; the sch
 
 ## Import formats and credentials
 
-- **Participant Excel columns** [C]: Name, School, Category, Team. The participant number is generated: schools in Excel order, then students in row order, **unique across the event**, and a team's numbers consecutive. Extra columns: **OPEN (U-40).** The sample files are **still to be sent (U-01).** The whole file is validated; an invalid file commits nothing [T].
-- **Question PDF:** strict predefined format, no OCR; any failure rejects the whole import [T]. Whether it also carries the points: **OPEN (U-03)**; the sample PDF is still to be sent (U-01).
-- [[FILL-BEFORE-UNIT: import units — place the sample participant Excel at `context/samples/participants-sample.xlsx` and the sample question PDF at `context/samples/question-sample.pdf` ; then fill: extra Excel columns = ________ (U-40) ; does the question PDF carry the points = ________ (U-03) ; grid shapes in the PDF = ________ (U-01) ; is a unique solution guaranteed for every puzzle = ________ (U-90) ; owner: the person completing the context]]
+- **Participant Excel columns** [C]: Name, School, Category, Team. The participant number is generated: schools in Excel order, then students in row order, **unique across the event**, and a team's numbers consecutive. Extra columns: **OPEN (U-40).** The whole file is validated; an invalid file commits nothing [T].
+- **Question Excel** [C] (BLD-012, resolves U-93): the question import file is **Excel (.xlsx), not PDF**. This replaces every earlier "PDF, strictly predefined format" statement. The no-OCR principle still holds in its new form: structured fields (instructions, category, points, dimensions, blank-cell answers) are read from cells, never recognized from an image. Any failure rejects the whole import [T].
+  - **Points column** [C] (BLD-013, resolves U-92): the file carries a points value per question, but points stay **fully customizable everywhere** — a flat value repeated down every row (as in the sample seen so far) is just what that file happens to contain, not a fixed rule. The controller can always change points before a round starts, including to reach the regulation's 100-per-round total.
+  - **Solution column: missing today.** See the Data model section above (BLD-014, U-94 open).
+- [[FILL-BEFORE-UNIT: import units — place the sample participant Excel at `context/samples/participants-sample.xlsx` and the sample question Excel at `context/samples/question-sample.xlsx` ; then fill: extra participant Excel columns = ________ (U-40) ; is a unique solution guaranteed for every puzzle = ________ (U-90) ; owner: the person completing the context]]
 - **Participant credentials** [C] (BLD-003): the **username is the participant number**; the **password is a short random code** generated by the system. Credential slips are exported and printed [C]. **OPEN (I-30):** the format of judge and controller credentials.
 
 ## Auth and access model
@@ -202,7 +205,8 @@ None described in the documents (no SMS, email or student-ID system mentioned). 
 | I-20 | UI component library, icons, fonts |
 | I-24 | Development environment (workflow and CI are decided) |
 | I-30 | Format of judge and controller credentials |
-| U-01, U-03, U-40 | Sample PDF and Excel not yet sent; whether the PDF carries points; extra Excel columns |
+| U-40 | Extra participant Excel columns |
+| U-94 | The missing complete-solution column; re-asking the stakeholder for a clearer answer |
 | U-90 | Whether every puzzle has a unique solution |
 | U-49 | How long an interruption during a round is acceptable |
 | I-05, U-60 | Load target and ceiling; listed both as [C] and as open |
