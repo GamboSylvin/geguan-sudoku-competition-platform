@@ -51,15 +51,15 @@ Coding may start when every A item is ticked **and** the approvals in section E 
 
 These are still open. They are being answered through the question process, and the context builder updates the files. Do not fill them. If a unit depends on one, stop and report it.
 
-- Awards after an early finish (U-27, U-89 narrowed) · the missing complete-solution column (U-94) · acceptable interruption length (U-49) · scope of the 15-day deletion (U-59, U-62)
-- Access rules (U-63, U-55) · the venue network and tablets (U-06) · risks, external systems, performance targets, scale ceiling, reliability (U-56 to U-61)
-- Look and brand, layouts, screen sizes, language switching, accessibility (U-65 to U-70) · authoring and a third language (U-45, U-51)
+- Whether the system computes award tiers at all, for a normal finish (U-27; the early-finish part is resolved, U-89) · the missing complete-solution column (U-94) · whether the participant Excel follows the 15-day deletion (U-62, narrowed; the scores/correction-log part is resolved, RES-005) · legal/school data rules and deletion-rule approval (U-59)
+- The venue network (U-46) — deliberately deferred to closer to the event date, not blocking (see `architecture.md`, "Devices and network") · reliability (U-61's backup-plan part — the failure-tolerance part is resolved, see `architecture.md`)
+- Layouts (U-66) — deliberately left to the design phase after the first slice, confirmed not blocking (BLD-009)
 - Real numbers for the second team round (TEM-006 to TEM-008): working positions are already in use for building; replace later if the regulation gives different numbers — no rebuild needed, only re-typing values
 
 ## E. Approvals before coding (the methodology's gate)
 
 The methodology says each context file is shown for review and approved, and that coding starts only when all files and specs are approved. Record who approved and when.
-The rows below were approved by the **project owner (the Sudoku team)** on **2026-09-30** (recorded on that date; no other date was given). The project owner is not the client's stakeholder, so these approvals are **[T]**, not stakeholder confirmations. The last row (the stakeholders' written confirmation) is a separate, stakeholder-level item: the project owner confirmed it is being handled as the order confirmation.
+The rows below were approved by the **project owner (the Sudoku team)** on **2026-09-30** (recorded on that date; no other date was given). The project owner is not the client's stakeholder, so these approvals are **[T]**, not stakeholder confirmations. **The last row (A14, the stakeholders' written confirmation) is different: it is now directly stakeholder-confirmed** [C], answered 2026-10-01 via pack Q36 — see that row for the exact answer.
 
 | What is approved | Approved by | Date | Done |
 |---|---|---|---|
@@ -72,7 +72,7 @@ The rows below were approved by the **project owner (the Sudoku team)** on **202
 | **Data model and schema** (`data-model.md`): the skeleton checkpoint | team / project owner | 2026-09-30 | [x] |
 | `specs/00-build-plan.md` and `specs/01-foundation.md` | team / project owner | 2026-09-30 | [x] |
 | **Quality chain agreed**: AI review, then automated checks, then human review. The decided workflow states CI and the other developer's review; it does not state an AI review step | project owner (Sudoku team) | 2026-09-30 | [x] |
-| **Requirements confirmed in writing by the stakeholders** (methodology Step 8, mandatory for client projects; question Q36 of the stakeholder question pack). The methodology places it before the specs are written | project owner (Sudoku team) | 2026-09-30 | [x] |
+| **Requirements confirmed in writing by the stakeholders** (methodology Step 8, mandatory for client projects; question Q36 of the stakeholder question pack). The methodology places it before the specs are written. **Resolved 2026-10-01** [C] (A14): **informal process, no formal signature required** — the stakeholder/project owner does not sign a formal written requirements document with a deadline; approval happens informally, as the project owner validates each answer along the way (as already done throughout this pack). Consistent with this row already being marked done. | project owner (Sudoku team); stakeholder-confirmed 2026-10-01 | 2026-09-30 / 2026-10-01 | [x] |
 
 ## How to work in parallel
 

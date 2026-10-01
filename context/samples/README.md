@@ -13,6 +13,6 @@ After placing them, fill the related blanks (see `../FILL-BEFORE-CODING.md`, sec
 - the extra participant Excel columns (U-40)
 - whether every puzzle has a unique solution (U-90)
 
-Already known from an earlier look at sample material (recorded in `../competition-rules.md`, not blocking): the question file carries a points-per-question column, but points stay controller-customizable regardless; a complete-solution column is **missing** from the source files today (U-94, still open) — a starter set is hand-transcribed in the meantime.
+Already known from an earlier look at sample material (recorded in `../competition-rules.md`, not blocking): the question file carries a points-per-question column, but points stay controller-customizable regardless; a complete-solution column is **missing** from the source files today, and **the given (pre-filled) cells exist only as an embedded picture, not as text** — OCR is ruled out, so there is no way today to build an interactive, correctly-locked grid from the files as they stand (U-94, still open, carried back to the stakeholder 2026-10-01) — a starter set is hand-transcribed in the meantime (BLD-026).
 
 **Privacy:** if the sample Excel contains real student names, replace them with fake ones before placing the file here. This folder is part of the context and may be read by an agent.

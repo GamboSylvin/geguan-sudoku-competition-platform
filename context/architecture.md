@@ -20,7 +20,8 @@
 | API contract and data model | (ARCH-023) | Starting point | "Working Position", not final [T] |
 | File storage | **The server's disk, in a mounted folder**, not object storage [C] (BLD-001) | Participant Excel, question Excel, credential slips, exports | Decided |
 | Containers | **Docker with Docker Compose** [T] (I-24), with a **Dockerfile per service** (backend, frontend) | The whole codebase: backend, frontend, PostgreSQL, Redis — the same environment in development and deployment | Decided 2026-09-29 by the team |
-| Hosting | **TBD — to be decided by the project owner** [[FILL-BEFORE-DEPLOYMENT: where the server runs on the event day = ________ ; owner: project owner]] (I-03, U-46) | Where the server runs on the event day | Blank on purpose |
+| Hosting (event day) | **TBD — to be decided by the project owner** [[FILL-BEFORE-DEPLOYMENT: where the server runs on the event day = ________ ; owner: project owner]] (I-03, U-46) | Where the server runs on the event day | Blank on purpose — deliberately deferred to closer to the event date (U-46, Q23); not blocking |
+| Hosting (demo/testing) | **Two-phase proposal, Working Position, resolved 2026-09-30** [T] (BLD-031, separate from U-46): **Phase 1 — now, free:** deploy the existing `docker-compose.yml` services to **Railway** (railway.app) for a shareable demo/test link. Railway stays awake 24/7 (unlike Render's free tier, which sleeps after 15 minutes and drops WebSocket connections — a problem since the round timer and live ranking run over Socket.io/WebSocket); managed PostgreSQL and Redis provision in a few clicks; cost is a one-time $5 credit plus $1/month free credit. Known limitation: persistent file storage (`STORAGE_ROOT`) isn't in the free tier — fine for a demo, not for production. **Phase 2 — event day, paid, ~800+ clients:** a dedicated VM (DigitalOcean Droplet or Hetzner Cloud), same `docker-compose.yml`, no architecture change (BLD-016); billed hourly, so cost is only for the day(s) used. Simpler alternative with less ops work: Render paid tier or Railway Pro (both support WebSockets and persistent disk on paid) — easier to operate, likely costlier for the same burst capacity. | A shareable demo/test link, available now | **Phase 1 can start immediately. The final Phase 2 choice stays open until U-46 is answered** (venue, date, real hosting decision) |
 
 ## System boundaries
 
@@ -39,6 +40,8 @@ One deployable backend organized as a modular monolith [T] (ARCHITECTURE §3 of 
 | Big Screen | Big-screen state, ranking projection, player and team projection, display mode |
 
 - The client's "control hub" takes commands from judges and the controller, applies the arbitration rule and broadcasts state. It lives inside the Orchestrator and Big Screen modules [S].
+
+**Hub-and-spoke** [C]/[T] (named 2026-09-30, resolves part of U-52 — the term formalizes facts already stated elsewhere in this file, not a new decision): the backend is the one hub; every client is a spoke that only receives server-pushed state over WebSocket, never computes or holds authority (invariant 10). Three spokes are **user roles** that also send commands back to the hub — player (submits), judge (supervises, restarts), controller (the primary user [C] U-52; setup and every live command). The **big screen is a receive-only spoke**: it takes the shared link with no login [C] (BSC-001), shows whatever the hub pushes, and never calculates rankings [T] (invariant 8) or sends any command. It is a display target, not a fourth user persona — see `project-overview.md`, "Target users".
 - **Frontend folders, by feature** [T]: `auth`, `competition`, `player`, `judge`, `admin`, `big-screen`, `ranking`, `gameplay`. The frontend is a **Vite** project (React with TypeScript) styled with **Tailwind CSS** [T] (BLD-023, decided 2026-09-30).
 
 **OPEN (I-01, module list): the module list is not final.** It was written for one judge and one category. It has **no module** for team rotation, score corrections, the 15-day purge, import and export, competition copy, participant numbering, judge ranges and takeover, or several synchronized big screens. **Keep the data model ready for team rotation** even though the Individual stage is built first [C] (BLD-009). The **data model part of I-01 is decided** (2026-09-30, `data-model.md`); the module list is revised with the build plan (A7).
@@ -107,7 +110,7 @@ The first slice of the build is the **Individual stage, end to end**. The team s
 - **Answer check** [C] (BLD-010): compare the submitted grid with the **solution stored with the question**; no rule checker per variant. This relies on every puzzle having a unique solution: **OPEN (U-90).**
 - A round transition happens only after its scoring is final [T]. A provisional ranking updates immediately when a round result is finalized, without waiting for every participant [T].
 - Big screens show ranking cycles every 3 minutes [T]; they never calculate rankings [T].
-- **Server restart mid-round** [C] (BLD-007): a **replay is acceptable**. Round state changes are kept in PostgreSQL and the working grids in Redis with persistence on. After a restart the competition comes back **paused**, so the controller chooses to resume or replay. **OPEN (U-49):** how long an interruption is acceptable.
+- **Server restart mid-round** [C] (BLD-007): a **replay is acceptable**. Round state changes are kept in PostgreSQL and the working grids in Redis with persistence on. After a restart the competition comes back **paused**, so the controller chooses to resume or replay. **Tolerable interruption length, resolved 2026-09-30** [C] (U-49, recorded as RND-008 in `REQUIREMENTS.md` §10): there is **no fixed limit**. The stakeholder deliberately declined to set a time cap — on the event day, the controller decides whether to resume or replay based on the schedule at that moment, regardless of how long the interruption actually lasted. **Hard product constraint:** both resume and replay must always remain available to the controller, no matter the interruption's duration; the system must never impose a timeout that disables either path.
 - Recovery after a network or server failure: the round is replayed, triggered by a judge or the controller [C] (ROL-005).
 
 ## API boundaries
@@ -126,7 +129,7 @@ Documented:
 - **PostgreSQL:** durable data and round state changes. Durable results live in PostgreSQL, **never only in Redis** [T].
 - **Redis (persistence on):** the working grids [C] (BLD-007).
 - **Files:** the server's disk, in a mounted folder [C] (BLD-001). Path and reference conventions are decided in `data-model.md`: the path template `{STORAGE_ROOT}/competitions/{competitionId}/{kind}/{fileId}-{originalName}` and the reference column `StoredFile.path`. The original question Excel is kept with the competition [A].
-- **Purge:** 15 days after the competition, answers, scores and student accounts are permanently deleted; setup, questions and judges are kept [P]. **OPEN (U-62, U-59):** archived scores, the correction log and the uploaded participant Excel.
+- **Purge:** 15 days after the competition, answers, scores and student accounts are permanently deleted; setup, questions and judges are kept [P]. **Archived scores and the correction log, resolved 2026-10-01** [C] (RES-005): also deleted after 15 days, same as the other student data. **Still OPEN:** the uploaded participant Excel (U-62, narrowed), and legal/school rules plus approval of the deletion rule (U-59). *(A controller-notification email before the purge was considered and withdrawn 2026-10-01 — team idea, not the stakeholder's; see `competition-rules.md` §7.)*
 
 ## Data model — DESIGNED and approved (2026-09-30)
 
@@ -152,7 +155,7 @@ Data rules already decided: question and round scores are whole numbers; the sch
 - **Participant Excel columns** [C]: Name, School, Category, Team. The participant number is generated: schools in Excel order, then students in row order, **unique across the event**, and a team's numbers consecutive. Extra columns: **OPEN (U-40).** The sample files are **still to be sent (U-01).** The whole file is validated; an invalid file commits nothing [T].
 - **Question Excel** [C] (BLD-024, resolves U-93): the question import file is **Excel (.xlsx), not PDF**. This replaces every earlier "PDF, strictly predefined format" statement. The no-OCR principle still holds in its new form: structured fields (instructions, category, points, dimensions, blank-cell answers) are read from cells, never recognized from an image. Any failure rejects the whole import [T].
   - **Points column** [C] (BLD-025, resolves U-92): the file carries a points value per question, but points stay **fully customizable everywhere** — a flat value repeated down every row (as in the real sample seen so far) is just what that file happens to contain, not a fixed rule. The controller can always change points before a round starts, including to reach the regulation's 100-per-round total.
-  - **Solution column: missing today.** See the Data model section above (BLD-026, U-94 open).
+  - **Solution column: missing today, and the problem runs deeper than just the solution.** The given (pre-filled) cells exist only as an embedded picture in the real sample files, not as text — and OCR is ruled out by this project's own no-OCR rule. There is no way to build an interactive, correctly-locked grid from the files as they stand. **Carried back to the stakeholder, 2026-10-01:** can the real production files include the given cells as structured text, the same way the answer column already is? Interim plan stays in place while waiting (BLD-026): hand-transcribe the given cells for a small starter set to build and test the answer-check unit; general automated import stays blocked. See the Data model section above (BLD-026, U-94 open).
 - [[FILL-BEFORE-UNIT: import units — place the sample participant Excel at `context/samples/participants-sample.xlsx` (still to be sent, U-01) and the real sample question Excel files at `context/samples/` (received 2026-09-29, folder `[0923]各组别字符串`) ; then fill: extra participant Excel columns = ________ (U-40) ; owner: the person completing the context]]
 - **Participant credentials** [C] (BLD-003): the **username is the participant number**; the **password is a short random code** generated by the system. Credential slips are exported and printed [C]. **OPEN (I-30):** the format of judge and controller credentials.
 
@@ -167,7 +170,12 @@ Data rules already decided: question and round scores are whole numbers; the sch
   - **Player:** cannot start or control anything, calculate rankings, control the display, or create or configure competitions [C] (PL-001).
   - **Judge:** sees the status of their assigned students and can restart one student's round [P] (ROL-003).
   - **Controller:** can do everything a judge can, plus event setup, rules and customization [C] (ROL-002); sees all progress in real time and can take over from a disconnected judge [C] (ROL-004). Commands: start a stage, pause, resume, end a round early, finish (early), reset or rematch, correct scores, control the big screens.
-- **OPEN:** who can read and who can change what is not written as a rule (U-63, U-55): whether a player can read only their own answers, whether a judge can read students outside their range, who may edit participants during the event, whether a judge can change a score.
+- **Access rules, resolved 2026-09-30** [C] (U-63, resolves also the general part of U-55; see `data-model.md`, "Access rules" for the field-level home):
+  - **Player:** sees only their own answers. No visibility into another player's data.
+  - **Judge:** strictly limited to their assigned range; cannot see students outside it. No powers beyond what is already documented — status of assigned students (connected, submitted) and single-student restart. Nothing more.
+  - **Editing participants during the event:** only the controller. Judges have no participant-management access.
+  - **Score changes:** only the controller can correct a score (already an invariant, RES-003); a judge cannot change a score.
+  - **Still OPEN (U-39):** what a judge sees specifically in the team stage.
 
 ## Cross-tool integration rules
 
@@ -180,7 +188,7 @@ Documented:
 
 ## External services
 
-None described in the documents (no SMS, email or student-ID system mentioned). **OPEN (U-57):** whether any is needed.
+**No external system integration for this version, confirmed 2026-09-30** [C] (ARCH-028, resolves U-57): the system connects only to its own four ends — tablets, judges' and controller's devices, and big screens. No SMS, no email, no external school student-ID system. Credentials are generated and printed internally; no external identity system is needed.
 
 ## Development environment and workflow
 
@@ -198,31 +206,35 @@ None described in the documents (no SMS, email or student-ID system mentioned). 
 
 ## Devices and network (constraints)
 
-- Students use Quark Browser on learning tablets (学练机), landscape, with a "please rotate your device" screen [C]. Model and Quark version unknown (U-06); the assumption of a modern Chromium-based Android browser is **not** confirmed.
-- Venue internet and Wi-Fi strength unknown; about 300 tablets in one room is the biggest real-world risk [A] (U-06, U-46).
+- Students use Quark Browser on learning tablets (学练机) as the primary real-world device, landscape, with a "please rotate your device" screen [C].
+- **Device/browser target, resolved 2026-09-30** [C] (U-06): **no fixed device or browser target.** The player-facing app must work broadly across platforms — tablet, phone or computer — not locked to one tablet model or one Quark Browser version. Build as a **standard responsive web app**, using only widely-supported web APIs, avoiding anything tied to a specific device or browser vendor. This **replaces** the earlier working assumption of "a modern Chromium-based Android browser." It does not remove the value of testing on a real learning tablet before the event if one becomes available — it just means the exact model/version is no longer a blocking unknown.
+- Venue internet and Wi-Fi strength: the biggest real-world risk, confirmed [C] (U-56, resolved 2026-09-30 — see "Risks" below). The venue network itself (who configures it, whether there's a backup plan) stays **OPEN (U-46)**.
+- **Venue network details (internet availability, Wi-Fi strength, device capacity, own router), deliberately deferred 2026-09-30** [C] (U-06, U-46): not needed for the current build phase. The priority right now is that the system be reachable from any computer, phone or tablet for testing and demoing features — not the real venue's network conditions. This does not hold up construction at all; it is answered closer to the event date. The on-site-server/router sub-question specifically is carried to the hosting decision (`FILL-BEFORE-DEPLOYMENT` item C1, U-46).
 
 ## Non-functional requirements
 
 **Performance**
 - Autosave about 2 grid saves per second per player [T]. Big-screen ranking cycle every 3 minutes [T]. A provisional ranking updates immediately when a round result is finalized [T].
-- **OPEN (U-58):** how quickly the ranking must update after a submit, how quickly all tablets must start together (relevant now that questions are fetched at the round start), and any other response time.
+- **Response-time targets, resolved 2026-10-01** [C] (U-58): the ranking must update within **2 seconds** of a submission; all tablets must start a round together within **1 second** of each other (relevant now that questions are fetched at the round start). No other timing requirement identified.
 
 **Security and student data**
 - The server decides time, submission validity, score and rank; the client is never trusted [T]. One active device per account [P].
 - The judge sees how many times a student left the answer page, as information only, with no penalty [P]. Remote-competition security and proctoring are out of scope [S] (ENV-005).
-- **OPEN (U-37):** anti-cheating beyond the above. **OPEN (U-59):** what must be protected, and any legal or school rules for student data (related: the 15-day deletion [P], and where the data must live).
+- **Anti-cheating, resolved 2026-09-30** [C] (SEC-001, resolves U-37): confirmed as-is, nothing added. Kept deliberately light — server-owned time and answers, one active device per account, and the judge's page-leave count (informational, no penalty) are enough, since the competition is in-person and physically supervised by 30+ judges in the room. No camera, no remote proctoring, no additional lockdown measure.
+- **OPEN (U-59):** what must be protected, and any legal or school rules for student data (related: the 15-day deletion [P], and where the data must live).
 
 **Scalability**
-- About 600–720 students, 11 rooms, at least 30 judges, 10 big screens [C]. A design and test target of about 800 clients is listed [C] (EVT-001) but the load target (about 800 clients, about 2 saves per second) is also listed as an open point (I-05); **not reconciled.**
-- The client's original document aimed at 1000+ devices and 3000 concurrent users for the full platform [S]. **OPEN (U-60):** whether about 800 concurrent clients is the ceiling for this version.
+- About 600–720 students, 11 rooms, at least 30 judges, 10 big screens [C].
+- **Scale ceiling, resolved 2026-09-30** [C] (U-60, also resolves I-05's "not reconciled" flag): **about 800 simultaneous clients is the ceiling for this version**, at about 2 grid saves per second — the existing load-test target (EVT-001) stays exactly as-is. Not the client document's original 1000+ devices / 3000 concurrent users [S]; that figure targeted the full multi-tenant platform vision, explicitly deferred to a later phase. The real known event scale (about 600–720 students) already fits comfortably under 800.
 
 **Reliability**
 - A failed round is replayed [C] (ROL-005); after a restart the competition comes back paused [C] (BLD-007); a student's saved grid is restored on reconnection [T].
-- **OPEN (U-61, U-49):** how much failure the event can tolerate, and whether there is a backup plan (an on-site server is kept as an option, I-03; paper is not mentioned anywhere).
+- **How much failure the event can tolerate, resolved 2026-09-30** [C] (U-61, failure-tolerance part; same answer as U-49): there is no fixed tolerable-interruption duration — the controller decides resume vs. replay on the day, and the system must never time out either option; see "Data flow" above.
+- **OPEN (U-61, backup-plan part; deferred to U-46):** whether there is a backup plan (an on-site server is kept as an option, I-03; paper is not mentioned anywhere). The stakeholder is answering this together with where the server runs on the event day, not separately — see `FILL-BEFORE-DEPLOYMENT` item C1.
 
 **Risks**
-- No risk assessment exists in the documents. Which parts the stakeholder considers most risky: **OPEN (U-56).**
-- Documented technical points, unranked: venue Wi-Fi and the tablet model and Quark version (U-06); the load target (I-05); the request burst at round start, now that questions are fetched then (BLD-006); a server restart mid-round (handled by replay, U-49 open).
+- **Biggest risk, resolved 2026-09-30** [C] (U-56): the venue Wi-Fi, in the room with about 300 tablets, is confirmed as the biggest real-world risk. It does **not** change the system design — the platform is already designed and load-tested for about 800 simultaneous clients. The only product addition is UI copy, not a functional requirement: an advisory reminder note shown to the controller when creating a competition, telling them to ask their network/IT team to properly configure the venue Wi-Fi before the event. No validation, no blocking behavior. See `ui-context.md`, competition creation/setup.
+- Documented technical points, unranked: the request burst at round start, now that questions are fetched then (BLD-006); a server restart mid-round (handled by replay; no fixed tolerable-interruption duration, U-49 resolved 2026-09-30).
 - The stakeholder believes the network is the most likely cause of a failed round [C] (ROL-005).
 - Failure cases the team plans to test [T]: see `code-standards.md`, Testing.
 
@@ -264,16 +276,13 @@ None described in the documents (no SMS, email or student-ID system mentioned). 
 | Item | Open point |
 |---|---|
 | I-02 | Backend language and framework: **decided 2026-09-27 — Node.js with TypeScript, Express.js** [T]. Folder structure: **decided 2026-09-30** — module-first, see "Backend folder structure" above [T] |
-| I-03, U-46 | Where the server runs on the event day: **TBD — to be decided by the project owner** |
+| I-03, U-46 | Where the server runs on the event day (Phase 2 hosting): **TBD — to be decided by the project owner.** Deliberately deferred to closer to the event date (Q23); not blocking. The separate near-term demo/testing hosting (Phase 1, Railway) is resolved — see Stack table and BLD-031. |
 | I-01 | **Data model: decided 2026-09-30** — approved in `data-model.md` (checklist item A6). The **final module list** and the **API** remain open |
 | I-08 | Events vs direct calls between modules |
 | I-16 | Session length |
-| I-20 | UI component library, icons, fonts. **Styling approach decided 2026-09-30 — Tailwind CSS** [T] (BLD-023). **Still open:** the component library, the icon set and the fonts (the visual design comes after the first slice, BLD-009/U-65) |
+| I-20 | UI component library, icons, fonts. **Styling approach decided 2026-09-30 — Tailwind CSS** [T] (BLD-023). **Default visual style (theme, colors) resolved 2026-10-01 as a Working Position** [T] (U-65; see `ui-context.md`, "Theme"/"Colors" — not yet stakeholder-confirmed). **Font stack resolved 2026-10-01** [C] (U-70; see `ui-context.md`, "Typography") — explicit Latin + CJK fallback stack, no web-font download. **Still open:** the component library and the icon set (the visual design comes after the first slice, BLD-009) |
 | I-30 | Format of judge and controller credentials |
 | U-01 | Sample participant Excel and a past results sheet still not sent (the sample question files were received 2026-09-29, folder `[0923]各组别字符串`) |
 | U-40 | Extra participant Excel columns |
-| U-94 | The missing complete-solution column; re-asking the stakeholder for a clearer answer |
+| U-94 | The given cells are image-only, not text (deeper than just the missing solution column); re-ask refined 2026-10-01, carried back to the stakeholder |
 | U-90 | Whether every puzzle has a unique solution |
-| U-49 | How long an interruption during a round is acceptable |
-| I-05, U-60 | Load target and ceiling; listed both as [C] and as open |
-| U-06 | Tablet model and Quark version |

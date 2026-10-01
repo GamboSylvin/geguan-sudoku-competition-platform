@@ -4,10 +4,10 @@
 
 ## Overview
 
-**Sudoku Arena** (working name [T]) is a web application that runs a school Sudoku competition digitally, following the regulations of the 4th Zhejiang Provincial Intelligence Sports Sudoku Inter-school League [S].
+**Sudoku Arena** (working name [T]) is a web application that runs a school Sudoku competition digitally, following the regulations of the 4th Zhejiang Provincial Intelligence Sports Sudoku Inter-school League [C] (re-confirmed 2026-10-01, Part 6 R9).
 Many Sudoku competitions in China are still largely paper-based: printing and distributing materials, preparing rooms, collecting answer sheets, and correcting and ranking by hand. That brings human error and little real-time view of progress, and it gets worse as the number of participants grows [S].
 
-The aim is to **digitalize the operational process of running a competition**. It is not an online Sudoku game [S].
+The aim is to **digitalize the operational process of running a competition**. It is not an online Sudoku game [C] (re-confirmed 2026-10-01, Part 6 R11).
 The MVP serves **one organizing institution** (a school or university). It is not a multi-tenant platform [C]. Multi-tenant SaaS is the long-term vision and is deferred, not cancelled [L].
 
 ## Goals
@@ -21,14 +21,14 @@ These are recorded from the documents and are to be confirmed. Measurable goals 
 
 ## Target users
 
-Four ends [S]:
+Three user roles, plus a passive display target [S]:
 
-- **Players**: students, in person, on the school's learning tablets (学练机) with Quark Browser [C]. They solve puzzles in timed rounds; their work is saved automatically.
-- **Controller (控制员)**: runs the event. Assumed to be the same as the administrator [A] (U-11). Several controller accounts are allowed [C] (BLD-004). Sets up the competition and controls it live.
+- **Players**: students, in person, on the school's learning tablets (学练机) with Quark Browser [C] as the primary real-world device. They solve puzzles in timed rounds; their work is saved automatically. **No fixed device or browser target** [C] (U-06, resolved 2026-09-30): the app is built as a standard responsive web app, not locked to one tablet model or browser version — see `architecture.md`, "Devices and network".
+- **Controller (控制员) — the primary user** [C] (U-52, resolved 2026-09-30): runs the event. **Confirmed 2026-10-01** [C] (U-11, Part 6 R12): **the controller is the administrator.** No role exists above the controller in this MVP version — the Super Administrator is a separate, later multi-tenant-phase role (SA-005), not part of this version. Several controller accounts are allowed [C] (BLD-004). Sets up the competition and controls it live.
 - **Judges**: at least 30, each with a range of participant numbers [C]. They supervise their own students' status and can restart one student's round [P].
-- **Big screens**: 10 of them, passive displays for rankings and close-ups [C].
+- **Big screens**: 10 of them, **not a user in the same sense as the other three roles** [C] (U-52). A passive architectural end (see `architecture.md`, "Hub-and-spoke"): it only receives server-pushed state and displays it — no person operates it as an actor. Treat it as a display target, not a fourth user persona.
 
-**OPEN:** which end is the primary user is not documented (U-52). Names and roles are recorded (I-17, recorded 2026-09-27): see "Client and team".
+**Primary user, resolved [C] (U-52, 2026-09-30):** the controller. The product is mainly built for the controller — the event organizer — per the documented business goal of reducing organizer effort (see "Business goal" below), and because the controller is the only role that touches setup, live control, score corrections and export. Names and roles are recorded (I-17, recorded 2026-09-27): see "Client and team".
 
 ## Client and team
 
@@ -48,15 +48,15 @@ The event flow (not a list of build units).
 
 **Setup (controller)**
 1. Log in with username and password [T].
-2. Create the competition: name, description, categories, participant Excel, question Excel [T]. One event can hold several categories at once [P].
-3. Validate the participant Excel as a whole; an invalid file commits nothing [T]. The system then creates participants, teams and accounts and generates participant numbers and credentials [T]/[P]. The Excel columns are Name, School, Category, Team; the participant number is generated (schools in Excel order, then students in row order, unique across the event, a team's numbers consecutive); the username is the participant number and the password a short random code [C] (BLD-003). Extra columns: **OPEN (U-40)**.
+2. Create the competition: name, description, categories, participant Excel, question Excel [T]. One event can hold several categories at once [C] (re-confirmed 2026-10-01, Part 6 R1).
+3. Validate the participant Excel as a whole; an invalid file commits nothing [T]. The system then creates participants, teams and accounts and generates participant numbers and credentials [C] (re-confirmed 2026-10-01, Part 6 R2). The Excel columns are Name, School, Category, Team; the participant number is generated (schools in Excel order, then students in row order, unique across the event, a team's numbers consecutive); the username is the participant number and the password a short random code [C] (BLD-003). Extra columns: **OPEN (U-40)**.
 4. Export the credential slips, which are printed [C].
 5. Import the question Excel (**not PDF** [C], BLD-024, resolves U-93): structured fields read from cells, no OCR; any failure rejects the whole import [T]. One file per category, not shared [C] (BLD-028). Points are customizable regardless of what the file carries [C] (BLD-025). Categories: U6 to U20, the original scheme [C] (BLD-027).
 6. Judges (at least 30) each get a range of participant numbers [C]/[P]. The **controller assigns them during setup, before publishing, and can change them during the event** [C] (BLD-008).
-7. Publish. The system refuses if anything is missing. Publishing generates the entry link/QR and the big-screen link, and locks the structure [T]/[S].
+7. Publish. The system refuses if anything is missing. Publishing generates the entry link/QR and the big-screen link, and locks the structure [C] (CMP-100, re-confirmed 2026-10-01, Part 6 R10).
 
 **Event day**
-8. All big screens open from one shared link, no login [C]. Who opens it, and who hands out slips and tablets: **OPEN (U-54)**.
+8. All big screens open from one shared link, no login [C]. Who physically opens the link, and who hands out printed slips and tablets, is **out of scope for product design** [C] (U-54, resolved 2026-09-30): pure event-day staffing logistics, not a product decision. The system's behaviour does not depend on who performs these actions — the link works identically regardless of who opens it, and slips/tablets are distributed before login, entirely outside the app. No screen, role or permission accounts for it.
 9. Each player opens the link/QR, logs in with the printed credentials, and waits in the competition room [T].
 10. The controller starts a stage. One command starts all categories together [T]/[P].
 11. Each round begins with a preparation screen (rules and countdown); then the round runs (see `competition-rules.md`) [T].
@@ -106,7 +106,7 @@ Everything in the features above, for one organizing institution.
 
 ### Out of scope
 - Multi-tenant SaaS and the Super Administrator role: deferred [C]/[L]
-- PK stage and matching, and a reusable question bank [L]
+- PK stage and matching, a reusable question bank, and puzzle authoring/generation/editing inside the app [C] (U-45, resolved 2026-10-01) [L]
 - Buzzer mode: dropped [C]
 - Configuration center and logic-template upload: rejected
 - Payment
@@ -116,9 +116,9 @@ Everything in the features above, for one organizing institution.
 - A long-term results archive: none; deleted after 15 days, after the controller exports [P]/[C]
 
 ### Open scope questions (do not assume)
-- Puzzle authoring or generation inside the app: **OPEN (U-45)**
-- Any third language beyond English and Chinese: **OPEN (U-51)**
-- The second team round ("齐心协力"): what it is and how it is scored: **OPEN (U-05, U-21)**
+- **Puzzle authoring, generation or editing, resolved 2026-10-01** [C] (U-45): out of scope for this version, confirmed. The system only imports pre-made questions (Excel, per category). No puzzle-authoring or puzzle-editing feature is built — same later-phase category as the reusable Question Bank (see "Scope", "Out of scope" above).
+- **Any third language beyond English and Chinese, resolved 2026-10-01** [C] (U-51): none needed. Language is chosen **per user** (not per event, not shown simultaneously), default **Chinese** — matches the i18n scaffold already built in Unit 01 (U-68, resolved the same day; see `ui-context.md`, "Language").
+- The second team round ("齐心协力"): resolved 2026-09-29, partition collaboration, see "Core user flow" / `competition-rules.md` [C] (TEM-005). *(Stale cross-reference corrected — this line predated that answer.)*
 - Which features are essential on the event day: the first slice is the **Individual stage, end to end**; the team stage and the design come later [C] (BLD-009). The data model must stay ready for team rotation.
 
 ## Important decisions

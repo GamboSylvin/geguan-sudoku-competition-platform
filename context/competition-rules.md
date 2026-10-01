@@ -6,9 +6,9 @@
 
 ## Terms
 
-- An **event** (competition) has **categories** (U6 to U20 [T]; how many are used is OPEN, U-02).
+- An **event** (competition) has **categories** (U6 to U20 [T]). **Exact numbers, resolved 2026-09-30** [T] (U-02): the stakeholder did not supply exact student/team/school/room counts and confirmed this is deliberate, not a gap — the documented estimates (about 600–720 students, 11 rooms, at least 30 judges, 10 big screens, one team per school per category, all categories U6 to U20 in use) stay the working position; the design already handles either answer and needs no rebuild if real numbers arrive later. **Still OPEN (U-02):** whether a room mixes categories.
 - A category has two **stages**: Individual and Team. Each stage has **2 rounds**. An Individual round has **6 puzzles**.
-- Structure (stages, rounds, order) is predefined and not admin-defined [P] (SCR-005).
+- Structure (stages, rounds, order) is predefined and not admin-defined [C] (SCR-005, re-confirmed 2026-10-01, Part 6 R7).
 
 ## 1. Structure from the regulations [S]
 
@@ -38,11 +38,11 @@
 - **Question import format** [C] (BLD-024, resolves U-93): the question import file is **Excel (.xlsx), not PDF**. Replaces every earlier "PDF, strictly predefined format" statement. No-OCR still holds: structured fields (instructions, category, points, dimensions, blank-cell answers) are read from cells, never recognized from an image. The file **does** carry a points value per question, but that is only a starting value: points stay **fully customizable** by the controller everywhere they appear, including to reach the 100-per-round total [C] (BLD-025, resolves U-92).
 - **One question file per category, not a shared pool** [C] (BLD-028, resolves U-32): each category (for example U8, U12) is uploaded and imported separately, even when they run the same round in parallel.
 - **Categories: U6 to U20, the original scheme** [C] (BLD-027, resolves U-95).
-- **Missing complete-solution column:** see `architecture.md`, Data model. **OPEN (U-94):** the stakeholder's reply was too short to read as an answer; re-asking with a clearer question.
+- **Missing complete-solution column — the problem runs deeper, found 2026-10-01:** see `architecture.md`, Data model. The given (pre-filled) cells exist only as an embedded picture in the real sample files, not as text, and OCR is ruled out — there is no way today to build an interactive, correctly-locked grid from the files as they stand. **OPEN (U-94):** carried back to the stakeholder to ask whether production files can supply the given cells as structured text. Interim plan (BLD-026): hand-transcribe a small starter set meanwhile; general automated import stays blocked.
 
 ## 3. Lifecycle and timing
 
-- The controller starts a stage. One command starts all categories together [T]/[P]. Only the controller starts a stage [P] (ROL-003).
+- The controller starts a stage. One command starts all categories together [C] (re-confirmed 2026-10-01, Part 6 R1). Only the controller starts a stage [C] (ROL-003, re-confirmed 2026-10-01, Part 6 R3).
 - **Preparation** before every round: a countdown of **60 seconds by default**, changeable per round. The screen shows the round's rules and the countdown [C] (RND-001).
   - When it reaches zero, the **puzzles appear and the round timer starts immediately**, with no extra "3, 2, 1, Start". A **pause during preparation** stops the countdown; on resume the "3, 2, 1, Start" shows first, and then the countdown **continues from where it stopped**. The "3, 2, 1, Start" uses neither round time nor preparation time [C] (RND-001).
   - The controller **cannot end the preparation early**; a shorter wait is set with a shorter length beforehand [C] (RND-003).
@@ -54,7 +54,8 @@
 - **Finishing:** after the last round of the last stage the competition **finishes by itself**, once that round's scoring is final. The controller's "finish" command is for finishing **early** [C] (RND-006).
   - **Finishing early:** the running round is ended the same way as an early end, then the competition finishes. Unplayed rounds have no scores and add nothing (the same as counting them as 0); the school total is the individual part x the coefficient plus the team part actually played. The running round is scored on the students' latest saved state. The results and the export carry a visible **"finished early"** mark. It is in the same finished state as a normal finish: the controller keeps access to the results and can export them. It **cannot be resumed**; for an interruption such as a fire alarm the controller uses **pause** (stops the timer, preserves the exact state) and then resumes [C] (RND-007).
   - **Reset after finishing: settled, not open.** A finished competition, early or not, **cannot continue** — this is the rule already stated above (RND-007, from REQUIREMENTS §7.7), not a separate open question.
-  - **OPEN (U-89, narrowed to awards only; U-27):** working position [T] (BLD-030): scores are still computed and marked as usual, with the "finished early" mark shown alongside; the school decides by hand whether to actually grant awards. Re-asking the stakeholder with the scenario spelled out (a fire alarm or similar forcing an early end), since the first reply showed the question wasn't understood.
+  - **Awards after an early finish, resolved 2026-10-01** [C] (U-89, narrowed): whether to grant awards after an early finish is entirely a human, on-site decision by the organizers — not the system's concern. The system's only responsibility is to clearly mark the result "finished early" and correctly calculate the scores of the rounds actually played (already built, RND-007). **No special award-tier computation or marking is needed for this case** — showing the computed scores and ranking is enough for the organizers to decide whether to award, re-run, or do something else. This narrows the earlier working position (BLD-030), which assumed the system would still compute award tiers.
+  - **Still OPEN, separate and general (U-27):** whether the system computes award tiers at all, for a normal (not-early) finish. Not resolved by the answer above.
 
 ## 4. Player rules (Individual stage)
 
@@ -62,7 +63,7 @@
 - **Submission** [C] (SUB-001, SUB-002): **once for the whole round.** Until then the student moves freely between the 6 puzzles and edits any of them (no live correctness feedback [T]). After submitting, all puzzles of the round are read-only and the submission is final. The student **confirms** before the final submit and **may submit with blank puzzles** (they score 0); the confirmation says how many are blank. A repeated submission never changes the result [C] (PL-009).
 - **Late submit** [C] (SUB-003): the **server clock decides.** A manual submit arriving after the timer ended is not counted as manual; the student's latest autosaved answers are submitted automatically, as at any time expiry. **No grace period.** The student sees the same state as any student whose time expired (read-only, submission received, no score), with **no separate message**. This is for the Individual rounds.
 - **Time expiry** [T]: the latest saved state for the whole round is submitted automatically. An empty grid scores 0. No penalty for a zero score, no moves, never submitting, or disconnection.
-- **Reconnection** [T]: the saved grid is restored and the timer keeps running. A student whose tablet fails can continue on another tablet with the same login, keeping saved answers and remaining time [P] (PAR-005). One active device per account; the newest login takes over [P].
+- **Reconnection** [T]: the saved grid is restored and the timer keeps running. A student whose tablet fails can continue on another tablet with the same login, keeping saved answers and remaining time [C] (PAR-005, re-confirmed 2026-10-01, Part 6 R4). One active device per account; the newest login takes over [C] (re-confirmed 2026-10-01, Part 6 R4).
 - **Seeing scores** [C] (SUB-007, narrowed by BLD-029, resolves U-24, U-88): students see their own score and rank **only when the whole competition reaches `FINISHED`** — not after each round, not after each stage. Right after a submit, and for the rest of the competition until it finishes, the student sees "submission accepted" and no score.
   Whether a separate manual "publish" click by the controller is also wanted at that same moment was **not addressed** by this answer; treat as a minor residual detail, not blocking.
 
@@ -81,23 +82,27 @@
 
 ## 6. Judge restart of one student
 
-- A judge can restart one student's round [P] (ROL-003) **only while the round is running**, **as many times as needed**, with no controller approval [C] (SUB-005, SUB-008).
-- The earlier attempt is **archived, not deleted** [P] (ROL-005). The student restarts with a **blank grid** and the **remaining round time** on the shared server timer. Any bonus is measured on the round timer. Each restart archives the attempt, so the number of restarts stays visible.
+- A judge can restart one student's round [C] (ROL-003, re-confirmed 2026-10-01, Part 6 R3) **only while the round is running**, **as many times as needed**, with no controller approval [C] (SUB-005, SUB-008).
+- The earlier attempt is **archived, not deleted** [C] (ROL-005, re-confirmed 2026-10-01, Part 6 R6). The student restarts with a **blank grid** and the **remaining round time** on the shared server timer. Any bonus is measured on the round timer. Each restart archives the attempt, so the number of restarts stays visible.
 - If a restart would come too late to be useful, the remedy is the **replay of the round**, which the judge or the controller can trigger [C] (ROL-005). This differs from a tablet failure, where the student continues on another tablet with saved answers and remaining time.
+- **Tolerable interruption length, resolved 2026-09-30** [C] (U-49): there is no fixed time limit. The stakeholder deliberately declined to set one — the controller decides, on the day, whether to resume or replay an interrupted round based on the event's schedule at that moment, regardless of how long the interruption lasted. Both resume and replay must always stay available to the controller; the system must never impose a timeout that disables either path.
 
 ## 7. Results, visibility and retention
 
 - The judge sees the status of their students, the stage, round and remaining time, and the live ranking; the judge does not determine or calculate rankings [C] (EX-005). The judge also sees how many times a student left the answer page, as information only, with no penalty [P].
-- Scores change only through a **controller correction with a mandatory reason and a change log** [P] (RES-003). The controller can export scores, rankings and answers [P]/[C] (RES-002). Export format assumed `.xlsx` [A] (U-08).
-- **15 days** after the competition, answers, scores and student accounts are permanently deleted; the setup, the questions and the judges are kept [P] (RES-004). **OPEN (U-62, U-59):** whether archived scores and the correction log, and the uploaded participant Excel, follow the 15-day deletion of student data.
+- Scores change only through a **controller correction with a mandatory reason and a change log** [C] (RES-003, re-confirmed 2026-10-01, Part 6 R5). The controller can export scores, rankings and answers [P]/[C] (RES-002). **Export format, resolved 2026-10-01** [C] (U-08): **Excel (`.xlsx`)**, with scores, ranks and the answer per question — as already planned. No specific layout or column list imposed; the exact columns stay an easy-to-adjust detail, not a system rule.
+- **15 days** after the competition, answers, scores and student accounts are permanently deleted; the setup, the questions and the judges are kept [C] (RES-004, re-confirmed 2026-10-01, Part 6 R8).
+- **Archived scores and the correction log, resolved 2026-10-01** [C] (RES-005, resolves U-62's scores/log part): also deleted after 15 days, same as the other student data. *(A daily-email reminder to the controller before deletion was considered — the user's own idea, not the stakeholder's — and withdrawn 2026-10-01; parked as a possible later-phase addition, not built now.)*
+- **Still OPEN (U-62, narrowed):** whether the uploaded participant Excel follows the 15-day deletion — not addressed by this answer.
+- **Still OPEN (U-59):** legal/school rules for student data, and who must approve the deletion rule — explicitly classified as genuine unknowns, a team decision would not be appropriate here.
 
 ## 8. Open items that block implementation of these rules
 
 | Item | Open point |
 |---|---|
-| U-89 (narrowed), U-27 | Awards after an early finish (reset is already settled: never) |
-| U-94 | The missing complete-solution column in the question Excel |
+| U-27 | Whether the system computes award tiers at all, for a normal finish (early-finish part resolved, U-89; reset is already settled: never) |
+| U-94 | The given cells are image-only, not text — deeper than just the missing solution column; re-ask refined 2026-10-01 |
 | TEM-006 to TEM-008 | Working positions (puzzle count 3, time 30 min, points 20/puzzle) for the second team round, not sourced; replace with the 4th Zhejiang league regulation numbers once available |
 | U-90 | Whether every puzzle has a unique solution |
-| U-59, U-62 | Whether archived scores, the correction log and the uploaded participant Excel follow the 15-day deletion |
-| U-49 | How long an interruption during a round is acceptable |
+| U-62 | Whether the uploaded participant Excel follows the 15-day deletion (scores/correction-log part resolved 2026-10-01, RES-005) |
+| U-59 | Legal/school rules for student data, and who must approve the deletion rule |

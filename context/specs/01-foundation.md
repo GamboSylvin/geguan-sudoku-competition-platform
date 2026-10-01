@@ -30,7 +30,7 @@ The methodology's pre-code checklist lists these artifacts. Each is produced in 
 2. **Reproducible development environment** (I-24): **npm with `package-lock.json` committed**; `.env.example` listing every required variable with placeholder values (the real `.env` git-ignored); **Docker with Docker Compose and a Dockerfile per service**; PostgreSQL 16 and Redis 7 as Compose services with a named volume for PostgreSQL and persistence on for Redis; Node.js LTS pinned. The frontend service is a **Vite** dev server (BLD-023).
 3. **CI pipeline:** lint, type check, tests and build — **the four checks of BLD-002 run in CI and must pass before a merge**; the test step runs **Jest** (I-32); the pipeline runs against the Compose services (or service containers) for PostgreSQL and Redis.
 4. **Git setup:** branch and pull-request rules as decided [C] (BLD-002) — one branch per unit, a pull request before every merge, the other developer reviews each pull request; a PR template and the CI checks configured as required status checks.
-5. **Translation mechanism for English and Chinese** planned in from the start [C] (ARCH-026): set up the i18n scaffold here (locale files, a translation function, the language switch hook), with **English and Chinese as the only locales**; the actual strings come with each screen. Any third language is OPEN (U-51) and is **not** set up.
+5. **Translation mechanism for English and Chinese** planned in from the start [C] (ARCH-026): set up the i18n scaffold here (locale files, a translation function, the language switch hook), with **English and Chinese as the only locales**; the actual strings come with each screen. **No third language needed, confirmed 2026-10-01** [C] (U-51) — English and Chinese stay the only two locales, no scaffold change required. **Language selection, resolved the same day** [C] (U-68): per user, default Chinese — already matches this scaffold as built.
 6. **Project skeleton** for the backend and the frontend: empty modules and feature folders, a **health-check** endpoint on the backend, **the Prisma schema initialized and its first migration applied** (I-31), and **a first passing test in Jest** (I-32). The skeleton contains **no feature code**.
 
 ### Inputs
@@ -95,4 +95,4 @@ The methodology's pre-code checklist lists these artifacts. Each is produced in 
 - Competition setup and the participant and question imports (Units 03–06).
 - The competition engine (rounds, timers, autosave, submission, scoring, ranking) (Units 07–12).
 - The team stage, the big screens, and any visual design (later slice, BLD-009).
-- Any third language beyond English and Chinese (U-51, open).
+- A third language beyond English and Chinese: not needed, resolved 2026-10-01 (U-51) — not a gap, nothing to build here.

@@ -29,145 +29,60 @@ Two items are being **re-asked** to you directly, because your first reply eithe
 
 ---
 
-## Part 2 — Roles and event-day operation
+## Part 2 — Roles and event-day operation — CLOSED 2026-09-30
 
-**Q9. Who is the primary user?**
-There are four ends: players, controller, judges, big screens.
-- Which one is the primary user of the product, the one it is mainly built for?
-Your answer: _______________ *(ref U-52)*
+Every question in this part was answered directly by the stakeholder and confirmed **[C]**. Nothing here still blocks building.
 
-**Q11. Big screens, slips and tablets on the day**
-All big screens open from one shared link.
-- Who opens the link on the screens?
-- Who hands out the printed credential slips and the tablets to the students?
-Your answer: _______________ *(ref U-54)*
+- **Q9** (primary user): the controller — U-52.
+- **Q11** (big screens, slips and tablets on the day): out of scope for product design — U-54.
+- **Q12** (what each role can see and change): access rules resolved — U-55, U-63.
+- **Q15** (server stops during a round): no fixed tolerable-interruption duration — U-49.
+- **Q17** (anti-cheating): confirmed as-is, nothing added — U-37 (SEC-001).
+- **Q18** (failure tolerance and backup plan): failure-tolerance part resolved, same answer as Q15/U-49; the backup-plan part was **not** answered here — it was deliberately carried forward into **Q24** (Part 3, U-46) rather than answered twice, so it is not a gap in this part's closure, just a question that lives under a different number now.
+- **Q19** (biggest risks): venue Wi-Fi confirmed as the biggest real-world risk — U-56. No design change; one UI-copy addition (advisory note to the controller). Also pre-confirmed pack row R13 in Part 6.
 
-**Q12. What each role can see and change**
-We know: a judge sees their own students' status and can restart one student's round; the controller can do everything a judge can, plus setup, rules, score corrections, and control of the big screens; a player cannot start or control anything.
-- Beyond that, what else can a judge do or see?
-- Can a player see only their own answers?
-- Can a judge see students outside their range?
-- Who may edit participants during the event?
-- Can a judge change a score?
-Your answer: _______________ *(ref U-55, U-63)*
-
-**Q15. If the server stops during a round**
-After a restart the competition comes back paused, and the controller chooses to resume or replay the round. A replay is acceptable.
-- How long an interruption during a round can the event tolerate?
-Your answer: _______________ *(ref U-49)*
-
-**Q17. Anti-cheating**
-We know: the server decides time and scores; one active device per account; the judge sees how many times a student left the answer page (information only, no penalty); remote-competition security and proctoring are out of scope.
-- Do you want anything more to prevent cheating?
-Your answer: _______________ *(ref U-37)*
-
-**Q18. Failure tolerance and backup plan**
-- How much failure can the event tolerate on the day?
-- Is there a backup plan (for example an on-site server, or paper)?
-Your answer: _______________ *(ref U-61)*
-
-**Q19. Biggest risks**
-- Which parts of the event do you consider the most risky or the most likely to go wrong?
-Your answer: _______________ *(ref U-56)*
+All seven answers are recorded in `context/` (`project-overview.md`, `architecture.md`, `ui-context.md`, `data-model.md`) and in `progress-tracker.md`'s Context change log, with the full wording kept there and in `context-feeders/working/_open-questions.md`.
 
 ---
 
-## Part 3 — Numbers, venue and technical facts
+## Part 3 — Numbers, venue and technical facts — CLOSED 2026-10-01
 
-**Q20. Exact numbers**
-On record: about 600–720 students; 11 rooms (10 of about 30 students and 1 of about 300, which comes to about 600, not 720); at least 30 judges; 10 big screens; one team per school per category; categories go from U6 to U20.
-- How many students, teams, schools and rooms exactly?
-- Which categories are used?
-Your answer: _______________ *(ref U-02)*
+Every question in this part has an answer; some deliberately leave a piece open rather than force one.
 
-**Q21. Maximum number of devices**
-The team is planning for about 800 devices connected at once.
-- Is that the maximum for this version, or should the system be ready for more?
-Your answer: _______________ *(ref U-60)*
+- **Q20** (exact numbers): deliberately not provided — documented estimates stay the working position, no rebuild needed later. Narrows **U-02** to just "whether a room mixes categories," which **stays open**.
+- **Q21** (max devices): 800 simultaneous clients confirmed as the ceiling — **U-60**.
+- **Q22** (tablets/browser): no fixed device or browser target, standard responsive web app — **U-06**.
+- **Q23** (venue network): **deliberately deferred** to closer to the event date, not blocking — **U-46 stays open** (by design, not an oversight).
+- **Q24** (hosting): two-phase plan (**BLD-031**, Working Position) — Phase 1 (Railway, now) resolved; Phase 2 (event day) **stays open until U-46 is answered**.
+- **Q25** (external systems): none needed, confirmed — **U-57**.
+- **Q26** (speed): response-time targets confirmed (ranking ≤2s, tablets start together ≤1s) — **U-58**.
+- **Q27** (student data): archived scores/correction log also purged after 15 days (**RES-005**) — narrows **U-62** to just the participant Excel, which **stays open**; **U-59** (legal rules, approval) **stays open**, explicitly classified as a genuine unknown. A proposed email-reminder add-on was raised and then withdrawn by the user (their own idea, not the stakeholder's) — parked as a later-phase maybe, no conflict remains.
+- **Q28** (export): Excel format confirmed, no fixed column list — **U-08**.
 
-**Q22. Tablets and browser**
-Students use Quark Browser on learning tablets (学练机).
-- Which tablet model and which Quark version?
-- Can we get a test tablet before the event?
-Your answer: _______________ *(ref U-06)*
-
-**Q23. Venue network**
-- Does the venue have internet?
-- How strong is the Wi-Fi in the room with about 300 tablets, and how many devices can it handle at once?
-- May we bring our own router or an on-site server?
-Your answer: _______________ *(ref U-06, U-46)*
-
-**Q24. Where the system runs**
-- Where will the server run on the day: a school server on the venue network, a cloud server in China, or somewhere else?
-- Who sets it up and runs it?
-- Do you want an on-site fallback server?
-Your answer: _______________ *(ref U-46)*
-
-**Q25. Connections to other systems**
-The system currently connects only to tablets, the judges' and controller's devices, and the big screens.
-- Does it need to connect to anything else (for example SMS, email, a school student-ID system)?
-Your answer: _______________ *(ref U-57)*
-
-**Q26. Speed requirements**
-- After a student submits, how quickly must the ranking update?
-- How quickly must all tablets start a round together?
-- Any other time requirement?
-Your answer: _______________ *(ref U-58)*
-
-**Q27. Student data**
-The plan is to delete answers, scores and student accounts 15 days after the event, after the controller has exported what it needs.
-- Are there legal or school rules for storing student data (names, answers, accounts)?
-- Are archived scores (after a rematch) and the score-correction log also deleted after 15 days?
-- Who must approve the deletion rule?
-Your answer: _______________ *(ref U-59, U-62)*
-
-**Q28. Export**
-We plan to export scores, rankings and answers as Excel `.xlsx` files.
-- Is that right? Is a specific layout or list of columns required?
-Your answer: _______________ *(ref U-08)*
+**Still open after this part:** U-02 (room mixing), U-46 (venue network / event-day hosting, Phase 2), U-59 (legal data rules), U-62 (narrowed to the participant Excel). All deliberate, none a gap.
 
 ---
 
-## Part 4 — Scope and language
+## Part 4 — Scope and language — CLOSED 2026-10-01
 
-**Q29. Creating puzzles**
-Questions come from a predefined PDF, with no OCR.
-- Should the app ever create, generate or edit puzzles, or is that out of scope for this version?
-Your answer: _______________ *(ref U-45)*
+Both questions fully resolved, nothing left open.
 
-**Q30. Languages**
-The interface is English and Chinese.
-- Is any other language needed?
-- Is the language chosen per user, per event, or are both shown at the same time? Which is the default?
-Your answer: _______________ *(ref U-51, U-68)*
+- **Q29** (creating puzzles): out of scope for this version, confirmed — **U-45**.
+- **Q30** (languages): no third language needed; language chosen per user, default Chinese, matching the existing i18n scaffold — **U-51, U-68**.
 
 ---
 
-## Part 5 — Design
+## Part 5 — Design — CLOSED 2026-10-01
 
-**Q31. Look and brand**
-- Should the interface be light or dark, minimal or rich, technical or friendly?
-- Is there a school brand (colours, logo) that must be used?
-Your answer: _______________ *(ref U-65)*
+Every question answered; two are explicitly Working Positions or deferrals rather than stakeholder-final answers, by design (the visual design comes after the first slice, BLD-009).
 
-**Q32. Fonts and Chinese display**
-- Are there requirements about fonts or how Chinese text must be displayed?
-Your answer: _______________ *(ref U-70)*
+- **Q31** (look and brand): default visual style set as a **Working Position, not yet stakeholder-confirmed** — light, minimal, blue/gray, Tailwind defaults; no school brand yet, placeholder kept — **U-65**.
+- **Q32** (fonts and Chinese display): explicit font stack confirmed, on-device CJK fallbacks, no web-font download — **U-70**.
+- **Q33** (screen layouts): **deliberately left to the design phase**, confirmed not blocking — **U-66 stays open** (by design).
+- **Q34** (screen sizes and orientations): fully responsive, no fixed list, consistent with ARCH-027 — **U-67**.
+- **Q35** (accessibility and error feedback): no formal standard (no WCAG), reasonable touch-first practice; autosave failure shown as a discreet indicator, not an alarm — **U-69**.
 
-**Q33. Screen layouts**
-We know the answer screen (landscape, puzzle left, number pad right) and what the big screens show. The layouts of the judge screen, the controller screen, the login, waiting, preparation and results screens are not defined.
-- Do you have preferences, examples or mock-ups for these screens?
-Your answer: _______________ *(ref U-66)*
-
-**Q34. Screen sizes and orientations**
-The student answer screen is landscape, with a "please rotate your device" message when the tablet is upright.
-- What screen sizes and orientations must the judges' and controller's devices and the big screens support?
-Your answer: _______________ *(ref U-67)*
-
-**Q35. Accessibility and error feedback**
-- Are there requirements for button sizes, contrast or keyboard use?
-- What should a student see if an automatic save fails?
-Your answer: _______________ *(ref U-69)*
+**Still open after this part:** U-65 (not yet stakeholder-confirmed, a Working Position only) and U-66 (deliberately deferred to the design phase). Neither blocks building now.
 
 ---
 
@@ -176,23 +91,25 @@ Your answer: _______________ *(ref U-69)*
 These were proposed by the team and approved in your general answer, or come from the client's original document, or are our assumptions. Please tell us **Yes**, **No** or **Change**, so that we can treat them as confirmed.
 *Note: a later document of 2026-09-26 states that the rules in rows R15 to R28 were confirmed by the stakeholder. The rows are kept until the project owner verifies that.*
 *Note: five answers given directly by you on 2026-09-30 do not appear as rows below, because they are already confirmed and need no round-trip — the question import file is Excel not PDF; points stay fully customizable; categories are U6 to U20; each category has its own question file; and students see their score only once the whole competition finishes. See `competition-rules.md` for the exact wording if you'd like to double-check any of them.*
+*Note, added 2026-10-01: R1–R11 and R14 confirmed as a batch, no underlying decision changed; R12 confirmed with the extra administrator detail (see its row); R13 was already confirmed separately via Q19. Behind these: EVT-002, PAR-001, PAR-002, ROL-003, PAR-005, RES-003, RES-004, ROL-005, SCR-005, CMP-100, NF-001, CMP-101 and U-11 are now stakeholder-confirmed `[C]`. The single canonical statement for each was updated in `context/`; other mentions of the same decision ID elsewhere in `context/` carry the identical confirmed status even where an inline tag still reads `[P]`/`[T]`/`[S]` — those weren't individually rewritten, to avoid a large low-value edit sweep over facts whose content didn't change, only their provenance. R15 to R29 are untouched by this and still await the project owner's verification (see the note above).*
 
 | # | Statement | Yes / No / Change |
 |---|---|---|
-| R1 | One event can hold several categories at once, and one command starts all of them together. | |
-| R2 | The participant Excel creates participants, teams and accounts, and generates each participant's number and credentials. | |
-| R3 | A judge can restart one student's round. | |
-| R4 | One active device per account: a new login takes over the old one. A student whose tablet fails can continue on another tablet with the same login, keeping saved answers and remaining time. | |
-| R5 | The controller can correct scores with a mandatory reason, and a change log records it. Scores change no other way. | |
-| R6 | A rematch archives the old scores. It does not delete them. | |
-| R7 | Only numeric values (for example points and times) can be changed, only by the controller, and only before a round starts. Stages, rounds and rules stay fixed. | |
-| R8 | 15 days after the competition, answers, scores and student accounts are permanently deleted. The setup, the questions and the judges are kept. | |
-| R9 | The competition follows the regulations of the 4th Zhejiang Provincial Intelligence Sports Sudoku Inter-school League, including the round times, question counts and points. | |
-| R10 | Publishing an event generates the entry link/QR code and the big-screen link, and locks the event structure. | |
-| R11 | The product digitalizes the running of a competition. It is not an online Sudoku game. | |
-| R12 | The controller is the administrator (see Q14). | |
-| R13 | The venue Wi-Fi in the room with about 300 tablets is the biggest real-world risk (see Q19). | |
-| R14 | Later, not now: several organizing institutions on one platform (multi-tenant), a head-to-head "PK" stage, and a reusable question bank. | |
+| R1 | One event can hold several categories at once, and one command starts all of them together. | Yes — confirmed 2026-10-01, no change |
+| R2 | The participant Excel creates participants, teams and accounts, and generates each participant's number and credentials. | Yes — confirmed 2026-10-01, no change |
+| R3 | A judge can restart one student's round. | Yes — confirmed 2026-10-01, no change |
+| R4 | One active device per account: a new login takes over the old one. A student whose tablet fails can continue on another tablet with the same login, keeping saved answers and remaining time. | Yes — confirmed 2026-10-01, no change |
+| R5 | The controller can correct scores with a mandatory reason, and a change log records it. Scores change no other way. | Yes — confirmed 2026-10-01, no change |
+| R6 | A rematch archives the old scores. It does not delete them. | Yes — confirmed 2026-10-01, no change |
+| R7 | Only numeric values (for example points and times) can be changed, only by the controller, and only before a round starts. Stages, rounds and rules stay fixed. | Yes — confirmed 2026-10-01, no change |
+| R8 | 15 days after the competition, answers, scores and student accounts are permanently deleted. The setup, the questions and the judges are kept. | Yes — confirmed 2026-10-01, no change |
+| R9 | The competition follows the regulations of the 4th Zhejiang Provincial Intelligence Sports Sudoku Inter-school League, including the round times, question counts and points. | Yes — confirmed 2026-10-01, no change |
+| R10 | Publishing an event generates the entry link/QR code and the big-screen link, and locks the event structure. | Yes — confirmed 2026-10-01, no change |
+| R11 | The product digitalizes the running of a competition. It is not an online Sudoku game. | Yes — confirmed 2026-10-01, no change |
+| R12 | The controller is the administrator (see Q14). | Yes — confirmed 2026-10-01: no role exists above the controller in this MVP version; the Super Administrator is a separate, later multi-tenant-phase role, not part of this version |
+| R13 | The venue Wi-Fi in the room with about 300 tablets is the biggest real-world risk (see Q19). | Yes — confirmed directly in Q19, 2026-09-30 |
+| R14 | Later, not now: several organizing institutions on one platform (multi-tenant), a head-to-head "PK" stage, and a reusable question bank. | Yes — confirmed 2026-10-01, no change |
+
 | R15 | (Q1) The controller defines the points of the puzzles before a round; no default split of the 100 points is imposed. The round total is the sum of the question points, calculated, not fixed at 100. For individual rounds the controller sees a warning before the round if the total is not 100 (not blocked). Team rounds have no fixed maximum and no warning. In a team rotation round the controller sets one "points per question" value for the whole round (default 10); a team's score is the number of correct answers times that value (4 correct answers give 40 with the default). | |
 | R16 | (Q2) A student submits once for the whole round; free movement and editing across the 6 puzzles until then; after submitting all puzzles are read-only and final. The student confirms before the final submit, may submit with blank puzzles (score 0, the confirmation says how many are blank), and sees "accepted" and no immediate score. | |
 | R17 | (Q3) Bonus: 3 points per whole minute early, changeable by the controller before a round, in both individual rounds, none in team rounds. Earned when the student submits before time ends with every puzzle of the round fully correct. Optional maximum bonus in points per individual round (empty = no cap). The bonus is part of the round score (which can exceed the round maximum) and is used in the individual ranking and the school total. Measured on the server round timer, which stops during a pause; fixed at the student's own manual submit; automatic submissions (time expiry, or the controller ending the round early) get no bonus. | |
@@ -211,13 +128,11 @@ These were proposed by the team and approved in your general answer, or come fro
 
 ---
 
-## Part 7 — Approval
+## Part 7 — Approval — CLOSED 2026-10-01
 
-**Q36. Written approval**
-Once the answers are in, we will send you a written summary of the requirements.
-- Will you approve it in writing before development starts?
-- Who signs, and by when?
-Your answer: _______________ *(ref A14)*
+**Q36. Written approval — RESOLVED (2026-10-01).**
+Answer: Informal process, no formal signature required. The stakeholder/project owner does not sign a formal written requirements document with a deadline — approval happens informally, as the project owner validates each answer along the way (as already done throughout this pack). This is consistent with the existing `FILL-BEFORE-CODING.md` section E row, already marked done.
+*(ref A14)*
 
 ---
 
@@ -225,25 +140,70 @@ Your answer: _______________ *(ref A14)*
 
 Your first replies on these two didn't quite answer what we asked. Nothing is blocked by them — we're building with a stopgap in the meantime — but we'd like a clearer answer when you have a moment.
 
-**Q37. The missing solution column**
-Our question files (Excel) don't currently have a column with the complete solved grid, only the given starting cells and, separately, the answer. Your reply ("需要一个") was too short for us to be sure what you meant.
-- Would it help if we asked whoever prepares these files to add one more column — the complete solved grid, written out cell by cell, the same way the answer column already is?
-- Or did you have something else in mind?
+**Q37. The missing solution column — STILL OPEN, question refined 2026-10-01 (not yet re-sent/answered).**
+Technical finding: there is no way to build an interactive, correctly-locked Sudoku grid using only what the sample files provide today. The given (pre-filled) cells exist only as an embedded picture, not as text — and OCR is ruled out by project rule. This is being carried back to the stakeholder, to ask whether the real production files can include the given cells as structured text (the same way the answer column already is), not just the image.
+Interim plan stays in place while waiting (BLD-026): manual transcription of the given cells for a small starter set, to build and test the answer-check unit. The general automated import stays blocked until a clear answer comes back.
+**Refined question to send:** can the real production files include the given (pre-filled) cells as structured text — the same way the answer column already is — not just as an embedded image?
 Your answer: _______________ *(ref U-94)*
 
-**Q38. Awards after an early finish**
-Picture the individual stage running, and the controller ends the competition early — a fire alarm, say. We still compute a school total from whatever was played, and the result is marked "finished early".
-- Does the school still hand out its usual awards (medals, certificates, whatever it normally gives) based on that early-finish result?
-- Or are awards withheld when the competition didn't run to its normal end?
-Your answer: _______________ *(ref U-89, U-27)*
+**Q38. Awards after an early finish — RESOLVED (2026-10-01).**
+Answer: Whether to grant awards after an early finish is entirely a human, on-site decision by the organizers — not the system's concern. The system's only responsibility: clearly mark the result "finished early", and correctly calculate the scores of the rounds actually played (already built, RND-007). No special award-tier computation or marking is needed for this case — showing the computed scores and ranking is enough for the organizers to decide whether to award, re-run, or do something else.
+This narrows the earlier working position (BLD-030), which assumed the system would still compute award tiers. It does not resolve the separate, general question (U-27) of whether the system computes award tiers at all for a normal finish — that stays open.
+*(ref U-89, U-27)*
 
 ---
 
-## For the project owner (not the stakeholder)
+## Part 8 — New items found while reviewing this pack (added 2026-10-01)
 
-Two facts are missing from the project records and only the project owner can supply them:
-1. **Names and roles** of the two developers, the business/client lead and the project owner. *(ref I-17)*
-2. **What the two developers know well**, and their experience with real-time applications, PostgreSQL and Redis. *(ref I-18)*
+These were never sent as numbered questions. Each was noted along the way as "ask the stakeholder" and set aside for later; this is that later. None of them block building right now — they affect specific units, listed under each question.
+
+**Q39. Unique solutions**
+The answer check compares a student's submitted grid with the solution stored with the question; it does not run a rule-checker per Sudoku variant (BLD-010). This only gives the right result if every puzzle has exactly one valid solution.
+- Can you confirm every puzzle used in the competition has a unique solution? Or should we assume some might not, and handle that case?
+Your answer: _______________ *(ref U-90)*
+
+**Q40. What a judge sees in the team stage**
+We've confirmed what a judge sees and can do in the Individual stage: their assigned students' status, and a single-student restart, nothing more (U-55, U-63).
+- Is it the same in the Team stage — status of their assigned teams, nothing more — or does the judge need something specific to team play (for example, which teammate currently holds a question during rotation, or status per team member rather than per team)?
+Your answer: _______________ *(ref U-39)*
+
+**Q41. Rooms and categories**
+Categories run in parallel and are ranked separately. The room/participant numbers are documented as working estimates (11 rooms, one of about 300 students).
+- Does a single room ever hold students from more than one category at the same time, or is every room always exactly one category?
+Your answer: _______________ *(ref U-02)*
+
+**Q42. Tie-break rule**
+Rankings are derived from scores; the school total is stored and compared as an exact decimal, never rounded.
+- If two players, two teams, or two schools end up with the exact same score, what breaks the tie? For example: earlier submission time, earlier completion time, alphabetical order, or no tie-break at all (shared rank)?
+Your answer: _______________ *(ref U-22)*
+
+**Q43. Award tiers for a normal finish**
+Q38 settled that awards after an *early* finish are a human, on-site decision — the system doesn't compute anything special for that case. This question is about the general case, not just early finishes.
+- Does the system need to compute or mark award tiers at all (for example gold/silver/bronze, or a cutoff rank) for a competition that runs to its normal end? Or is showing the computed scores and final ranking always enough, and awarding is entirely up to the school either way?
+Your answer: _______________ *(ref U-27)*
+
+**Q44. Extra participant Excel columns**
+The confirmed columns are Name, School, Category, Team. The client's original document also mentioned things like age, city or province.
+- Will the real production file carry any columns beyond Name, School, Category, Team? If so, which, and what should the system do with them — store them, display them, or ignore them?
+Your answer: _______________ *(ref U-40)*
+
+**Q45. Changing a team after import**
+Teams are derived automatically from the participant file's Team column at import time, not formed by hand afterward.
+- Once a file is imported, can a student be moved to a different team (for example, a late substitution), or are teams fixed from that point on?
+Your answer: _______________ *(ref U-41)*
+
+**Q46. Regenerating the big-screen link**
+All big screens share one link, generated at publish, with no login (BSC-001/BSC-002).
+- Should the controller be able to regenerate that link after publish (for example, if it was shared somewhere it shouldn't have been)? If so, what happens to a screen that's already open on the old link — does it just stop updating, or should it show something?
+Your answer: _______________ *(ref U-15)*
+
+---
+
+## For the project owner (not the stakeholder) — CLOSED, stale section corrected 2026-10-01
+
+Both items below were answered on 2026-09-27 and were never removed from this list when they closed — corrected now, not a new gap.
+1. ~~Names and roles of the two developers, the business/client lead and the project owner.~~ **Recorded (I-17):** Sylvin (developer 1), Louise (developer 2), project owner the Sudoku team, business lead Ma Laoshi. See `project-overview.md`, "Client and team".
+2. ~~What the two developers know well, and their experience with real-time applications, PostgreSQL and Redis.~~ **Recorded (I-18):** both junior; Sylvin a little more React, a little Express, some PostgreSQL, a little Redis; Louise a little Express and React, more PostgreSQL; both little real-time, Socket.io the tool they know best. See `project-overview.md`, "Client and team".
 
 ---
 

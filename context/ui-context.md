@@ -5,38 +5,39 @@
 
 ## Theme
 
-**OPEN (U-65).** No visual language is documented: not dark or light, not minimal or rich, and no school brand, colours or logo. The stakeholder has to answer.
+**Default visual style, resolved 2026-10-01** [T] (U-65, **Working Position — not yet a confirmed stakeholder preference**): light theme, minimal (not rich), friendly-but-professional tone, blue primary color with neutral grays (matches Tailwind CSS defaults, already the decided styling tool, BLD-023).
+**School brand (colours, logo): none yet — a placeholder slot is kept for one.** This is not the same as deciding there is no brand; if the stakeholder supplies one later, or dislikes this default once shown, it changes then. Build with this working position in the meantime.
 
 ## Visual references
 
-None recorded.
+None recorded. A school brand slot is kept open (see "Theme" above).
 
-The design comes **after the first slice** (the Individual stage, end to end) [C] (BLD-009). The token tables below are empty structures until the visual language (U-65) is answered. When defined, every component must use named tokens, never raw values.
+The design comes **after the first slice** (the Individual stage, end to end) [C] (BLD-009). A default visual style is now a working position (U-65, above); the token tables below fill in that default, not a stakeholder-confirmed final design. When defined, every component must use named tokens, never raw values.
 
 ## Colors
 
-**OPEN (U-65).** Define the color tokens as named variables.
+**Default tokens, resolved 2026-10-01** [T] (U-65, Working Position, Tailwind CSS defaults — light theme, blue primary, neutral grays). Subject to change once shown to the stakeholder.
 
 | Role | Variable name | Value |
 |---|---|---|
-| Page background | ________ | ________ |
-| Surface | ________ | ________ |
-| Primary text | ________ | ________ |
-| Muted text | ________ | ________ |
-| Primary accent | ________ | ________ |
-| Border | ________ | ________ |
-| Error | ________ | ________ |
-| Success | ________ | ________ |
+| Page background | `--color-bg` | Tailwind `white` / `gray-50` |
+| Surface | `--color-surface` | Tailwind `white` |
+| Primary text | `--color-text` | Tailwind `gray-900` |
+| Muted text | `--color-text-muted` | Tailwind `gray-500` |
+| Primary accent | `--color-primary` | Tailwind `blue-600` |
+| Border | `--color-border` | Tailwind `gray-200` |
+| Error | `--color-error` | Tailwind `red-600` |
+| Success | `--color-success` | Tailwind `green-600` |
 
 (Add levels and states as the UI needs them: background layers, text levels, hover and selected variants, warning and info.)
 
 ## Typography
 
-**OPEN (I-20, U-70).**
+**Font stack, resolved 2026-10-01** [C] (U-70): not a bare `system-ui`. An explicit stack — generic sans-serif first (Latin/English), then CJK fallbacks in order: **PingFang SC** (macOS/iOS), **Hiragino Sans GB** (older macOS), **Microsoft YaHei** (Windows), **Noto Sans CJK SC** (Android/Linux), then `sans-serif`. All already installed on-device — **no custom web-font download**, which matters given the venue Wi-Fi risk (U-56). **Still OPEN (I-20):** the UI component library and icon set.
 
 | Role | Font | Variable |
 |---|---|---|
-| UI text | ________ | ________ |
+| UI text | `sans-serif, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif` (generic sans-serif first for Latin/English, named CJK fallbacks in the given order, generic `sans-serif` as the final catch-all) | `--font-sans` |
 | Code / mono | ________ | ________ |
 
 ## Border Radius / Rounding
@@ -63,29 +64,30 @@ The design comes **after the first slice** (the Individual stage, end to end) [C
 
 ## Component Library
 
-**OPEN (I-20).** [[FILL-BEFORE-UNIT: first UI unit — UI component library = ________ ; icon set = ________ ; fonts (including Chinese) = ________ ; owner: the person completing the context]] The frontend is React with TypeScript [T]. **The styling approach is decided: Tailwind CSS** [T] (BLD-023, decided 2026-09-30) — utility-first classes; every component still uses named design tokens (the token tables above) once the visual language (U-65) is answered, never raw values scattered through the markup. **The frontend build tool is Vite** [T] (BLD-023). No UI component library, icon set or font is documented (team decision); the visual design comes after the first slice [C] (BLD-009). Chinese text rendering on the tablets is undocumented and depends on the tablet model and Quark version (U-06); font and Chinese-display requirements: **OPEN (U-70).**
+**OPEN (I-20).** [[FILL-BEFORE-UNIT: first UI unit — UI component library = ________ ; icon set = ________ ; fonts (including Chinese) = ________ ; owner: the person completing the context]] The frontend is React with TypeScript [T]. **The styling approach is decided: Tailwind CSS** [T] (BLD-023, decided 2026-09-30) — utility-first classes; every component uses the named design tokens defined above (U-65, Working Position), never raw values scattered through the markup. **The frontend build tool is Vite** [T] (BLD-023). No UI component library or icon set is documented yet (team decision). Chinese text rendering must work broadly, since there is **no fixed device or browser target** [C] (U-06, resolved 2026-09-30 — see `architecture.md`, "Devices and network"); **font and Chinese-display requirements, resolved 2026-10-01** [C] (U-70): an explicit font stack with on-device CJK fallbacks, no web-font download — see "Typography" above.
 
 ## Layout patterns
 
 - **Answer screen [C] (UI-001):** landscape; the puzzle on the left, a number pad on the right; previous, next and question-number buttons; a delete button that clears the selected cell; a clear-all button that starts the puzzle over. Delete and clear-all ask for confirmation. Each question's point value is shown [S].
-- Layouts of the judge, controller and big-screen views, and of the login, competition room, preparation, waiting and results screens: **OPEN (U-66).**
+- Layouts of the judge, controller and big-screen views, and of the login, competition room, preparation, waiting and results screens: **deliberately left to the design phase, confirmed 2026-10-01** [C] (U-66) — not blocking now. No mockups or layout preferences given yet; scheduled for after the first slice, same timing already set for the visual design generally [C] (BLD-009).
 
 ## Responsive rules
 
 - The student answer screen is landscape; a "please rotate your device" screen appears when the tablet is held upright [C] (UI-001, PAR-006).
-- Screen sizes and orientations for the learning tablets, the judges' and controller's devices, and the big screens: **OPEN (U-67, with U-06).**
+- **Screen sizes and orientations, resolved 2026-10-01** [C] (U-67): **fully responsive design, no fixed screen-size list** — consistent with `ARCH-027`/U-06 (no fixed device target). The **student answer screen stays landscape-only** (existing rule, UI-001/PAR-006). **Judge/controller screens impose no fixed orientation.** **Big screens are landscape by nature, no special rule needed.**
 
 ## Interaction patterns
 
-- Autosave: every move is saved [C]. What the student sees when an autosave fails: **OPEN (U-69).**
+- Autosave: every move is saved [C]. **Autosave failure feedback, resolved 2026-10-01** [C] (U-69): a discreet, non-blocking indicator (e.g. "reconnecting...") — not an alarming error — while the system retries in the background, consistent with the existing reconnection behavior.
 - Before the final submit the student is asked to confirm; the confirmation states how many puzzles are blank [T]. After submitting, the student sees "accepted" and no immediate score [T].
 - The pause notice for players is a blocking message [T]. On resume, a "3, 2, 1, Start" shows first [T].
 - The controller's warning when a round's points do not add up to 100 (Individual rounds): shown on the setup screen next to the points, updated as typed, and as a summary when starting the stage; never blocking [T].
-- Touch target sizes, contrast and keyboard use: **OPEN (U-69).**
+- **Touch target sizes, contrast and keyboard use, resolved 2026-10-01** [C] (U-69): no formal accessibility standard imposed (no WCAG requirement) — just reasonable practice for the age range (U6–U20) and touch-first devices: touch targets/buttons sized for comfortable tapping (~44px minimum), high contrast, no keyboard dependency.
 
 ## Language
 
-The interface is **English and Chinese**, not one or the other; the translation mechanism must be planned in from the start [C] (ARCH-026). Messages such as the pause notice are written in both languages [T]. Whether the language is per user, per event or both shown at once, and the default: **OPEN (U-68).**
+The interface is **English and Chinese**, not one or the other; the translation mechanism must be planned in from the start [C] (ARCH-026). Messages such as the pause notice are written in both languages [T]. **Language selection, resolved 2026-10-01** [C] (U-68): **per user**, not fixed per event and not shown simultaneously — matches the i18n scaffold already built in Unit 01. **Default language: Chinese.**
+**No third language needed, resolved 2026-10-01** [C] (U-51): English and Chinese stay the only two locales.
 
 ## Pages / Screens
 
@@ -94,10 +96,11 @@ The interface is **English and Chinese**, not one or the other; the translation 
 - Waiting for the next stage: a message that the stage is over and the next stage is coming, with no score or rank [T]. Students see their own score and rank **only when the whole competition reaches `FINISHED`** — not after each round, not after each stage [C] (BLD-029, resolves U-24, U-88). Whether the controller also gets a separate manual "publish" action at that moment is a minor residual detail, not addressed yet.
 
 ### Judge
-- Content (not layout): the status of their own students, the stage, round and remaining time, and the live ranking. Also how many times a student left the answer page, as information only, with no penalty [P]. Can restart one student's round [P]. Judge powers beyond that: **OPEN (U-55).**
+- Content (not layout): the status of their own students, the stage, round and remaining time, and the live ranking. Also how many times a student left the answer page, as information only, with no penalty [P]. Can restart one student's round [P]. **No powers beyond that** [C] (U-55, resolved 2026-09-30): visibility is strictly limited to the judge's assigned range; no participant-editing access; cannot change a score. **Still OPEN (U-39):** what a judge sees specifically in the team stage.
 
 ### Controller
 - Content (not layout): the command list (start a stage, pause, resume, end a round early, finish, reset or rematch, correct scores, control the big screens) [C]; all progress in real time; setup screens for the competition, points and numeric values; assigning judge ranges during setup (changeable during the event) [C] (BLD-008); the "total is not 100" warning per category and round on the setup screen and as a summary when starting the stage [C]; results and export.
+- **Venue Wi-Fi advisory note, resolved 2026-09-30** [C] (U-56): when creating a competition, the controller sees an advisory reminder telling them to ask their network/IT team to properly configure the venue Wi-Fi before the event, to avoid connectivity problems (the venue Wi-Fi, in a room with about 300 tablets, is confirmed as the biggest real-world risk). **UI copy only** — no validation, no blocking behavior, not a functional requirement.
 
 ### Big screen
 - A ranking cycle every 3 minutes, paginated when it does not fit [T]. It includes the final ranking of the stage that just ended while waiting for the next stage [T].
@@ -109,7 +112,7 @@ The interface is **English and Chinese**, not one or the other; the translation 
 
 ## Accessibility requirements
 
-**OPEN (U-69).** Nothing documented.
+**Resolved 2026-10-01** [C] (U-69): no formal accessibility standard imposed (no WCAG requirement) — just reasonable practice for the age range (U6–U20) and touch-first devices. Touch targets/buttons sized for comfortable tapping (~44px minimum); high contrast; no keyboard dependency. See "Interaction patterns" above for the autosave-failure indicator.
 
 ## Icons
 

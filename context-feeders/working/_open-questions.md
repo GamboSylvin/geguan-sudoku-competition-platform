@@ -53,19 +53,19 @@ Pack Q1 to Q4 (points and total, submission, early-finish bonus, late submit) we
 **A5f. Do the categories have their own question files? — RESOLVED 2026-09-30**
 - **Answer:** one file per category, not a shared pool [C] (BLD-016, resolves U-32); each category (e.g. U8, U12) is uploaded and imported separately, even when running the same round in parallel. Recorded in `competition-rules.md` §2 and `architecture.md` Data model.
 
-**A6d. Finished early: awards, and reset after finishing — PARTLY RESOLVED 2026-09-30**
+**A6d. Finished early: awards, and reset after finishing — RESOLVED 2026-10-01**
 - **Reset: resolved, was never actually open.** A finished competition, early or not, cannot continue — already stated directly in the documents (REQUIREMENTS §7.7). Not a separate question.
-- **Awards: still OPEN (U-89, narrowed; U-27).** Working position [T] (BLD-018): scores are still computed and marked as usual, with the "finished early" mark shown alongside; the school decides by hand whether to grant awards. The first reply to this question showed the scenario wasn't understood — re-asking with a fire-alarm-style example spelled out.
-- Answer: _
+- **Awards: resolved 2026-10-01** [C] (U-89, narrowed): whether to grant awards after an early finish is entirely a human, on-site decision by the organizers — not the system's concern. The system's only responsibility is to clearly mark the result "finished early" and correctly calculate the scores of the rounds actually played (already built, RND-007). No special award-tier computation or marking is needed for this case — showing the computed scores and ranking is enough for the organizers to decide whether to award, re-run, or do something else. This narrows the earlier working position (BLD-018/BLD-030), which assumed the system would still compute award tiers.
+- **Does not resolve the separate, general question (U-27):** whether the system computes award tiers at all for a *normal* finish. That stays open.
 
-**A6e. Follow-up: awards after an early finish, re-asked with the scenario (U-89, U-27)** — OPEN, stakeholder (sent as pack Q38)
+**A6e. Follow-up: awards after an early finish, re-asked with the scenario (U-89, U-27)** — RESOLVED 2026-10-01 (sent as pack Q38)
 - Picture the individual stage running, and the controller ends the competition early because of a fire alarm. The school total still gets computed from whatever was played, and the result is marked "finished early". Does the school still give out its usual awards (medals, certificates, whatever it normally does) based on that early-finish result, or are awards withheld when a competition didn't run to its normal end?
-- Answer: _
+- **Answer (2026-10-01)** [C]: see A6d above — entirely a human, on-site decision; the system just marks "finished early" and shows the computed scores/ranking for the rounds played.
 
-**A8. Server restart during a round (I-10)** — Priority 2 — PARTLY RESOLVED (2026-09-26)
+**A8. Server restart during a round (I-10)** — Priority 2 — RESOLVED (2026-09-30)
 - Decided [C] (BLD-007): a replay is acceptable. Round state changes are kept in PostgreSQL and the working grids in Redis with persistence on. After a restart the competition comes back paused, so the controller chooses to resume or replay (see `architecture.md`).
-- **Still OPEN (U-49):** how long an interruption during a round is acceptable.
-- Answer: _
+- **Tolerable interruption length, resolved 2026-09-30** [C] (U-49): no fixed limit. The stakeholder deliberately declined to set one — the controller decides, on the day, whether to resume or replay based on the event's schedule at that moment, regardless of how long the interruption lasted. Both resume and replay must always stay available to the controller; the system must never impose a timeout that disables either path.
+- Answer: given, see above (pack Q15)
 
 **A10. Team round 2, "齐心协力" (U-21)** — Priority 2 — RESOLVED 2026-09-29
 - Earlier answer (2026-09-25): "Don't know." Superseded.
@@ -84,75 +84,71 @@ Pack Q1 to Q4 (points and total, submission, early-finish bonus, late submit) we
 
 ### Priority 3 — confirmations
 
-**A11. Puzzle authoring/generation (U-45; earlier cited as U-43)** — Priority 3 — OPEN
+**A11. Puzzle authoring/generation (U-45; earlier cited as U-43)** — Priority 3 — RESOLVED 2026-10-01
 - Question: Is creating, generating or editing puzzles inside the app in scope or out of scope? Documented [T]: questions are imported from the predefined question Excel (corrected from PDF, 2026-09-30), with no OCR.
-- Suggestion on record: none. The earlier "authoring is out" was withdrawn.
-- Answer: _
+- **Answer (2026-10-01)** [C]: out of scope for this version, confirmed. The system only imports pre-made questions (Excel, per category). No puzzle-authoring or puzzle-editing feature is built — same later-phase category as the reusable Question Bank.
 
-**A12. Export format (U-08)** — Priority 3 — OPEN
+**A12. Export format (U-08)** — Priority 3 — RESOLVED 2026-10-01
 - Question: Confirm exports (scores, rankings, answers) are Excel `.xlsx` files. Any required layout or columns?
-- Suggestion on record (NOT an answer, not used): `.xlsx`.
-- Answer: _
+- **Answer (2026-10-01)** [C]: Excel (`.xlsx`), with scores, ranks and the answer per question — as already planned. No specific layout or column list imposed; the exact columns stay an easy-to-adjust detail, not a system rule.
 
 **A13. Data protection for student data** — Priority 3 — OPEN (Step 4, not yet answered)
 - Question: Are there legal or school rules for storing student data (names, answers, login accounts)? The plan is to delete answers, scores and student accounts 15 days after the event, after the controller exports what it needs. Is that acceptable, and who must approve it?
 - Answer: _
 
-**A14. Written approval of requirements (Step 8)** — Priority 3 — OPEN
+**A14. Written approval of requirements (Step 8)** — Priority 3 — RESOLVED 2026-10-01
 - Question: Will the stakeholder approve the summarized requirements in writing before the specs are written? Who signs, and when?
 - Why it matters: the README makes this a mandatory gate for client projects.
-- Answer: _
+- **Answer (2026-10-01)** [C]: informal process, no formal signature required. The stakeholder/project owner does not sign a formal written requirements document with a deadline — approval happens informally, as the project owner validates each answer along the way (as already done throughout this pack). Consistent with the existing `FILL-BEFORE-CODING.md` section E row, already marked done.
 
-**A15. Third language (U-51)** — Priority 3 — OPEN
+**A15. Third language (U-51)** — Priority 3 — RESOLVED 2026-10-01
 - Question: English and Chinese are both in [C]. Is any other language in or out of scope?
-- Suggestion on record: none. The earlier "a third language is out" was withdrawn.
-- Answer: _
+- **Answer (2026-10-01)** [C]: no third language needed beyond English and Chinese.
 
-**A16. Primary user (U-52)** — Priority 3 — OPEN
-- Question: Which of the four ends (player, controller, judge, big screen) is the primary user of the product?
-- Suggestion on record: none. The documents list four ends and a business goal of reducing the organizers' effort, without naming a primary user. The earlier "the controller" was withdrawn.
-- Answer: _
+**A16. Primary user (U-52)** — Priority 3 — RESOLVED 2026-09-30
+- **Answer:** the controller. The product is mainly built for the controller — the event organizer — per the documented business goal of reducing organizer effort, and because the controller is the only role that touches setup, live control, score corrections and export [C].
+- **Note on scope:** the big screen is not a "user" in the same sense as the other three roles. It is a passive architectural end (see `architecture.md`, "Hub-and-spoke") that only receives server-pushed state and displays it — no person operates it as an actor. Treated as a display target, not a fourth user persona.
+- Recorded in `project-overview.md` ("Target users") and `architecture.md` (new "Hub-and-spoke" note under System boundaries).
 
-**A18. Who opens the big-screen link and hands out slips and tablets (U-54)** — Priority 2 — OPEN
-- Question: All screens open from one shared link. Who opens it on the screens? Who hands out the credential slips and the tablets?
-- Suggestion on record: none. The earlier "the controller opens the link" and "the slips go out with the tablets" were withdrawn.
-- Answer: _
+**A18. Who opens the big-screen link and hands out slips and tablets (U-54)** — Priority 2 — RESOLVED 2026-09-30
+- **Answer:** out of scope for product design [C]. Who physically opens the big-screen link on the day, and who hands out printed credential slips and tablets to students, is pure event-day staffing logistics, not a product decision. The system's behaviour does not depend on who performs these actions: the big-screen link works identically regardless of who opens it, and credential slips/tablets are distributed before login, entirely outside the app. No screen, role or permission needs to account for this.
+- Recorded in `project-overview.md`, flow step 8.
 
-**A19. Judge powers beyond their own students (U-55)** — Priority 2 — OPEN
-- Question: Beyond watching their own students and restarting one student's round, what else can a judge do or see?
-- The register lists this as open.
-- Answer: _
+**A19. Judge powers beyond their own students (U-55)** — Priority 2 — RESOLVED 2026-09-30
+- **Answer:** nothing more, beyond what is already documented (status of assigned students, single-student restart) [C]. See H3 above for the full access-rules answer (also covers U-63).
+- **Still OPEN (U-39):** what a judge sees specifically in the team stage.
 
 ---
 
 ## B. Facts needed from the stakeholder or venue
 
-**B1. Exact participant numbers (U-02)** — OPEN
+**B1. Exact participant numbers (U-02)** — PARTLY RESOLVED 2026-09-30
 - Question: How many students, teams, schools and rooms exactly? The numbers given (about 600–720 students; 11 rooms: 10 of about 30 and one of about 300) do not add up.
 - Why it matters: sizing, test data, and load targets.
-- Suggestion on record (NOT an answer, not used): design and test for about 800 clients. The group 4 answer lists this target as on record under [C] (EVT-001); whether the [C] covers the 800 figure itself is unclear. To verify. The group 5 answer again lists it as [C] (EVT-001), while also listing the load target of about 800 clients and 2 saves per second as an open point (I-05). The two statements are not reconciled.
-- Answer (2026-09-26): **Stakeholder still has to give the exact numbers.** Still OPEN (U-02).
+- Suggestion on record (NOT an answer, not used): design and test for about 800 clients. The group 4 answer lists this target as on record under [C] (EVT-001); whether the [C] covers the 800 figure itself is unclear. The group 5 answer again lists it as [C] (EVT-001), while also listing the load target of about 800 clients and 2 saves per second as an open point (I-05). **Reconciled 2026-09-30, see D5/Q21:** 800 clients is confirmed as the ceiling for this version; the two statements now agree.
+- **Answer (2026-09-30)** [T]: exact numbers not provided; the documented estimates are kept as the working position **deliberately, not a gap** — the design already handles either answer (rooms are just groups of participant numbers; the system is built to about 800 clients regardless of the exact split). No design changes needed; exact numbers can be supplied later without a rebuild.
 - On record [C] (EVT-001): about 600–720 students; 11 rooms (10 of about 30 students and 1 of about 300, which comes to about 600, not 720); at least 30 judges; 10 big screens.
 - Teams: the count is not on record. The rule on record: each school has exactly one team per category. [C] (SCR-004)
-- Schools and categories: not on record. Categories run from U6 to U20 [T], but the documents do not say how many are used.
+- Categories: all of U6 to U20 [T] confirmed in use, per the 2026-09-30 answer.
+- **Still OPEN (U-02, narrowed):** whether a room mixes categories.
 
-**B2. Tablets and browser (U-06)** — OPEN
+**B2. Tablets and browser (U-06)** — RESOLVED 2026-09-30
 - Question: Which tablet model (学练机) and which Quark Browser version? Can we get a test tablet before the event?
 - Why it matters: decides what web features are safe to use.
-- Suggestion on record (NOT an answer, not used): assume a modern Chromium-based Android browser. The earlier "please add a compatibility check" was withdrawn; the documents say only that a test on a real tablet was proposed as a team default.
-- Answer (2026-09-26): **Stakeholder still has to answer.** Still OPEN (U-06).
-- Known: students use Quark Browser on learning tablets (学练机). [C] (PAR-006)
-- OPEN: tablet model; Quark version; whether a test tablet is available before the event.
+- Suggestion on record (NOT an answer, not used, now superseded): assume a modern Chromium-based Android browser.
+- **Answer (2026-09-30)** [C]: no fixed device or browser target. The player-facing app must work broadly across platforms — tablet, phone or computer — not locked to one tablet model or one Quark Browser version. Build as a standard responsive web app, using only widely-supported web APIs, avoiding anything tied to a specific device or browser vendor. This replaces the earlier "modern Chromium-based Android browser" assumption. Testing on a real learning tablet before the event, if one becomes available, is still valuable — it just means the exact model/version is no longer a blocking unknown.
+- Known: students use Quark Browser on learning tablets (学练机) as the primary real-world device. [C] (PAR-006)
 
-**B3. Venue network (U-06)** — OPEN
+**B3. Venue network (U-46)** — DEFERRED 2026-09-30 (deliberately, not blocking)
 - Question: Does the venue have internet? How strong is the Wi-Fi in the room with about 300 tablets, and how many devices can it handle at once? Can we run our own Wi-Fi router or on-site server?
-- Why it matters: the biggest real-world risk. Decides whether the app must work on a local network only.
-- Answer (2026-09-26): **Stakeholder still has to answer all of it.** Still OPEN (U-06, U-46): internet at the venue; Wi-Fi strength in the room with about 300 tablets; how many devices it handles at once; whether we may bring our own router or an on-site server.
+- Why it matters: the biggest real-world risk (already confirmed as such, see D1/Q19). Decides whether the app must work on a local network only.
+- **Answer (2026-09-30)** [C]: deferred to closer to the event date, deliberately non-blocking. The venue's actual internet availability and Wi-Fi strength aren't needed for the current build phase — the priority right now is that the system be reachable from any computer, phone or tablet, for testing and demoing features, not the real venue's network conditions. Does not hold up construction of the current system at all.
+- The router/on-site-server sub-question is carried to B4/Q24 (hosting), where it is addressed in full.
 
-**B4. Hosting (I-03)** — OPEN
+**B4. Hosting (I-03)** — PARTLY RESOLVED 2026-09-30 (a separate near-term plan added; the event-day question itself stays OPEN)
 - Question: Where does the server run on the day: a school server on the venue network, a cloud server in China, or elsewhere? Who is responsible for setting it up and running it? Is an on-site fallback server wanted?
-- Answer (2026-09-26): **Stakeholder still has to answer.** Still OPEN (U-46): where the server runs on the day; who sets it up and runs it; whether an on-site fallback server is wanted.
-- Internal side: hosting and infrastructure are undecided, including the option of an on-site server as a fallback. OPEN (I-03).
+- **Still OPEN (U-46, I-03):** where the server runs on the event day; who sets it up and runs it; whether an on-site fallback server is wanted. The stakeholder's answer (2026-09-30, see Q24) keeps this deliberately deferred until the venue and date are known — not blocking.
+- **New, resolved 2026-09-30** [T] (BLD-031, Working Position, separate from U-46): a two-phase hosting proposal, raised while discussing Q23/Q24, for getting a shareable demo/test link now at no/low cost. **Phase 1 (now, free):** deploy `docker-compose.yml` to Railway (railway.app) — stays awake 24/7 unlike Render's free tier (which sleeps after 15 min and drops WebSocket connections, a problem for the round timer and live ranking); managed PostgreSQL/Redis in a few clicks; ~$5 one-time + $1/month free credit; persistent file storage not in the free tier (fine for a demo, not production). **Phase 2 (event day, paid, ~800+ clients):** a dedicated VM (DigitalOcean Droplet or Hetzner Cloud), same `docker-compose.yml`, no architecture change; billed hourly. Simpler alternative: Render paid tier or Railway Pro. **Phase 1 starts immediately; the Phase 2 choice stays open until U-46 is answered.**
 
 ---
 
@@ -192,34 +188,36 @@ Pack Q1 to Q4 (points and total, submission, early-finish bonus, late submit) we
 
 Asked 2026-09-26 as group 5. Answered with what the documents hold; **every item below still needs the stakeholder** and stays OPEN.
 
-- **D1. Risks (U-56)** — OPEN
+- **D1. Risks (U-56)** — RESOLVED 2026-09-30
   - Question: what are the most risky or complex parts, and what could go wrong on the event day?
-  - Answer (2026-09-26): no risk assessment exists in the documents. Which parts the stakeholder considers most risky: the stakeholder still has to answer (U-56).
-  - Documented technical open points, listed without ranking: venue Wi-Fi, and the tablet model and Quark version, both unknown (U-06); the load target of about 800 clients sending roughly 2 grid saves per second (I-05);
+  - **Answer (2026-09-30)** [C]: the venue Wi-Fi, in the room with about 300 tablets, is confirmed as the biggest real-world risk. Does not change the system design — the platform is already designed and load-tested for about 800 simultaneous clients. Only addition: an advisory reminder note shown to the controller when creating a competition, telling them to ask their network/IT team to properly configure the venue Wi-Fi before the event. UI copy only, no validation, no blocking behavior, not a functional requirement. This also pre-confirmed pack row R13 (Part 6) — no separate round-trip needed there.
+  - Documented technical open points, listed without ranking: the tablet model and Quark version, still unknown (U-06); the load target of about 800 clients sending roughly 2 grid saves per second (I-05);
     a burst of requests at round start if questions are fetched then, with up to 300 tablets in one room (I-06); a server restart mid-round (I-10); a submit that arrives just after the timer ends (I-11).
   - Documented as handled: after a network or server failure the round is replayed, and the stakeholder believes the network is the most likely cause. [C] (ROL-005)
   - Failure cases the team plans to test [T]: disconnect and reconnect, timer expiry, manual and duplicate submission, pause and resume, an early round end, an early finish, many players at once, team scoring, tie-breaks, big-screen synchronization, an invalid participant or question file.
-- **D2. External systems (U-57)** — OPEN
+- **D2. External systems (U-57)** — RESOLVED 2026-09-30
   - Question: does the system need to connect to anything beyond the tablets and screens (for example SMS, email, a school student-ID system)?
-  - Answer (2026-09-26): the documents describe no connection to anything beyond the tablets, the judges' and controller's devices and the big screens, and say nothing about SMS, email or a student-ID system. Whether any is needed: the stakeholder still has to answer (U-57).
-- **D3. Performance (U-58)** — OPEN
+  - **Answer (2026-09-30)** [C] (ARCH-028): no external system integration for this version, confirmed. The system connects only to its own four ends — tablets, judges' and controller's devices, and big screens. No SMS, no email, no external school student-ID system. Credentials are generated and printed internally; no external identity system needed.
+- **D3. Performance (U-58)** — RESOLVED 2026-10-01
   - Question: what response times must hold (ranking update after a submit, all tablets starting together, others)?
   - Documented: an autosave rate of about 2 grid saves per second per player [T]; a 3-minute ranking cycle on the big screen [T]; a provisional ranking that updates immediately when a round result is finalized, without waiting for every participant. [T]
-  - Not defined: how quickly the ranking must update after a submit, how quickly all tablets must start together, any other response time. The stakeholder still has to answer (U-58).
-- **D4. Security, cheating and student data (U-37, U-59)** — OPEN
+  - **Answer (2026-10-01)** [C]: ranking updates within 2 seconds of a submission; all tablets start a round together within 1 second of each other. No other timing requirement identified.
+- **D4. Security, cheating and student data (U-59)** — PARTLY RESOLVED 2026-09-30
   - Question: what must be protected, how should cheating be prevented, and are there legal or school rules for student data?
   - Documented: the server decides the time, the validity of submissions, the score and the rank, and the client is never trusted [T]; one active device per account [P] (PAR-005);
     the judge sees how many times a student left the answer page, as information only, with no penalty [P]; remote-competition security and proctoring are out of scope [S] (ENV-005).
-  - Anti-cheating beyond that: not defined. The register has only a team assumption that it is kept light, not confirmed by the stakeholder. OPEN (U-37).
-  - What must be protected and any legal or school rules for student data: none recorded. The stakeholder still has to answer (U-59). Related facts only: the 15-day deletion [P] (RES-004) and that where the data must live is open (U-46).
-- **D5. Scale (U-60)** — OPEN
+  - **Anti-cheating, resolved 2026-09-30** [C] (SEC-001, resolves U-37): confirmed as-is, nothing added — kept light because the competition is in-person and physically supervised by 30+ judges. No camera, no remote proctoring, no additional lockdown measure.
+  - What must be protected and any legal or school rules for student data: none recorded. **Answer (2026-10-01), see Q27:** explicitly classified as "to be confirmed with the stakeholder" — genuine unknowns, not a team decision. **Still OPEN (U-59).** Related facts only: the 15-day deletion [P] (RES-004) and that where the data must live is open (U-46).
+- **D5. Scale (U-60)** — RESOLVED 2026-09-30
   - Question: is the current client count the ceiling for this version?
   - Documented: about 600–720 students and a design and test target of about 800 clients [C] (EVT-001). The client's original document aimed at 1000+ devices and 3000 concurrent users for the full platform [S].
-  - Not stated: whether 800 is the maximum for this version. The stakeholder still has to answer (U-60).
-- **D6. Reliability and backup plan (U-61, with U-49 and U-46)** — OPEN
+  - **Answer (2026-09-30)** [C]: about 800 simultaneous clients is the ceiling for this version. Not the original 1000+ devices / 3000 concurrent users — that targeted the full multi-tenant platform vision, deferred to a later phase. The real known event scale (~600–720 students) fits comfortably under 800, so the existing load-test target stays as-is (~800 clients at ~2 grid saves/second). This also reconciles the "listed both as [C] and as open" flag on I-05.
+- **D6. Reliability and backup plan (U-61, with U-46)** — PARTLY RESOLVED 2026-09-30
   - Question: how much failure can the event tolerate, and is there a backup plan (on-site server, paper)?
   - Documented: a failed round is replayed [C] (ROL-005); a student's saved grid is restored on reconnection [T]; an on-site server on the venue network is kept as an option [O] (I-03).
-  - Not defined: how much failure the event can tolerate, and whether there is a backup plan. Paper is not mentioned anywhere. The stakeholder still has to answer (U-61).
+  - **Failure-tolerance part, resolved 2026-09-30** [C]: same answer as U-49 (see A8) — no fixed limit, the controller decides resume vs. replay on the day.
+  - **Backup-plan part: still OPEN, deferred by the stakeholder to Q24/U-46** (Part 3, where the server runs on the event day) rather than answered twice.
+  - **U-49 (tolerable interruption length) resolved 2026-09-30, see A8:** no fixed limit — the controller decides resume vs. replay on the day.
 
 ---
 
@@ -327,12 +325,12 @@ If the stakeholder or the venue must clarify it, log it here and return to it at
 - C5 session length (I-16) · H1 final module list (I-01) and how modules communicate (I-08) · I2 component library, icons, fonts (I-20) · J5 environment (I-24) · J9 team sync (I-28) · J1 to J3 build units, order and definition of done · K4 judge and controller credentials (I-30) · C7 status-tag format · E1 the [T] team decisions
 
 **Only the stakeholder can settle it (log and return at the end):**
-- A6e awards after an early finish, re-asked with a scenario (U-89, U-27) · A8 acceptable interruption length (U-49) · A10b regulation numbers for the second team round, in use as working positions (TEM-006 to TEM-008) · K2 extra Excel columns (U-40) · K3 unique solutions (U-90) · K3b the missing complete-solution column, re-asking (U-94) · K6 15-day deletion scope (U-59, U-62)
-- A10b regulation numbers for the second team round (TEM-006 to TEM-008, pack ref R9) · A11 to A19 remaining (authoring U-45, third language U-51, primary user U-52, link and slips U-54, judge powers U-55) · D1 to D6 (U-56 risks, U-57 external systems, U-58 performance, U-59 data protection, U-37 anti-cheating, U-60 scale, U-61 reliability) · H2 and H3 (U-62 archived scores, U-63 read/change rules, U-55 judge powers) · I1 to I6 (U-65 brand and look, U-70 fonts and Chinese display, U-66 layouts, U-67 screen sizes, U-68 language switching, U-69 accessibility) · E2 to E6 re-confirmations
+- A10b regulation numbers for the second team round, in use as working positions (TEM-006 to TEM-008) · K2 extra Excel columns (U-40) · K3 unique solutions (U-90) · K3b the missing complete-solution column, re-ask refined 2026-10-01 (U-94) · K6 15-day deletion scope (U-59, U-62)
+- A12, A13 remaining · A6d/U-27 (whether the system computes award tiers at all, for a normal finish — distinct from the now-resolved early-finish question) · D4 (U-59 data protection) · D6 (U-61 reliability's backup-plan part) · K6 (U-62 narrowed to the participant Excel) · U-39 (judge view in the team stage) · E2 to E6 re-confirmations
 - Client confirmation of the 2026-09-26 decisions: stated as given (see `competition-rules.md`); verify with the project owner.
 
 **Venue or school (stakeholder to obtain):**
-- B1 exact numbers (U-02) · B2 tablets and Quark version (U-06) · B3 venue network
+- B1 whether a room mixes categories (U-02, narrowed; the exact-numbers part is resolved as a deliberate working position) · B3 venue network (U-46, deliberately deferred to closer to the event date, not blocking)
 
 ---
 
@@ -379,20 +377,23 @@ Documented as team decisions [T] (ARCHITECTURE.md §3): one deployable backend o
   - A rematch archives the old scores; it does not delete them (ROL-005).
   - Numeric values are customizable by the controller only, and only before a round starts. The structure and rules stay fixed (SCR-005).
   - Fifteen days after the competition, answers, scores and student accounts are permanently deleted. The setup, the questions and the judges are kept (RES-004).
-- **OPEN (U-62):** whether the archived scores and the correction log are also deleted after 15 days.
+- **Resolved 2026-10-01** [C] (RES-005, U-62 scores/log part): archived scores and the correction log are also deleted after 15 days, same as the rest of the student data. **Still OPEN (U-62, narrowed):** the uploaded participant Excel.
 
-### H3. Access control — OPEN (U-63, with U-55 for judge powers)
-Documented:
+### H3. Access control — RESOLVED 2026-09-30 (U-63, and the general part of U-55). U-39 stays open.
+- **Answer:** player reads only their own answers, no visibility into another player's data. Judge visibility strictly limited to their assigned range, cannot see students outside it. No judge powers beyond what is already documented — status of assigned students (connected, submitted) and single-student restart. Only the controller may add, edit or replace participants during the event; judges have no participant-management access. Only the controller may correct a score; judges cannot change a score. [C]
+- **Still OPEN (U-39):** what a judge sees specifically in the team stage.
+- Recorded in `architecture.md` (Auth and access model), `ui-context.md` (Judge content), `data-model.md` (new "Access rules" section).
+Documented (background, as originally recorded):
 - **Player:** does not start or control anything, calculate rankings, control the display, or create or configure competitions [C] (PL-001). Only members of the competition's participant dataset can take part [T]. One active device per account [P].
 - **Judge:** sees the status of their assigned students and can restart one student's round [P] (ROL-003). A judge can enter only the competition they are assigned to [T].
 - **Controller:** can do everything a judge can, plus event setup, rules and customization [C] (ROL-002). It sees all progress in real time and can take over from a disconnected judge [C] (ROL-004).
   The listed commands are start a stage, pause, resume, end a round early, finish, reset or rematch, correct scores, and control the big screens.
 - **Big screen:** a passive display that receives commands and shows [S]. After the competition it becomes read-only [T].
 
-OPEN: who can read and who can change what is not written as a rule (U-63). For example: whether a player can read only their own answers, whether a judge can read students outside their range, who may edit participants during the event, and whether a judge can change a score.
+(All of the above is now answered — see the RESOLVED line at the top of this section.)
 
-### H4. Roles — RESOLVED (2026-09-26)
-Decided [C] (BLD-004): one role per account; several controller accounts are allowed; one person with several roles is handled as two accounts. This settles U-64 and the "more than one controller" conflict (U-11). Whether "controller" and "administrator" are literally the same role remains assumed [A]. See `architecture.md`.
+### H4. Roles — RESOLVED (2026-09-26; U-11 fully resolved 2026-10-01, Part 6 R12)
+Decided [C] (BLD-004): one role per account; several controller accounts are allowed; one person with several roles is handled as two accounts. This settles U-64 and the "more than one controller" conflict (U-11). **Whether "controller" and "administrator" are the same role, resolved 2026-10-01** [C] (U-11, R12): confirmed — the controller is the administrator. No role exists above the controller in this MVP version; the Super Administrator is a separate, later multi-tenant-phase role (SA-005). See `project-overview.md`, "Target users".
 
 ---
 
@@ -400,15 +401,16 @@ Decided [C] (BLD-004): one role per account; several controller accounts are all
 
 Answered with what the documents hold. **Little is documented for the visual design; almost every item needs the stakeholder or the team.**
 
-### I1. Visual language and school brand (U-65) — OPEN
-Nothing is documented: not dark or light, not minimal or rich, and no school brand, colours or logo. The stakeholder still has to answer.
+### I1. Visual language and school brand (U-65) — RESOLVED 2026-10-01 (Working Position, not stakeholder-confirmed)
+Nothing was documented before: not dark or light, not minimal or rich, and no school brand, colours or logo.
+**Answer (2026-10-01)** [T], a Working Position in active use, not yet a confirmed stakeholder preference: light theme, minimal (not rich), friendly-but-professional tone, blue primary color with neutral grays (matches Tailwind CSS defaults, already the styling tool). No school brand/colors/logo yet — a placeholder slot is kept for one. If the stakeholder dislikes this once shown, it changes then — build with it in the meantime.
 
-### I2. Component library, icons, fonts, Chinese text — OPEN (I-20, U-70)
+### I2. Component library, icons, fonts, Chinese text — PARTLY RESOLVED 2026-10-01 (fonts/U-70 resolved; component library/icons stay OPEN, I-20)
 - Documented: the frontend is React with TypeScript [T] (ARCH-020).
-- Not documented: any UI component library, icon set or font. Internal team decision, OPEN (I-20).
-- Chinese text rendering on the tablets: undocumented. It depends on the tablet model and Quark version, which are unknown (U-06). Whether there are requirements on fonts or Chinese display: the stakeholder still has to answer, OPEN (U-70).
+- Not documented: any UI component library or icon set. Internal team decision, **still OPEN (I-20).**
+- **Font stack and Chinese display, resolved 2026-10-01** [C] (U-70): not a bare `system-ui`. An explicit stack — generic sans-serif first (Latin/English), then CJK fallbacks in order: PingFang SC (macOS/iOS), Hiragino Sans GB (older macOS), Microsoft YaHei (Windows), Noto Sans CJK SC (Android/Linux), then sans-serif. All already installed on-device — no custom web-font download, which matters given the venue Wi-Fi risk (U-56). This makes the tablet-model/Quark-version dependency (U-06) moot for fonts specifically, since the stack only relies on fonts already present on common OSes, not a specific browser.
 
-### I3. Main screens and layouts — partly OPEN (U-66)
+### I3. Main screens and layouts — RESOLVED 2026-10-01 (deliberately deferred, not blocking)
 - **Answer screen [C] (UI-001):** landscape; the puzzle on the left, a number pad on the right; previous, next and question-number buttons; a delete button that clears the selected cell; a clear-all button that starts the puzzle over. Both buttons ask for confirmation. Each question's point value is shown [S].
 - **Player states [T]:** competition room; preparation room with the rules and a countdown; active round; read-only after submitting; waiting. The pause notice for players is a blocking message.
 - **Big-screen content:**
@@ -418,18 +420,20 @@ Nothing is documented: not dark or light, not minimal or rich, and no school bra
   - The controller can show a category leaderboard, the school ranking or a close-up, with optional rotation between categories [C] (BSC-002).
   - Ranking columns: rank, player name, score and completion time for individuals; rank, team name, score and completion time for teams; rank, school and total for the school ranking.
 - **Judge and controller content (not layout):** the judge sees the status of their students, the stage, round and remaining time, and the live ranking. The controller has the command list in ROL-002 to ROL-005.
-- **OPEN (U-66):** the layout of the judge, controller and big screens, and of the login, competition room, preparation, waiting and results screens. The stakeholder still has to answer.
+- **Answer (2026-10-01)** [C] (U-66): left to the design phase, deliberately not blocking now. No mockups or layout preferences given yet for the judge, controller, login, waiting, preparation or results screens — scheduled for the design phase after the first slice (BLD-009).
 
-### I4. Responsive and device rules — partly OPEN (U-67, with U-06)
+### I4. Responsive and device rules — RESOLVED 2026-10-01 (U-67)
 - Documented [C] (UI-001, PAR-006): the students' answer screen is landscape, and a "please rotate your device" screen appears when the tablet is held upright.
-- **OPEN (U-67):** screen sizes and orientations for the learning tablets, the judges' and controller's devices, and the big screens. The stakeholder still has to answer.
+- **Answer (2026-10-01)** [C]: fully responsive design, no fixed screen-size list — consistent with ARCH-027 (no fixed device target). Student answer screen stays landscape-only (existing rule). Judge/controller screens impose no fixed orientation. Big screens are landscape by nature, no special rule needed.
 
-### I5. Bilingual UI — partly OPEN (U-68)
+### I5. Bilingual UI — RESOLVED 2026-10-01 (U-68)
 - Documented [C] (ARCH-026): the interface is English and Chinese, not one or the other, and the translation mechanism must be planned in from the start. Messages such as the pause notice are to be written in both languages [T].
-- **OPEN (U-68):** whether the language is per user, per event, or both shown at once, and which is the default. The stakeholder still has to answer.
+- **Answer (2026-10-01)** [C]: language is chosen **per user**, not fixed per event and not shown simultaneously — matches the i18n scaffold already built in Unit 01. **Default language: Chinese.**
 
-### I6. Accessibility and interaction — OPEN (U-69)
-Nothing is documented: touch target sizes, contrast, keyboard use, or what the student sees when an autosave fails. The stakeholder still has to answer.
+### I6. Accessibility and interaction — RESOLVED 2026-10-01 (U-69)
+Nothing was documented before: touch target sizes, contrast, keyboard use, or what the student sees when an autosave fails.
+**Answer (2026-10-01)** [C]: no formal accessibility standard imposed (no WCAG requirement) — just reasonable practice for the age range (U6–U20) and touch-first devices: touch targets/buttons sized for comfortable tapping (~44px minimum), high contrast, no keyboard dependency.
+Autosave failure: a discreet, non-blocking indicator (e.g. "reconnecting...") — not an alarming error — while the system retries in the background, consistent with existing reconnection behavior.
 
 ---
 
@@ -473,18 +477,20 @@ Resolved 2026-09-26: git branching, pull requests, CI and review (I-25 to I-27, 
 **K1. The sample question Excel and participant Excel (U-01)** — RESOLVED (partly) 2026-09-30
 - **Answer:** the material has been examined; the question import file is **Excel (.xlsx), not PDF** [C] (BLD-012, resolves U-93), which corrects the earlier "sample question PDF" wording throughout. Physical files are **still not placed in `context/samples/`**; that placement step (renamed `question-sample.xlsx`) remains open as pack item B1 in `FILL-BEFORE-CODING.md`.
 
-**K2. Extra participant Excel columns (U-40)** — OPEN
+**K2. Extra participant Excel columns (U-40)** — OPEN, sent as pack Q44 (2026-10-01)
 - The columns are Name, School, Category, Team. Are there any others?
 - Answer: _
 
-**K3. Unique solution of every puzzle (U-90)** — OPEN
+**K3. Unique solution of every puzzle (U-90)** — OPEN, sent as pack Q39 (2026-10-01)
 - The answer check compares the submitted grid with the solution stored with the question and relies on every puzzle having a unique solution. Is that guaranteed?
 - Answer: _
 
-**K3b. The missing complete-solution column (U-94)** — OPEN, re-asking, stakeholder (sent as pack Q37)
-- The source files have no column for the complete solved grid. The stakeholder's reply ("需要一个") was too short to read as a full answer. Working position in the meantime [T] (BLD-014): ask the source to add one more column, the complete solved grid (or at minimum the given cells) as plain text, in the same array format as the existing answer column; until it exists, hand-transcribe the given cells for a small starter set to build and test the answer-check unit, and keep general automated import of the solution blocked.
-- Re-asked question: could you say more clearly — should the source add a "solution" column to the question Excel with the fully solved grid written out cell by cell, the same way the existing answer column is written? If not that, what would work instead?
-- Answer: _
+**K3b. The missing complete-solution column (U-94)** — STILL OPEN, re-ask refined 2026-10-01 (not yet answered by the stakeholder — this is a technical finding sharpening what to ask)
+- The source files have no column for the complete solved grid. The stakeholder's reply ("需要一个") was too short to read as a full answer.
+- **Technical finding, 2026-10-01:** there is no way to build an interactive, correctly-locked Sudoku grid using only what the sample files provide today. The **given (pre-filled) cells exist only as an embedded picture, not as text** — and OCR is ruled out by project rule (BLD-010/BLD-011's no-OCR principle). This is a deeper, more fundamental blocker than the missing solution column alone: even the puzzle's starting state can't be automatically imported.
+- **Refined question to carry back to the stakeholder:** can the real production files include the given (pre-filled) cells as structured text — the same way the answer column already is — not just as an embedded image?
+- **Interim plan stays in place while waiting** [T] (BLD-026): manual transcription of the given cells for a small starter set, to build and test the answer-check unit. **General automated import stays blocked** until a clear answer comes back.
+- Answer: _ (refined question not yet sent/answered)
 
 **K4. Format of judge and controller credentials (I-30)** — OPEN
 - Participants use the participant number and a short random password. What do judges and controllers use?
@@ -494,9 +500,10 @@ Resolved 2026-09-26: git branching, pull requests, CI and review (I-25 to I-27, 
 - The requirements list them as needed before coding (REQUIREMENTS §12), but no file here describes them, and the 2026-09-26 decisions did not address them.
 - Answer: _
 
-**K6. Does the 15-day deletion cover the uploaded participant Excel? (U-59, U-62)** — OPEN
-- Also open: whether archived scores and the correction log follow the 15-day deletion.
+**K6. Does the 15-day deletion cover the uploaded participant Excel? (U-62, narrowed)** — OPEN
+- **Resolved 2026-10-01, see Q27:** archived scores and the correction log DO follow the 15-day deletion [C] (RES-005). Only the participant Excel question remains open here.
 - Answer: _
+- **Separate, still OPEN (U-59):** legal/school rules for student data, and who must approve the deletion rule — explicitly classified by the stakeholder as genuine unknowns, not a team decision.
 
 **K7. Blank on purpose: TBD — to be decided by the project owner**
 - Backend language and framework (I-02), the developers' skills (I-18), names and roles (I-17), who builds what (I-23), and where the server runs on the event day (I-03, U-46). Do not choose a value.
@@ -507,6 +514,34 @@ Resolved 2026-09-26: git branching, pull requests, CI and review (I-25 to I-27, 
 
 ---
 
+- **2026-10-01, pack Q27 (student data) received:** archived scores and the correction log confirmed [C] (RES-005, resolves U-62's scores/log part) — also deleted after 15 days, same as other student data. **Legal/school data rules and who approves the deletion rule: explicitly left open** [O] (U-59) — the stakeholder classified these as genuine unknowns, not a team decision. A proposed daily-email reminder to the controller in the last 3 days before deletion was flagged as conflicting with ARCH-028 ("no external system integration... no email", Q25). Recorded in `competition-rules.md` §7/§8, `architecture.md` (Storage model), `data-model.md` (`PurgeSchedule`, `AuditLog`).
+- **2026-10-01, Parts 3, 4 and 5 of the pack (Q20 to Q35) closed on the project side.** Re-verified every answer against `context/` (no stale OPEN tags found); genuinely-still-open narrowed items (U-02 room mixing, U-46 venue/hosting, U-59 legal rules, U-62 participant Excel, U-65 not stakeholder-confirmed, U-66 deferred to design) are correctly flagged, not dropped. The pack's sixteen question blocks were replaced with three closure summaries.
+- **2026-10-01, pack Q38 (awards after an early finish) received:** resolved [C] (U-89, narrowed) — entirely a human, on-site decision by the organizers; the system's only job is to mark "finished early" and compute scores for the rounds actually played (already built, RND-007), no special award-tier computation. Narrows the earlier BLD-018/BLD-030 working position. **Does not resolve U-27** (whether the system computes award tiers at all for a normal finish) — stays open, separate. No follow-up questions were needed. Recorded in `competition-rules.md` (§3), `data-model.md` (`Competition.finishedEarly`), `FILL-BEFORE-CODING.md`, `specs/00-build-plan.md`.
+- **2026-10-01, pack Q37 (missing solution column) re-examined — still open, not resolved.** Technical finding: no way to build an interactive, correctly-locked grid from the sample files as they stand — the given (pre-filled) cells exist only as an embedded picture, not text, and OCR is ruled out. Deeper than the originally-asked "missing solution column" alone. Carried back to the stakeholder with a refined question: can production files supply the given cells as structured text too? Interim plan unchanged (BLD-026): hand-transcribe a starter set; general automated import stays blocked. Recorded in `architecture.md`, `competition-rules.md`, `data-model.md`, `samples/README.md`, and K3b above.
+- **2026-10-01, pack Q36 (written approval, Part 7) received:** informal process, no formal signature required [C] (A14) — approval happens as the project owner validates each answer along the way, consistent with the existing `FILL-BEFORE-CODING.md` section E row (already marked done). No follow-up questions were needed. Recorded in `FILL-BEFORE-CODING.md` (section E last row, and header note) and `progress-tracker.md` ("Minimum to start coding").
+- **2026-10-01, pack Q35 (accessibility and error feedback) received:** no formal accessibility standard imposed, confirmed [C] (U-69) — no WCAG requirement, reasonable practice for the age range (U6–U20) and touch-first devices: ~44px touch targets, high contrast, no keyboard dependency. Autosave-failure feedback: a discreet, non-blocking "reconnecting..." indicator, not an alarming error, while the system retries in the background. No follow-up questions were needed. Recorded in `ui-context.md` (Interaction patterns, Accessibility requirements). **Every question in Parts 3, 4 and 5 (Q20-Q35) now has an answer** — none of the three parts has been formally closed out (summary-replaced) yet.
+- **2026-10-01, pack Q34 (screen sizes and orientations) received:** fully responsive design, no fixed screen-size list, confirmed [C] (U-67) — consistent with ARCH-027/U-06. Student answer screen stays landscape-only (existing rule); judge/controller screens impose no fixed orientation; big screens are landscape by nature, no special rule needed. No follow-up questions were needed. Recorded in `ui-context.md` (Responsive rules).
+- **2026-10-01, pack Q33 (layouts) received:** left to the design phase, deliberately not blocking now [C] (U-66) — no mockups or layout preferences given yet for the judge, controller, login, waiting, preparation or results screens; scheduled for after the first slice (BLD-009), same timing already set for the visual design generally. No follow-up questions were needed. Recorded in `ui-context.md` (Layout patterns) and `FILL-BEFORE-CODING.md`.
+- **2026-10-01, pack Q32 (fonts and Chinese display) received:** font stack confirmed [C] (U-70) — not a bare `system-ui`; explicit stack with generic sans-serif first then named CJK fallbacks in order (PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC), then `sans-serif`. All on-device already, no web-font download — relevant given the venue Wi-Fi risk (U-56, Q19). No follow-up questions were needed. Recorded in `ui-context.md` (Typography, Component Library) and `architecture.md` (I-20 row).
+- **2026-10-01, pack Q31 (look and brand) received:** default visual style set as a **Working Position, explicitly not yet a confirmed stakeholder preference** [T] (U-65): light theme, minimal, friendly-but-professional, blue primary with neutral grays (Tailwind CSS defaults). No school brand/colors/logo yet — a placeholder slot kept, not the same as deciding there is none. Revisable once shown to the stakeholder. No follow-up questions were needed. Recorded in `ui-context.md` (Theme, Visual references, Colors table filled with Tailwind-default tokens) and `architecture.md` (I-20 row).
+- **2026-10-01, pack Q30 (third language) received:** no third language needed beyond English and Chinese [C] (U-51). Also resolves the bilingual-UI question (U-68, raised separately in section I but answered together here): language is chosen per user, not fixed per event and not shown simultaneously — matches the i18n scaffold already built in Unit 01; default language Chinese. No follow-up questions were needed. Recorded in `ui-context.md` (Language), `project-overview.md` (Open scope questions), `specs/01-foundation.md` (confirming the existing scaffold needs no change).
+- **2026-10-01, pack Q29 (creating puzzles) received:** puzzle authoring/generation/editing confirmed out of scope [C] (U-45) — only pre-made questions are imported (Excel, per category); same later-phase category as the reusable Question Bank. No follow-up questions were needed. Recorded in `project-overview.md` ("Out of scope", "Open scope questions"). While here, also corrected a stale cross-reference in the same list: the second team round line still said "OPEN (U-05, U-21)" though it was resolved 2026-09-29 (TEM-005) — fixed.
+- **2026-10-01, pack Q28 (export) received:** export format confirmed [C] (U-08) — Excel (.xlsx), with scores, ranks and the answer per question, as already planned. No specific layout or column list imposed; the exact columns stay an easy-to-adjust detail, not a system rule. No follow-up questions were needed. Recorded in `competition-rules.md` §7 and `data-model.md` (`StoredFile`, and removed from "Open points flagged in this model").
+- **2026-10-01, the email-reminder flag withdrawn:** the project owner clarified the email-reminder idea was their own (not the stakeholder's) and withdrew it, parking it as a possible later-phase [L] addition. No conflict remains; ARCH-028 stands unchanged.
+- **2026-10-01, pack Q26 (speed requirements) received:** ranking updates within 2 seconds of a submission; all tablets start a round together within 1 second of each other [C] (U-58). No other timing requirement identified. No follow-up questions were needed. Recorded in `architecture.md` (Non-functional requirements, Performance).
+- **2026-09-30, pack Q25 (external systems) received:** no external system integration for this version, confirmed [C] (ARCH-028, resolves U-57) — the system connects only to its own four ends (tablets, judge/controller devices, big screens); no SMS, email or external student-ID system; credentials generated and printed internally. No follow-up questions were needed. Recorded in `architecture.md` ("External services"). Note: this exact answer, word for word, was already sitting in `context-feeders/decisions/project-decisions.md` as ARCH-028 ("Confirmed 2026-09-30") and in `unmade-decisions.md` as "ANSWERED, pending builder review" before this chat turn — a second convergence of the same kind seen with Q17/SEC-001, Q21/EVT-004 and Q22/ARCH-027.
+- **2026-09-30, pack Q24 (where the system runs) received:** two-phase hosting proposal [T] (BLD-031, Working Position, separate from U-46) — Phase 1 (now, free): deploy to Railway for a shareable demo/test link, stays awake 24/7 unlike Render's free tier. Phase 2 (event day, paid, ~800+ clients): a dedicated VM (DigitalOcean/Hetzner), same `docker-compose.yml`, billed hourly. Phase 1 starts immediately; the final Phase 2 choice stays open until U-46 is answered — does not resolve U-46, a separate near-term need. No follow-up questions were needed. Recorded in `architecture.md` (Stack table — new Hosting (demo/testing) row, Open technical decisions). This also matched `context-feeders/decisions/project-decisions.md`'s BLD-031 row almost verbatim, and `progress-tracker.md`'s "Next Up" item 6 already described the same Railway plan — consistent, not a conflict.
+- **2026-09-30, pack Q23 (venue network) received:** deferred to closer to the event date, deliberately non-blocking [C] (U-46) — not needed for the current build phase; the priority right now is that the system be reachable from any computer, phone or tablet for testing and demoing, not the real venue's network conditions. The router/on-site-server sub-question carried to Q24 (hosting). Does not hold up construction at all. No follow-up questions were needed. Recorded in `architecture.md` (Devices and network) and `FILL-BEFORE-CODING.md`.
+- **2026-09-30, pack Q22 (tablet model and browser) received:** no fixed device or browser target [C] (U-06) — the player-facing app must work broadly across platforms, built as a standard responsive web app using only widely-supported web APIs. Replaces the earlier "modern Chromium-based Android browser" working assumption. Testing on a real tablet before the event, if available, is still worthwhile, just no longer a blocking unknown. No follow-up questions were needed. Recorded in `architecture.md` (Devices and network, Risks, and removed from the open technical decisions table), `project-overview.md` (Target users), `ui-context.md` (Component Library, Responsive rules) and `FILL-BEFORE-CODING.md`.
+- **2026-09-30, pack Q21 (maximum number of devices) received:** 800 simultaneous clients confirmed as the ceiling for this version [C] (U-60) — not the client document's original 1000+ devices / 3000 concurrent users, which targeted the full multi-tenant platform vision, deferred to a later phase. The real known event scale (~600–720 students) fits comfortably under 800, so the existing load-test target stays as-is (~800 clients at ~2 grid saves/second). Also reconciles I-05's "listed both as [C] and as open" flag. No follow-up questions were needed. Recorded in `architecture.md` (Scalability, and removed from the open technical decisions table) and `FILL-BEFORE-CODING.md`.
+- **2026-09-30, pack Q20 (exact numbers) received:** exact numbers not provided; documented estimates kept as the working position deliberately, not a gap — the design already handles either answer (rooms are just groups of participant numbers, the system is built to ~800 clients regardless of the split). No design changes needed; real numbers can be supplied later with no rebuild. Narrows U-02 to just "whether a room mixes categories," which stays open. No follow-up questions were needed. Recorded in `competition-rules.md`, `data-model.md` and `progress-tracker.md` (Known Issues).
+- **2026-09-30, pack Q19 (biggest risks) received:** the venue Wi-Fi (room with ~300 tablets) confirmed as the biggest real-world risk [C] (U-56). Does not change the system design — already designed and load-tested for ~800 clients. Only addition: an advisory reminder note to the controller when creating a competition, telling them to ask their network/IT team to configure the venue Wi-Fi properly. UI copy only, not a functional requirement. Also pre-confirmed pack row R13 (Part 6) directly, no separate round-trip needed there. No follow-up questions were needed. Recorded in `architecture.md` (Risks) and `ui-context.md` (Controller content, new advisory-note line).
+- **2026-09-30, pack Q18 (failure tolerance and backup plan) received:** failure-tolerance part answered by pointing to the U-49/Q15 answer (no fixed limit, resume and replay always available, organizer decides on the day) — same decision, not a new one. Backup-plan part (on-site server, paper, etc.) deliberately deferred to Q24 (Part 3, U-46), which asks it in more depth alongside where the server runs on the day; will be answered once there, not twice. No follow-up questions were needed. Recorded in `architecture.md` (Reliability, split into a resolved failure-tolerance line and a still-open backup-plan line) and `FILL-BEFORE-CODING.md`.
+- **2026-09-30, pack Q17 (anti-cheating) received:** confirmed as-is, nothing added [C] (SEC-001, resolves U-37) — server-owned time and answers, one active device per account, the judge's page-leave count (informational, no penalty) are enough; no camera, no remote proctoring, no additional lockdown, since the competition is in-person and physically supervised by 30+ judges in the room. No follow-up questions were needed. Recorded in `architecture.md` (Security and student data). Note: `context-feeders/requirements/REQUIREMENTS.md` §10 and `context-feeders/decisions/unmade-decisions.md` already carried this same answer under SEC-001, marked "pending builder review" — this matches it exactly, no conflict.
+- **2026-09-30, pack Q15 (server stops during a round — tolerable interruption length) received:** no fixed limit [C] (U-49) — the stakeholder deliberately declined to set a time cap; the controller decides, on the day, whether to resume or replay based on the event's schedule at that moment, regardless of how long the interruption lasted. Hard constraint: both resume and replay must always stay available to the controller; the system must never impose a timeout that disables either path. No schema change. No follow-up questions were needed. Recorded in `architecture.md`, `competition-rules.md`, `data-model.md` (`CompetitionRuntimeState` note: no timeout field added).
+- **2026-09-30, pack Q12 (what each role can see and change) received:** access rules resolved [C] (U-63, and the general part of U-55): player reads only own answers; judge strictly limited to assigned range, no powers beyond status viewing and single-student restart; only the controller edits participants during the event or corrects a score. `U-39` (judge view in the team stage) stays open. No follow-up questions were needed. Recorded in `architecture.md`, `ui-context.md`, `data-model.md` (new "Access rules" section, added on top of the approved schema, no field/entity change).
+- **2026-09-30, pack Q11 (big screens, slips and tablets on the day) received:** out of scope for product design — pure event-day staffing logistics, no screen, role or permission accounts for it [C] (U-54). No follow-up questions were needed. Recorded in `project-overview.md` (flow step 8) and this pack.
+- **2026-09-30, pack Q9 (primary user, Part 2) received:** the controller, per the business goal and the roles only it touches (setup, live control, corrections, export) [C] (U-52). The big screen clarified as a passive display target, not a fourth user persona (architectural "Hub-and-spoke" note added to `architecture.md`). No follow-up questions were needed. Recorded in `project-overview.md`, `architecture.md`, `progress-tracker.md` and this pack.
 - **2026-09-30, Part 1's remaining five items received (import format, points, solution column, categories, question files per category, score visibility, awards/reset for an early finish, second team round numbers):**
   - ✅ **Resolved, [C], stakeholder-confirmed:** question import format is Excel not PDF (A1c, BLD-012, U-93); points stay fully customizable everywhere (BLD-013, U-92); categories are U6 to U20, the original scheme (BLD-015, U-95); one question file per category, not shared (A5f, BLD-016, U-32); students see scores only when the competition reaches `FINISHED` (A4d, BLD-017, U-24, U-88); reset after finishing is never allowed, already documented, not actually open (part of A6d).
   - 🔶 **Working position, [T], not confirmed — re-asking:** the missing complete-solution column, stakeholder's reply too short (K3b, BLD-014, U-94); awards after an early finish, stakeholder didn't understand the question, re-asked with a scenario (A6e, BLD-018, U-89 narrowed, U-27).
@@ -516,4 +551,4 @@ Resolved 2026-09-26: git branching, pull requests, CI and review (I-25 to I-27, 
 
 ## Not yet asked
 
-Nothing. All 7 interview steps and the workflow items from the README checklist have been asked. Step 8 (written requirements confirmation, A14) and the skeleton checkpoint are still to come.
+Nothing. All 7 interview steps and the workflow items from the README checklist have been asked. **Step 8 (written requirements confirmation, A14) was asked and resolved 2026-10-01** (see A14 above, and pack Q36): informal process, no formal signature. The skeleton checkpoint is done too (Unit 1 scaffold built 2026-09-30).
