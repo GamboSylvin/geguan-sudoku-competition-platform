@@ -37,7 +37,7 @@ Coding may start when every A item is ticked **and** the approvals in section E 
 | # | What to fill | Unit | Where | Done |
 |---|---|---|---|---|
 | B1 | **Sample files placed** in `context/samples/`: `participants-sample.xlsx` and `question-sample.xlsx` (**Excel, not PDF** — corrected 2026-09-30) | Import units | `samples/README.md`; marker in `architecture.md` (Import formats) | [ ] |
-| B2 | From the samples: **extra participant Excel columns** = ________ (U-40); **is a unique solution guaranteed for every puzzle** = ________ (U-90) | Import; answer check | marker in `architecture.md` (Import formats) | [ ] |
+| B2 | From the samples: **extra participant Excel columns** — Working Position (U-40, pending confirmation; see pack Q44): any extra columns are ignored, no error. **Unique solution guaranteed for every puzzle**: confirmed yes (U-90) | Import; answer check | marker in `architecture.md` (Import formats) | [x] |
 | B3 | **Session length** = ________ (I-16); **judge and controller credential format** = ________ (I-30) | Authentication | marker in `architecture.md` (Auth and access model) | [ ] |
 | B4 | **UI component library** = ________ ; **icon set** = ________ ; **fonts, including Chinese** = ________ (I-20) | First UI unit | marker in `ui-context.md` | [ ] |
 
@@ -51,7 +51,7 @@ Coding may start when every A item is ticked **and** the approvals in section E 
 
 These are still open. They are being answered through the question process, and the context builder updates the files. Do not fill them. If a unit depends on one, stop and report it.
 
-- Whether the system computes award tiers at all, for a normal finish (U-27; the early-finish part is resolved, U-89) · the missing complete-solution column (U-94) · whether the participant Excel follows the 15-day deletion (U-62, narrowed; the scores/correction-log part is resolved, RES-005) · legal/school data rules and deletion-rule approval (U-59)
+- The missing complete-solution column (U-94) · whether the participant Excel follows the 15-day deletion (U-62, narrowed; the scores/correction-log part is resolved, RES-005)
 - The venue network (U-46) — deliberately deferred to closer to the event date, not blocking (see `architecture.md`, "Devices and network") · reliability (U-61's backup-plan part — the failure-tolerance part is resolved, see `architecture.md`)
 - Layouts (U-66) — deliberately left to the design phase after the first slice, confirmed not blocking (BLD-009)
 - Real numbers for the second team round (TEM-006 to TEM-008): working positions are already in use for building; replace later if the regulation gives different numbers — no rebuild needed, only re-typing values

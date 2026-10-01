@@ -6,7 +6,7 @@
 
 ## Terms
 
-- An **event** (competition) has **categories** (U6 to U20 [T]). **Exact numbers, resolved 2026-09-30** [T] (U-02): the stakeholder did not supply exact student/team/school/room counts and confirmed this is deliberate, not a gap — the documented estimates (about 600–720 students, 11 rooms, at least 30 judges, 10 big screens, one team per school per category, all categories U6 to U20 in use) stay the working position; the design already handles either answer and needs no rebuild if real numbers arrive later. **Still OPEN (U-02):** whether a room mixes categories.
+- An **event** (competition) has **categories** (U6 to U20 [T]). **Exact numbers, resolved 2026-09-30** [T] (U-02): the stakeholder did not supply exact student/team/school/room counts and confirmed this is deliberate, not a gap — the documented estimates (about 600–720 students, 11 rooms, at least 30 judges, 10 big screens, one team per school per category, all categories U6 to U20 in use) stay the working position; the design already handles either answer and needs no rebuild if real numbers arrive later. **Whether a room mixes categories, resolved 2026-10-01** [C] (EVT-005): no design impact either way — the system doesn't model "room" as an entity tied to category, a room is simply a physical grouping of participant numbers. Whichever way organizers assign rooms, nothing changes in what gets built.
 - A category has two **stages**: Individual and Team. Each stage has **2 rounds**. An Individual round has **6 puzzles**.
 - Structure (stages, rounds, order) is predefined and not admin-defined [C] (SCR-005, re-confirmed 2026-10-01, Part 6 R7).
 
@@ -55,7 +55,7 @@
   - **Finishing early:** the running round is ended the same way as an early end, then the competition finishes. Unplayed rounds have no scores and add nothing (the same as counting them as 0); the school total is the individual part x the coefficient plus the team part actually played. The running round is scored on the students' latest saved state. The results and the export carry a visible **"finished early"** mark. It is in the same finished state as a normal finish: the controller keeps access to the results and can export them. It **cannot be resumed**; for an interruption such as a fire alarm the controller uses **pause** (stops the timer, preserves the exact state) and then resumes [C] (RND-007).
   - **Reset after finishing: settled, not open.** A finished competition, early or not, **cannot continue** — this is the rule already stated above (RND-007, from REQUIREMENTS §7.7), not a separate open question.
   - **Awards after an early finish, resolved 2026-10-01** [C] (U-89, narrowed): whether to grant awards after an early finish is entirely a human, on-site decision by the organizers — not the system's concern. The system's only responsibility is to clearly mark the result "finished early" and correctly calculate the scores of the rounds actually played (already built, RND-007). **No special award-tier computation or marking is needed for this case** — showing the computed scores and ranking is enough for the organizers to decide whether to award, re-run, or do something else. This narrows the earlier working position (BLD-030), which assumed the system would still compute award tiers.
-  - **Still OPEN, separate and general (U-27):** whether the system computes award tiers at all, for a normal (not-early) finish. Not resolved by the answer above.
+  - **Award tiers, general case, resolved 2026-10-01** [C] (RES-007, resolves U-27, extends BLD-030): no award-tier computation needed, for any finish (normal or early). The system shows computed scores and the final ranking — that's sufficient for the school to apply its own award regulation (top 8 certificate, top 3 medal, etc.) by hand. The system doesn't need to know or encode the award rules, which can change independently of the product.
 
 ## 4. Player rules (Individual stage)
 
@@ -70,7 +70,7 @@
 ## 5. Scoring
 
 - **All-or-nothing per puzzle:** a wrong or blank cell means 0 for that puzzle [C] (SCR-001). Points are set per question, by difficulty [C] (SCR-003). Scores are stored as integers.
-- **Answer check** [C] (BLD-010): the submitted grid is compared with the **solution stored with the question**, with no rule checker per variant. This relies on every puzzle having a **unique solution**, which is **OPEN (U-90)**.
+- **Answer check** [C] (BLD-010): the submitted grid is compared with the **solution stored with the question**, with no rule checker per variant. **Unique solution, resolved 2026-10-01** [C] (U-90): every puzzle has exactly one valid solution, confirmed directly by the stakeholder.
 - **Early-finish bonus** (Individual stage only; team rounds have none [C]) [C] (SCR-008 to SCR-011):
   - Applies in **both Individual rounds** at **3 points per whole minute** early, customizable by the controller.
   - Earned when the student **submits before time ends** with **every puzzle of the round fully correct**, counted in whole minutes (1 min 30 s early counts as 1).
@@ -94,15 +94,13 @@
 - **15 days** after the competition, answers, scores and student accounts are permanently deleted; the setup, the questions and the judges are kept [C] (RES-004, re-confirmed 2026-10-01, Part 6 R8).
 - **Archived scores and the correction log, resolved 2026-10-01** [C] (RES-005, resolves U-62's scores/log part): also deleted after 15 days, same as the other student data. *(A daily-email reminder to the controller before deletion was considered — the user's own idea, not the stakeholder's — and withdrawn 2026-10-01; parked as a possible later-phase addition, not built now.)*
 - **Still OPEN (U-62, narrowed):** whether the uploaded participant Excel follows the 15-day deletion — not addressed by this answer.
-- **Still OPEN (U-59):** legal/school rules for student data, and who must approve the deletion rule — explicitly classified as genuine unknowns, a team decision would not be appropriate here.
+- **Legal/school rules for student data, resolved 2026-10-01** [C] (RES-008): no special protection required — participants provide it voluntarily, the organizer assumes no legal liability. The existing 15-day deletion plan (RES-004) stands as-is.
 
 ## 8. Open items that block implementation of these rules
 
 | Item | Open point |
 |---|---|
-| U-27 | Whether the system computes award tiers at all, for a normal finish (early-finish part resolved, U-89; reset is already settled: never) |
 | U-94 | The given cells are image-only, not text — deeper than just the missing solution column; re-ask refined 2026-10-01 |
 | TEM-006 to TEM-008 | Working positions (puzzle count 3, time 30 min, points 20/puzzle) for the second team round, not sourced; replace with the 4th Zhejiang league regulation numbers once available |
-| U-90 | Whether every puzzle has a unique solution |
 | U-62 | Whether the uploaded participant Excel follows the 15-day deletion (scores/correction-log part resolved 2026-10-01, RES-005) |
 | U-59 | Legal/school rules for student data, and who must approve the deletion rule |

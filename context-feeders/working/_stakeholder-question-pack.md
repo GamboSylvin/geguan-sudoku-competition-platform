@@ -56,10 +56,10 @@ Every question in this part has an answer; some deliberately leave a piece open 
 - **Q24** (hosting): two-phase plan (**BLD-031**, Working Position) — Phase 1 (Railway, now) resolved; Phase 2 (event day) **stays open until U-46 is answered**.
 - **Q25** (external systems): none needed, confirmed — **U-57**.
 - **Q26** (speed): response-time targets confirmed (ranking ≤2s, tablets start together ≤1s) — **U-58**.
-- **Q27** (student data): archived scores/correction log also purged after 15 days (**RES-005**) — narrows **U-62** to just the participant Excel, which **stays open**; **U-59** (legal rules, approval) **stays open**, explicitly classified as a genuine unknown. A proposed email-reminder add-on was raised and then withdrawn by the user (their own idea, not the stakeholder's) — parked as a later-phase maybe, no conflict remains.
+- **Q27** (student data): archived scores/correction log also purged after 15 days (**RES-005**) — narrows **U-62** to just the participant Excel, which **stays open**. **U-59** (legal rules), resolved 2026-10-01: no special protection required — student data is provided voluntarily, the organizer assumes no legal liability, the existing 15-day plan stands as-is (**RES-008**). A proposed email-reminder add-on was raised and then withdrawn by the user (their own idea, not the stakeholder's) — parked as a later-phase maybe, no conflict remains.
 - **Q28** (export): Excel format confirmed, no fixed column list — **U-08**.
 
-**Still open after this part:** U-02 (room mixing), U-46 (venue network / event-day hosting, Phase 2), U-59 (legal data rules), U-62 (narrowed to the participant Excel). All deliberate, none a gap.
+**Still open after this part:** U-46 (venue network / event-day hosting, Phase 2), U-62 (narrowed to the participant Excel). All deliberate, none a gap. (U-02 and U-59 are resolved as of 2026-10-01.)
 
 ---
 
@@ -140,10 +140,10 @@ Answer: Informal process, no formal signature required. The stakeholder/project 
 
 Your first replies on these two didn't quite answer what we asked. Nothing is blocked by them — we're building with a stopgap in the meantime — but we'd like a clearer answer when you have a moment.
 
-**Q37. The missing solution column — STILL OPEN, question refined 2026-10-01 (not yet re-sent/answered).**
-Technical finding: there is no way to build an interactive, correctly-locked Sudoku grid using only what the sample files provide today. The given (pre-filled) cells exist only as an embedded picture, not as text — and OCR is ruled out by project rule. This is being carried back to the stakeholder, to ask whether the real production files can include the given cells as structured text (the same way the answer column already is), not just the image.
-Interim plan stays in place while waiting (BLD-026): manual transcription of the given cells for a small starter set, to build and test the answer-check unit. The general automated import stays blocked until a clear answer comes back.
-**Refined question to send:** can the real production files include the given (pre-filled) cells as structured text — the same way the answer column already is — not just as an embedded image?
+**Q37. The missing solution column — STILL OPEN (reply received 2026-10-01 did not answer the question).**
+Technical finding: there is no way to build an interactive, correctly-locked Sudoku grid using only what the sample files provide today. The given (pre-filled) cells exist only as an embedded picture, not as text — and OCR is ruled out by project rule.
+**2026-10-01 attempt:** a reply came back but addresses display, not the source file — it doesn't answer the real question. The interim plan (BLD-026, manual transcription) continues in use while waiting for a real technical clarification about the given cells existing only as an image. No new decision; U-94 remains open.
+**Question to ask again, more precisely next time:** can the real production files include the given (pre-filled) cells as structured text — the same way the answer column already is — not just as an embedded image?
 Your answer: _______________ *(ref U-94)*
 
 **Q38. Awards after an early finish — RESOLVED (2026-10-01).**
@@ -157,45 +157,42 @@ This narrows the earlier working position (BLD-030), which assumed the system wo
 
 These were never sent as numbered questions. Each was noted along the way as "ask the stakeholder" and set aside for later; this is that later. None of them block building right now — they affect specific units, listed under each question.
 
-**Q39. Unique solutions**
-The answer check compares a student's submitted grid with the solution stored with the question; it does not run a rule-checker per Sudoku variant (BLD-010). This only gives the right result if every puzzle has exactly one valid solution.
-- Can you confirm every puzzle used in the competition has a unique solution? Or should we assume some might not, and handle that case?
-Your answer: _______________ *(ref U-90)*
+**Status (2026-10-01): Q40, Q41, Q43, Q45, Q46 resolved. Q39 resolved. Q42 and Q44 are Working Positions, pending the stakeholder's confirmation of a proposed extension. All eight of Part 8 now have an answer of some kind — none is blank.**
 
-**Q40. What a judge sees in the team stage**
-We've confirmed what a judge sees and can do in the Individual stage: their assigned students' status, and a single-student restart, nothing more (U-55, U-63).
-- Is it the same in the Team stage — status of their assigned teams, nothing more — or does the judge need something specific to team play (for example, which teammate currently holds a question during rotation, or status per team member rather than per team)?
-Your answer: _______________ *(ref U-39)*
+**Q39. Unique solutions — RESOLVED (2026-10-01).**
+Answer: Every puzzle in the competition has exactly one valid solution, confirmed directly by the stakeholder.
+Recorded: BLD-010, Confirmed, resolves U-90.
+*(ref U-90)*
 
-**Q41. Rooms and categories**
-Categories run in parallel and are ranked separately. The room/participant numbers are documented as working estimates (11 rooms, one of about 300 students).
-- Does a single room ever hold students from more than one category at the same time, or is every room always exactly one category?
-Your answer: _______________ *(ref U-02)*
+**Q40. What a judge sees in the team stage — RESOLVED (2026-10-01).**
+Answer: Same scope as the Individual stage, no expansion. A judge sees the status (connected, in progress) of their assigned teams, nothing more — no per-member detail.
+*(ref U-39)*
 
-**Q42. Tie-break rule**
-Rankings are derived from scores; the school total is stored and compared as an exact decimal, never rounded.
-- If two players, two teams, or two schools end up with the exact same score, what breaks the tie? For example: earlier submission time, earlier completion time, alphabetical order, or no tie-break at all (shared rank)?
-Your answer: _______________ *(ref U-22)*
+**Q41. Rooms and categories — RESOLVED (2026-10-01).**
+Answer: No design impact either way. The system doesn't model "room" as an entity tied to category — a room is simply a physical grouping of participant numbers. Whichever way the organizers assign rooms, nothing changes in what gets built.
+*(ref U-02)*
 
-**Q43. Award tiers for a normal finish**
-Q38 settled that awards after an *early* finish are a human, on-site decision — the system doesn't compute anything special for that case. This question is about the general case, not just early finishes.
-- Does the system need to compute or mark award tiers at all (for example gold/silver/bronze, or a cutoff rank) for a competition that runs to its normal end? Or is showing the computed scores and final ranking always enough, and awarding is entirely up to the school either way?
-Your answer: _______________ *(ref U-27)*
+**Q42. Tie-break rule — WORKING POSITION (2026-10-01), pending confirmation.**
+Answer: Tie-break rule confirmed by the stakeholder: the shortest submission time wins — superseding the client document's "rank by round 1 score" rule and the team's earlier unconfirmed guess. Team-proposed extension, not yet confirmed: for an individual player, use the combined time of both rounds; for a school, use the sum of submission times of all that school's players in the category.
+Recorded: SCR-017, Working Position, narrows U-22 — not fully resolved until the extension is confirmed.
+*(ref U-22)*
 
-**Q44. Extra participant Excel columns**
-The confirmed columns are Name, School, Category, Team. The client's original document also mentioned things like age, city or province.
-- Will the real production file carry any columns beyond Name, School, Category, Team? If so, which, and what should the system do with them — store them, display them, or ignore them?
-Your answer: _______________ *(ref U-40)*
+**Q43. Award tiers for a normal finish — RESOLVED (2026-10-01).**
+Answer: No award-tier computation needed, for any finish (normal or early). The system shows computed scores and the final ranking — that's sufficient for the school to apply its own award regulation by hand. The system doesn't need to know or encode the award rules.
+*(ref U-27)*
 
-**Q45. Changing a team after import**
-Teams are derived automatically from the participant file's Team column at import time, not formed by hand afterward.
-- Once a file is imported, can a student be moved to a different team (for example, a late substitution), or are teams fixed from that point on?
-Your answer: _______________ *(ref U-41)*
+**Q44. Extra participant Excel columns — WORKING POSITION (2026-10-01), pending confirmation.**
+Answer: read as: the real file may carry columns beyond Name/School/Category/Team, but the system simply ignores them, no error.
+Recorded: PAR-008, Working Position, narrows U-40 — not fully resolved until confirmed.
+*(ref U-40)*
 
-**Q46. Regenerating the big-screen link**
-All big screens share one link, generated at publish, with no login (BSC-001/BSC-002).
-- Should the controller be able to regenerate that link after publish (for example, if it was shared somewhere it shouldn't have been)? If so, what happens to a screen that's already open on the old link — does it just stop updating, or should it show something?
-Your answer: _______________ *(ref U-15)*
+**Q45. Changing a team after import — RESOLVED (2026-10-01).**
+Answer: No special feature needed. Moving a student to a different team is just editing that participant's Team field — already covered by PAR-003 (participants editable at any time). No dedicated "team management" screen required.
+*(ref U-41)*
+
+**Q46. Regenerating the big-screen link — RESOLVED (2026-10-01).**
+Answer: Yes, the controller can regenerate the big-screen link after publish — a simple safeguard against a leaked link. A screen already open on the old link shows a clear "this link is no longer valid" message, rather than silently stopping its updates.
+*(ref U-15)*
 
 ---
 

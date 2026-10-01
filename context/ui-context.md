@@ -96,7 +96,7 @@ The interface is **English and Chinese**, not one or the other; the translation 
 - Waiting for the next stage: a message that the stage is over and the next stage is coming, with no score or rank [T]. Students see their own score and rank **only when the whole competition reaches `FINISHED`** — not after each round, not after each stage [C] (BLD-029, resolves U-24, U-88). Whether the controller also gets a separate manual "publish" action at that moment is a minor residual detail, not addressed yet.
 
 ### Judge
-- Content (not layout): the status of their own students, the stage, round and remaining time, and the live ranking. Also how many times a student left the answer page, as information only, with no penalty [P]. Can restart one student's round [P]. **No powers beyond that** [C] (U-55, resolved 2026-09-30): visibility is strictly limited to the judge's assigned range; no participant-editing access; cannot change a score. **Still OPEN (U-39):** what a judge sees specifically in the team stage.
+- Content (not layout): the status of their own students, the stage, round and remaining time, and the live ranking. Also how many times a student left the answer page, as information only, with no penalty [P]. Can restart one student's round [P]. **No powers beyond that** [C] (U-55, resolved 2026-09-30): visibility is strictly limited to the judge's assigned range; no participant-editing access; cannot change a score. **Judge's view in the Team stage, resolved 2026-10-01** [C] (ROL-008, resolves U-39): same scope as the Individual stage, no expansion. The judge sees the status (connected, in progress) of their assigned teams, nothing more — no per-member detail (for example, which teammate currently holds a question during rotation).
 
 ### Controller
 - Content (not layout): the command list (start a stage, pause, resume, end a round early, finish, reset or rematch, correct scores, control the big screens) [C]; all progress in real time; setup screens for the competition, points and numeric values; assigning judge ranges during setup (changeable during the event) [C] (BLD-008); the "total is not 100" warning per category and round on the setup screen and as a summary when starting the stage [C]; results and export.
@@ -109,6 +109,7 @@ The interface is **English and Chinese**, not one or the other; the translation 
 - The controller can show a category leaderboard, the school ranking or a close-up, with optional rotation between categories, and can switch display at any time [C] (BSC-002).
 - Columns: individuals: rank, player name, score, completion time; teams: rank, team name, score, completion time; school ranking: rank, school, total (shown with its decimals [T]).
 - After the competition the big screen becomes read-only [T].
+- **Link regeneration, resolved 2026-10-01** [C] (BSC-003, resolves U-15): the controller can regenerate the shared big-screen link after publish, as a safeguard against a leaked link. A screen still open on the old link shows a clear "this link is no longer valid, ask the controller for the new one" message, rather than silently freezing with no explanation.
 
 ## Accessibility requirements
 
