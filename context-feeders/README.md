@@ -9,14 +9,22 @@
 | `requirements/` | The two live requirement documents (`REQUIREMENTS.md`, `ARCHITECTURE.md`) | Feeds `context/`. If it differs from `context/`, raise it; do not resolve it silently. Maintained under the documentation rules in the root `CLAUDE.md` |
 | `decisions/` | The decision register: `project-decisions.md` (history and status) and `unmade-decisions.md` (open items) | Look up decision IDs (U-xx, I-xx, SCR-xx and so on) here when a context file points to one. Maintained under the documentation rules in the root `CLAUDE.md` |
 | `archive/` | Source documents already merged into the requirements and decisions | Reference only. Not maintained. Do not use it to decide what to build |
-| `working/` | Working files of the requirements process: the interview record, the open questions, the question pack for the client's stakeholder, and a backup of the previous root `CLAUDE.md` | Contains superseded statements. Do not read it to decide what to build |
 
 Every file in these folders begins with a one-line note saying its role (`[CONTEXT FEEDER NOTE]`).
 
 ## Paths
 
-The folders used to sit at the project root (`requirements/`, `decisions/`, `archive/`, `context-working/`). They were moved here on 2026-09-26, and every path inside the documents was updated to the new location (`context-feeders/requirements/`, `context-feeders/decisions/`, `context-feeders/archive/`, `context-feeders/working/`).
+The folders used to sit at the project root (`requirements/`, `decisions/`, `archive/`, `context-working/`). They were moved here on 2026-09-26, and every path inside the documents was updated to the new location (`context-feeders/requirements/`, `context-feeders/decisions/`, `context-feeders/archive/`).
 
-## Later
+## `working/`, removed 2026-10-01
 
-Once the context files are approved and the requirements are final, `working/` can be archived or deleted. The other folders stay as the requirements record.
+This folder used to hold the requirements process's working files: the interview record (`_interview-notes.md`), the open-questions tracker (`_open-questions.md`), the stakeholder question pack, and a backup of an earlier root `CLAUDE.md`. As planned in the "Later" note this section replaces, once the context files were approved and most of the requirements process was done, it was removed.
+
+Before removal, every file was checked so nothing would be lost:
+- The question pack and the original `_open-questions.md` were fully answered; every decision they referenced was confirmed already present in `project-decisions.md`/`unmade-decisions.md`/`context/` before they were deleted (2026-10-01, earlier in the cleanup).
+- The interview record (`_interview-notes.md`) was audited ID by ID against `decisions/` and `context/`. Of roughly 86 decision IDs it referenced, all but three turned out to already be covered elsewhere (often under the original interview ID rather than the newer register ID — checked by content, not just by name). The three genuine gaps found this way — U-65 (visual style, working position) and U-66 (screen layouts, deferred to design) were already tracked in `context/` but missing from `unmade-decisions.md`; U-83 (practice/unscored puzzles) had never been tracked anywhere — were added to `unmade-decisions.md` §1 before the file was deleted.
+- The `CLAUDE.md` backup was a strict subset of the current root `CLAUDE.md` (every section header matched, with the current file having more) — deleted with nothing lost.
+
+Nothing was moved into `requirements/` or `decisions/` as a literal copy: where the audit found a gap, the gap itself was added to `unmade-decisions.md` as a proper tracked item, not the raw interview prose. Git history holds the exact original content of every deleted file if it's ever needed.
+
+`requirements/`, `decisions/` and `archive/` are now the only folders here.

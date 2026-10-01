@@ -1,7 +1,7 @@
 # AI Workflow Rules (DRAFT v1, 2026-09-26)
 
 > Direct instructions to the coding agent. Status tags: [T] team decision · [O] open. See `README.md`.
-> The git, CI and review rules are decided (BLD-002); team roles are recorded (I-17) and the team sync rhythm is still open (I-28). The structure below follows the agreed `building-with-ai` methodology.
+> The git, CI and review rules are decided (BLD-002); team roles are recorded (I-17) and the team sync rhythm is resolved (I-28, BLD-036). The structure below follows the agreed `building-with-ai` methodology.
 
 ## Approach
 
@@ -72,8 +72,7 @@ If a change cannot be verified end to end quickly, the scope is too broad. Split
 
 Do not modify the following unless explicitly instructed:
 
-- `context-feeders/requirements/`, `context-feeders/decisions/` and `context-feeders/archive/` (in the transit folder `context-feeders/`, outside this folder). They belong to the documentation phase and are governed by the root `CLAUDE.md`.
-- The working files in `context-feeders/working/` (outside this folder). They are the record of the requirements process, not part of the context; do not read them to decide what to build (they contain superseded statements). Changes to them go through the answer-recording process, not through code work.
+- `context-feeders/requirements/`, `context-feeders/decisions/` and `context-feeders/archive/` (in the transit folder `context-feeders/`, outside this folder). They belong to the documentation phase and are governed by the root `CLAUDE.md`. (`context-feeders/decisions/unmade-decisions.md` is edited directly when a decision is made and already reflected in `context/`, at the project owner's explicit instruction — never through code work.)
 - Generated UI-library components and third-party internals (once a UI library is chosen, I-20): generated output can be overwritten and vendor code is updated upstream; project customization lives in the app layer.
 
 ## Change management
@@ -99,7 +98,7 @@ Decided [C] (BLD-002):
 - **The other developer reviews each pull request.**
 
 Methodology rules that still apply (not contradicted): delete a feature branch after merge; write commit messages that say what changed and why; quality layers are AI review, then automated checks, then human review; the developer must read and understand AI-generated code before closing a unit.
-Team roles are recorded (I-17, 2026-09-27): Sylvin (developer 1) and Louise (developer 2); project owner the Sudoku team; business lead Ma Laoshi. Team sync rhythm: **OPEN (I-28).**
+Team roles are recorded (I-17, 2026-09-27): Sylvin (developer 1) and Louise (developer 2); project owner the Sudoku team; business lead Ma Laoshi. **Team sync rhythm, resolved 2026-10-01** [T] (I-28, BLD-036): a short check-in every 2 days, not daily — enough to catch integration blockers early for a 2-developer team, without daily-meeting overhead. Informal discussion in between is not restricted.
 
 ## Before moving to the next unit
 

@@ -24,7 +24,7 @@
     - **Points:** the controller sets one "points per puzzle" value for the whole round, default 20, customizable [T] (TEM-008), a working position following the same one-value-per-round pattern as rotation, **not read from any source**. Flag for replacement.
     - **Scoring:** all-or-nothing per puzzle once the blocks are combined, no early bonus, the same rules as everywhere else [C] (SCR-001, SCR-002).
     - **Needed on the event day:** yes, because the school total counts both team rounds. Rules are needed by about day 8 of the build if required on competition day.
-- **School total** = individual part x coefficient + team part [C] (SCR-004). Each school has exactly one team per category [C].
+- **School total** = individual part x coefficient + team part [C] (SCR-004). Each school has exactly one team per category [C]. **The individual part, resolved 2026-10-01** [T] (SCR-018, resolves U-04): counts **all** of the school's players in that category, not only the team's members — "school total" reflects the school's overall performance in the category, not a subset.
 
 ## 2. Points, totals and the values the controller can set
 
@@ -46,7 +46,7 @@
 - **Preparation** before every round: a countdown of **60 seconds by default**, changeable per round. The screen shows the round's rules and the countdown [C] (RND-001).
   - When it reaches zero, the **puzzles appear and the round timer starts immediately**, with no extra "3, 2, 1, Start". A **pause during preparation** stops the countdown; on resume the "3, 2, 1, Start" shows first, and then the countdown **continues from where it stopped**. The "3, 2, 1, Start" uses neither round time nor preparation time [C] (RND-001).
   - The controller **cannot end the preparation early**; a shorter wait is set with a shorter length beforehand [C] (RND-003).
-- **Rounds inside a stage** follow each other automatically, with no human action [T].
+- **Rounds inside a stage** follow each other automatically, with no human action [T]. **No manual individual-round start exists, sanity-checked and confirmed by the project owner 2026-10-01** [T] (CS-022, resolves U-38): the judge/controller only starts a **stage**; preparation, round start, round end at timer expiry, and advancing to the next round all happen automatically. This narrows an earlier judge proposal that treated a manual round start as a needed exception path — nothing reviewed since suggests a real need for it; recovery from a stuck state is already covered by reset, rematch and replay (ROL-005).
 - **After a stage ends** the next stage does **not** start by itself. Players see "waiting for the next stage"; the controller starts it with the same start command, which starts all categories together. While waiting, the tablets show a waiting message and no score; the big screens keep the ranking cycle, which now includes the final ranking of the stage that just ended, and the controller can switch to any other display [C] (RND-006).
 - **A round has no automatic end** when everyone has submitted. It runs until its timer ends or the controller ends it [C] (SUB-004).
 - **Pause and resume** [C]: pausing stops the timer and preserves the exact state.
@@ -70,6 +70,7 @@
 ## 5. Scoring
 
 - **All-or-nothing per puzzle:** a wrong or blank cell means 0 for that puzzle [C] (SCR-001). Points are set per question, by difficulty [C] (SCR-003). Scores are stored as integers.
+- **No unscored or practice puzzles, confirmed 2026-10-01** [T] (SCR-019, resolves U-83): every puzzle in a round counts toward the score. This is a different question from the already-settled "no warm-up round" (CMP-106, which closed the round-level question — whether a whole extra round exists — not this puzzle-level one — whether any single puzzle within a round could be unscored).
 - **Answer check** [C] (BLD-010): the submitted grid is compared with the **solution stored with the question**, with no rule checker per variant. **Unique solution, resolved 2026-10-01** [C] (U-90): every puzzle has exactly one valid solution, confirmed directly by the stakeholder.
 - **Early-finish bonus** (Individual stage only; team rounds have none [C]) [C] (SCR-008 to SCR-011):
   - Applies in **both Individual rounds** at **3 points per whole minute** early, customizable by the controller.
@@ -87,13 +88,18 @@
 - If a restart would come too late to be useful, the remedy is the **replay of the round**, which the judge or the controller can trigger [C] (ROL-005). This differs from a tablet failure, where the student continues on another tablet with saved answers and remaining time.
 - **Tolerable interruption length, resolved 2026-09-30** [C] (U-49): there is no fixed time limit. The stakeholder deliberately declined to set one — the controller decides, on the day, whether to resume or replay an interrupted round based on the event's schedule at that moment, regardless of how long the interruption lasted. Both resume and replay must always stay available to the controller; the system must never impose a timeout that disables either path.
 
+## 6b. Controller reset or rematch
+
+- The controller can reset or rematch the whole event, one round, one person or one team [C] (ROL-005). Resetting a part that already has scores is a **rematch**; the old scores are **archived, not deleted**, same as a judge restart [P] (ROL-005).
+- **Rematch mechanics, resolved 2026-10-01** [T] (ROL-005, resolves U-13): a rematch gives students the **full round time again** — **not** the remaining time, which is specific to a judge's single-student restart (§6 above, SUB-005). It erases the student's partial answers for that round, and leaves earlier rounds' scores untouched.
+
 ## 7. Results, visibility and retention
 
 - The judge sees the status of their students, the stage, round and remaining time, and the live ranking; the judge does not determine or calculate rankings [C] (EX-005). The judge also sees how many times a student left the answer page, as information only, with no penalty [P].
 - Scores change only through a **controller correction with a mandatory reason and a change log** [C] (RES-003, re-confirmed 2026-10-01, Part 6 R5). The controller can export scores, rankings and answers [P]/[C] (RES-002). **Export format, resolved 2026-10-01** [C] (U-08): **Excel (`.xlsx`)**, with scores, ranks and the answer per question — as already planned. No specific layout or column list imposed; the exact columns stay an easy-to-adjust detail, not a system rule.
 - **15 days** after the competition, answers, scores and student accounts are permanently deleted; the setup, the questions and the judges are kept [C] (RES-004, re-confirmed 2026-10-01, Part 6 R8).
 - **Archived scores and the correction log, resolved 2026-10-01** [C] (RES-005, resolves U-62's scores/log part): also deleted after 15 days, same as the other student data. *(A daily-email reminder to the controller before deletion was considered — the user's own idea, not the stakeholder's — and withdrawn 2026-10-01; parked as a possible later-phase addition, not built now.)*
-- **Still OPEN (U-62, narrowed):** whether the uploaded participant Excel follows the 15-day deletion — not addressed by this answer.
+- **The uploaded participant Excel, resolved 2026-10-01** [C] (RES-009): also deleted after 15 days — it holds the same personal data as the derived accounts and records already scheduled for deletion (RES-004); keeping the raw source file after deleting what it generated would be inconsistent. **U-62 is now closed in full.**
 - **Legal/school rules for student data, resolved 2026-10-01** [C] (RES-008): no special protection required — participants provide it voluntarily, the organizer assumes no legal liability. The existing 15-day deletion plan (RES-004) stands as-is.
 
 ## 8. Open items that block implementation of these rules
@@ -101,6 +107,4 @@
 | Item | Open point |
 |---|---|
 | U-94 | The given cells are image-only, not text — deeper than just the missing solution column; re-ask refined 2026-10-01 |
-| TEM-006 to TEM-008 | Working positions (puzzle count 3, time 30 min, points 20/puzzle) for the second team round, not sourced; replace with the 4th Zhejiang league regulation numbers once available |
-| U-62 | Whether the uploaded participant Excel follows the 15-day deletion (scores/correction-log part resolved 2026-10-01, RES-005) |
-| U-59 | Legal/school rules for student data, and who must approve the deletion rule |
+| TEM-006 to TEM-008 | Working positions (puzzle count 3, time 30 min, points 20/puzzle) for the second team round, not sourced. **Closed 2026-10-01 (A10b, TEM-009): not blocking, no stakeholder question coming** — controller-configurable per competition (SCR-005); whoever sets up the real competition types in the regulation's numbers directly, if they have them |

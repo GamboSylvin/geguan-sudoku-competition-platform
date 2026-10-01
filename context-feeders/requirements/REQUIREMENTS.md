@@ -177,7 +177,7 @@ Interruptions: `ACTIVE → PAUSED → RESUME COUNTDOWN → ACTIVE`; `ACTIVE → 
 
 ### 7.3 Entry and player runtime
 
-1. Entry: the player opens the competition link/QR, which identifies the competition; there is no global competition-selection screen; the player logs in with the printed credentials and enters the competition room. **[T]** Judges enter the same way with their own login. **[T]** The client document has a role-selection page instead. **[O]** U-28
+1. Entry: the player opens the competition link/QR, which identifies the competition (no global competition-selection screen); the login page then shows an explicit role picker (player, judge, controller), followed by that role's printed credentials, then the role's home page. **[C]** (ARCH-030, resolves U-28) Confirmed over the alternative (detecting the role from the credential format alone) for simplicity and clarity.
 2. Only members of the competition's participant dataset may take part, and a judge can enter only the competition they are assigned to; a judge assigned to another competition gains no access. **[T]** What a rejected or failed login shows: **[O]** I-13.
 3. The competition room shows the competition, category, stages and the current state. **[T]**
 4. Flow: competition room → wait for the start → stage starts → preparation room (the round's **rules** and a **countdown**) → countdown → round active → solve with continuous autosave → submit or automatic submission at time expiry → evaluation and score → wait for the next round → next preparation. **[T]**
@@ -209,7 +209,7 @@ The server keeps the round timer running. A reconnecting player receives the cur
 
 ### 7.8 Flows in the client document
 
-1. **Entry:** open the link in a browser or tablet → pick a role (player, judge, admin) → username and password → the role's home page. **[S]** See U-28.
+1. **Entry:** open the competition link in a browser or tablet → pick a role (player, judge, admin) → username and password → the role's home page. **[C]** (ARCH-030, resolves U-28)
 2. **Player:** log in → list of registered events → choose stage (individual or team) → answer → submit (no more answering afterwards) → wait for the unified start command → see own score and rank once published. **[S]**
 3. **Judge:** log in → choose the session → control panel (the rounds are listed and controlled one by one) → start or pause a round → unified command → end the round → confirm and publish results → hand results to arbitration and analysis. **[S]**
 4. **Admin:** log in → competition entry → participant management → configuration → analysis. **[S]**

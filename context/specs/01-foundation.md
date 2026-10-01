@@ -37,7 +37,7 @@ The methodology's pre-code checklist lists these artifacts. Each is produced in 
 
 - The decided stack and environment (I-02, I-24, I-31, I-32, I-33) as above.
 - The backend folder structure — decided 2026-09-30 (I-02): module-first; see `../architecture.md`, "Backend folder structure".
-- The module boundaries in `../architecture.md` (the module list is provisional, I-01).
+- The module boundaries in `../architecture.md` (the module list is final — resolved 2026-10-01, I-01, BLD-032).
 
 ### Expected Behavior
 

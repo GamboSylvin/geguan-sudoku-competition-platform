@@ -23,7 +23,7 @@
 - **Frontend:** React [T]. The **build tool is Vite** [T] (BLD-023, decided 2026-09-30) — the frontend is a Vite project (React with TypeScript); `npm run build` runs Vite's production build and the dev server is Vite's. **Styling is Tailwind CSS** [T] (BLD-023, decided 2026-09-30) — utility-first classes, configured through `tailwind.config` and a global stylesheet; do not introduce a second styling system. Project conventions (routing, state, data fetching): **OPEN**.
 - **Backend framework:** Express.js [T] (I-02).
 - **ORM and migrations:** **Prisma** [T] (I-31, decided 2026-09-29) — the ORM for the PostgreSQL schema and the migration system. Migrations are versioned in the repository and applied in CI and on deployment; the schema is the single source of truth for the database. Do not write raw SQL migrations by hand.
-- **UI component library, icons, fonts:** **OPEN (I-20).** The styling *approach* is decided (Tailwind CSS, BLD-023), but no component library, icon set or font is documented; the visual design comes after the first slice [C] (BLD-009).
+- **UI component library, icons, fonts:** **Resolved 2026-10-01** [T] (BLD-035, I-20): **Headless UI** (unstyled, accessible interactive components) + **Heroicons** (icon set), both built by the Tailwind team, pairing natively with the decided styling approach (Tailwind CSS, BLD-023). Fonts are decided (U-70). The visual design (colors, layout) comes after the first slice [C] (BLD-009).
 
 ## Error handling
 

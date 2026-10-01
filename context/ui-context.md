@@ -33,16 +33,16 @@ The design comes **after the first slice** (the Individual stage, end to end) [C
 
 ## Typography
 
-**Font stack, resolved 2026-10-01** [C] (U-70): not a bare `system-ui`. An explicit stack — generic sans-serif first (Latin/English), then CJK fallbacks in order: **PingFang SC** (macOS/iOS), **Hiragino Sans GB** (older macOS), **Microsoft YaHei** (Windows), **Noto Sans CJK SC** (Android/Linux), then `sans-serif`. All already installed on-device — **no custom web-font download**, which matters given the venue Wi-Fi risk (U-56). **Still OPEN (I-20):** the UI component library and icon set.
+**Font stack, resolved 2026-10-01** [C] (U-70): not a bare `system-ui`. An explicit stack — generic sans-serif first (Latin/English), then CJK fallbacks in order: **PingFang SC** (macOS/iOS), **Hiragino Sans GB** (older macOS), **Microsoft YaHei** (Windows), **Noto Sans CJK SC** (Android/Linux), then `sans-serif`. All already installed on-device — **no custom web-font download**, which matters given the venue Wi-Fi risk (U-56). **I-20 resolved in full 2026-10-01** [T] (BLD-035): the UI component library and icon set are Headless UI + Heroicons — see "Component Library" below.
 
 | Role | Font | Variable |
 |---|---|---|
 | UI text | `sans-serif, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif` (generic sans-serif first for Latin/English, named CJK fallbacks in the given order, generic `sans-serif` as the final catch-all) | `--font-sans` |
-| Code / mono | ________ | ________ |
+| Code / mono | **Not applicable, resolved 2026-10-01.** Nothing in this product displays code or monospace content — the Sudoku grid renders numeric digits, not code text, and no developer-facing or log-style view is in scope (`project-overview.md`, "Out of scope"). No token needed. If a future admin/debug view ever needs one, default to the platform's native monospace stack (`ui-monospace, monospace`) rather than adding a web-font download, consistent with the UI-text row's no-download rule. | — |
 
 ## Border Radius / Rounding
 
-**OPEN.**
+**[[FILL-BEFORE-UNIT: border radius scale = ________ ; owner: project owner; needed before the first UI/design unit, after the first slice (BLD-009)]]** Found open 2026-10-01 during a methodology completeness check — this section exists in the template and in this file but was never tracked as a blank anywhere. Not blocking the first slice (Individual stage, end to end): no UI unit before the design phase needs a decided radius scale. **Candidate default, not yet chosen:** Tailwind CSS's own default scale (already the decided styling tool, BLD-023), the same "Working Position" treatment already given to Theme/Colors (U-65) — proposing it here, not deciding it.
 
 | Context | Value |
 |---|---|
@@ -52,7 +52,7 @@ The design comes **after the first slice** (the Individual stage, end to end) [C
 
 ## Spacing Scale
 
-**OPEN.**
+**[[FILL-BEFORE-UNIT: spacing scale = ________ ; owner: project owner; needed before the first UI/design unit, after the first slice (BLD-009)]]** Same finding, same date, same reasoning as Border Radius above — never tracked, not blocking the first slice. **Candidate default, not yet chosen:** Tailwind CSS's own default spacing scale, consistent with BLD-023 and the U-65 Working-Position pattern.
 
 | Scale | Variable | Value |
 |---|---|---|
@@ -64,7 +64,7 @@ The design comes **after the first slice** (the Individual stage, end to end) [C
 
 ## Component Library
 
-**OPEN (I-20).** [[FILL-BEFORE-UNIT: first UI unit — UI component library = ________ ; icon set = ________ ; fonts (including Chinese) = ________ ; owner: the person completing the context]] The frontend is React with TypeScript [T]. **The styling approach is decided: Tailwind CSS** [T] (BLD-023, decided 2026-09-30) — utility-first classes; every component uses the named design tokens defined above (U-65, Working Position), never raw values scattered through the markup. **The frontend build tool is Vite** [T] (BLD-023). No UI component library or icon set is documented yet (team decision). Chinese text rendering must work broadly, since there is **no fixed device or browser target** [C] (U-06, resolved 2026-09-30 — see `architecture.md`, "Devices and network"); **font and Chinese-display requirements, resolved 2026-10-01** [C] (U-70): an explicit font stack with on-device CJK fallbacks, no web-font download — see "Typography" above.
+**Resolved 2026-10-01** [T] (BLD-035, resolves I-20): **Headless UI + Heroicons.** Both are built by the Tailwind team, so they integrate natively with Tailwind CSS (BLD-023) with no extra configuration or style conflict. Headless UI provides accessible, unstyled interactive components (confirmation dialogs, menus), leaving the visual style fully to Tailwind, consistent with UI-004. Chosen over heavier, opinionated libraries (Material UI, Ant Design) because both developers are junior (I-18) and a low learning curve matters more than feature breadth. The frontend is React with TypeScript [T]. **The styling approach is decided: Tailwind CSS** [T] (BLD-023, decided 2026-09-30) — utility-first classes; every component uses the named design tokens defined above (U-65, Working Position), never raw values scattered through the markup. **The frontend build tool is Vite** [T] (BLD-023). Chinese text rendering must work broadly, since there is **no fixed device or browser target** [C] (U-06, resolved 2026-09-30 — see `architecture.md`, "Devices and network"); **font and Chinese-display requirements, resolved 2026-10-01** [C] (U-70): an explicit font stack with on-device CJK fallbacks, no web-font download — see "Typography" above. **I-20 is now resolved in full**: styling approach (BLD-023), default visual style (U-65, Working Position), font stack (U-70, [C]), and component library/icon set (BLD-035) all decided.
 
 ## Layout patterns
 
@@ -117,4 +117,4 @@ The interface is **English and Chinese**, not one or the other; the translation 
 
 ## Icons
 
-**OPEN (I-20).** No icon set is documented. The styling approach is decided (Tailwind CSS, BLD-023); the icon set is not.
+**Resolved 2026-10-01** [T] (BLD-035, resolves I-20): **Heroicons** — the icon set that pairs with Headless UI, also built by the Tailwind team. See "Component Library" above.

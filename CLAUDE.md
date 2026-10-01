@@ -26,7 +26,7 @@ If implementation changes the architecture, scope, or standards documented in th
 **Open-item gate.** Anything tagged **[O]** or marked OPEN is not decided. Do not implement it and do not guess it. If a unit depends on an open item, stop and report it.
 **Status gate.** **[C]** means the client's stakeholder confirmed it (on the date shown; a confirmed rule can change later, and the change is logged in `context/progress-tracker.md`). **[T]** decisions were made by the team or the project owner and are not stakeholder-confirmed.
 
-The working files live **outside** `context/`, in `context-feeders/working/`. They are not part of the context and contain superseded statements. Do not read them to decide what to build.
+Open items not yet answered live in `context-feeders/decisions/unmade-decisions.md`. (The earlier working files under `context-feeders/working/` — the interview record and the question pack — were removed 2026-10-01 once fully answered; everything they held is reflected in `context-feeders/decisions/` and `context/`, see `context-feeders/README.md`.)
 
 ---
 
@@ -58,11 +58,10 @@ context-feeders/     transit folder: files that only FEED context/
     requirements/    the two live requirement documents
     decisions/       the decision register
     archive/         merged source documents
-    working/         working files of the requirements process
 ```
 
 * `context/` — the context folder, read first (see above).
-* `context-feeders/` — everything that feeds `context/`. It is **not** what a coding agent builds from. Each file starts with a short note saying its role. `context-feeders/working/` holds the interview record, the open questions, the question pack, and a backup of the previous version of this file.
+* `context-feeders/` — everything that feeds `context/`. It is **not** what a coding agent builds from. Each file starts with a short note saying its role. See `context-feeders/README.md` for what each subfolder holds, including the `working/` folder's removal.
 
 ### `context-feeders/requirements/`
 

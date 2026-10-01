@@ -27,8 +27,8 @@ Not yet written: the specs of the later units (`specs/NN-unit-name.md`). They fo
 
 ## Working files (outside this folder)
 
-Everything that feeds this folder lives in the transit folder **`context-feeders/`**, next to `context/`, so that this folder holds only the context: `requirements/`, `decisions/`, `archive/` and `working/` (the interview record, the open questions and the questions for the client's stakeholder). Each file there starts with a note saying its role. **Do not read them to decide what to build**; `working/` contains superseded statements.
-The context builder records new answers in `context-feeders/working/` first and then updates the files here. Delete or archive `context-feeders/working/` once the context files are approved.
+Everything that feeds this folder lives in the transit folder **`context-feeders/`**, next to `context/`, so that this folder holds only the context: `requirements/`, `decisions/` and `archive/`. Each file there starts with a note saying its role. **Do not read them to decide what to build.**
+The context builder records a new answer in `context-feeders/decisions/` (resolved items in `project-decisions.md`, still-open ones in `unmade-decisions.md`) and then updates the files here. **`context-feeders/working/`, the earlier staging folder for the interview record and open questions, was removed 2026-10-01** once fully answered — see `context-feeders/README.md` for what happened to its content.
 
 ## Status tags (used in every file)
 
