@@ -24,6 +24,23 @@ export const en = {
     sessionExpired: "Your session has ended. Please log in again.",
     deviceTakenOver: "This account was signed in on another device.",
   },
+  competition: {
+    // Unit 03. Only a controller may create, edit or publish (ROL-002); the
+    // readiness keys are the named unmet conditions the publish rejection lists.
+    forbidden: "Only a controller can manage competitions.",
+    notFound: "Competition not found.",
+    structureLocked:
+      "This competition is published; its categories, stages and rounds can no longer be changed.",
+    readiness: {
+      categoryRequired: "Add at least one category.",
+      participantsRequired:
+        "Every category needs at least one participant.",
+      questionsRequired:
+        "Every category needs a question set assigned to both of its Individual rounds.",
+      judgeRangesRequired:
+        "Judge ranges must cover every participant number.",
+    },
+  },
 } as const;
 
 /** Recursively widens the literal `en` catalogue to `string` leaves, keeping its shape. */
