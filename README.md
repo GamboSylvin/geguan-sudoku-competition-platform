@@ -2,7 +2,20 @@
 
 A live Sudoku competition platform (individual and team stages, judge supervision, real-time ranking, big-screen display). Built with Node.js/TypeScript/Express on the backend, React/TypeScript/Vite on the frontend, PostgreSQL and Redis for storage.
 
-**Project status:** pre-build documentation phase is complete; **Unit 01 (Foundation) is implemented** — the repository, Docker environment, CI, backend/frontend skeletons, database migration, health check and i18n scaffold. No feature (login, competition setup, gameplay, etc.) exists yet; those are built unit by unit per `context/specs/00-build-plan.md`. Anyone pulling this repository today will see a running skeleton with a health check and a placeholder page, not a finished product.
+## Start here if you're about to code
+
+**Read [`CLAUDE.md`](CLAUDE.md) at the project root next — before writing anything.** It's the entry point for this project's build methodology ([`building-with-ai/`](building-with-ai/)): it states the exact current status (what's built, what's approved, what's blocked and why, what to build next), and the rules every change must follow.
+
+**If your coding agent isn't Claude Code**, rename or copy `CLAUDE.md` to your agent's convention — the content is agent-agnostic:
+
+| Agent | Entry point filename |
+|---|---|
+| Claude Code | `CLAUDE.md` (already named correctly) |
+| Codex / GitHub Copilot | `AGENTS.md` |
+| Cursor | `.cursorrules` |
+| Windsurf | `.windsurfrules` |
+
+**Project status:** actively being built. `CLAUDE.md`'s "Current status" section and [`context/progress-tracker.md`](context/progress-tracker.md) are the two places this is kept accurate day to day — read those for the real, current picture rather than trusting a summary here, which would only go stale again. In short: only Unit 1 (Foundation) has shipped code today; anyone pulling this repository will see a running skeleton with a health check and a placeholder page, not a finished product.
 
 Full product and technical documentation lives in [`context/`](context/) (start at [`context/README.md`](context/README.md)) and is the source of truth for what is decided, open, or still to be built.
 
