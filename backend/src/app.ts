@@ -1,6 +1,6 @@
 import express, { type Express } from "express";
 import { apiRouter } from "./routes";
-import { errorHandler, requestLogger } from "./shared/middleware";
+import { cors, errorHandler, requestLogger } from "./shared/middleware";
 
 /**
  * The Express application: middleware plus route mounting (BLD-020). It is kept
@@ -11,6 +11,8 @@ export function createApp(): Express {
   const app = express();
 
   app.disable("x-powered-by");
+  // CORS first: the preflight must be answered before body parsing or routing.
+  app.use(cors);
   app.use(express.json({ limit: "2mb" }));
   app.use(requestLogger);
 

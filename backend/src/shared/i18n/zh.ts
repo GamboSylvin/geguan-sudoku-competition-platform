@@ -18,4 +18,10 @@ export const zh: MessageCatalogue = {
     database: "数据库",
     redis: "Redis",
   },
+  auth: {
+    invalidCredentials: "用户名或密码错误",
+    noSession: "未登录",
+    sessionExpired: "会话已结束，请重新登录。",
+    deviceTakenOver: "该账号已在另一台设备上登录。",
+  },
 };

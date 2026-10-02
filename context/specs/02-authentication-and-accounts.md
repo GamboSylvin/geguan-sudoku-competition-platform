@@ -1,25 +1,26 @@
-# Unit 02: Authentication and accounts — DRAFT, awaiting approval
+# Unit 02: Authentication and accounts — APPROVED (2026-10-02)
 
-> **Draft spec, not yet approved.** This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
-> **Every open item this spec touches is now resolved:** session length (I-16, AUTH-001), judge/controller credential format (I-30, BLD-037), the login flow/role picker (U-28, ARCH-030), and the failed-login message (I-13, AUTH-002, resolved 2026-10-01 — it matches this spec's own safe-default placeholder exactly, see Error Cases). Nothing in this spec depends on an unresolved item.
-> Present this spec for review before starting the unit, per the methodology (`specs/00-build-plan.md`).
+> **Approved Unit 2 spec.** Approved 2026-10-02 by the project owner. This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
+> **Every open item this spec touches is now resolved:** session length (I-16, AUTH-001 — concretized 2026-10-02 as a fixed 24 hours from login), judge/controller credential format (I-30, BLD-037), the login flow/role picker (U-28, ARCH-030), the failed-login message (I-13, AUTH-002, resolved 2026-10-01 — it matches this spec's own safe-default placeholder exactly, see Error Cases), and the first-controller-account creation gap (ROL-011, resolved 2026-10-02 — a one-time bootstrap seed command). Nothing in this spec depends on an unresolved item.
+> **Corrected 2026-10-02:** this spec originally claimed it needed "no new migration." That was wrong — `Account.sessionExpiresAt` was omitted from Unit 1's schema while I-16 was open, and this unit must add it via a migration (see Context and Constraints).
+> Approved 2026-10-02 and now being built (builder: Sylvin).
 
 ## Goal
 
-Role-separated login for the three account roles (**controller**, **judge**, **player**) against the `Account` table that already exists from Unit 1's migration: verify username and password, issue a session that lasts the whole event day, and enforce **one active device per account** — a new login on another device takes over the old one without losing the account's identity. Logout ends the session.
+Role-separated login for the three account roles (**controller**, **judge**, **player**) against the `Account` table that already exists from Unit 1's migration: verify username and password, issue a session that lasts 24 hours from login, and enforce **one active device per account** — a new login on another device takes over the old one without losing the account's identity. Logout ends the session.
 
-Goal in one testable sentence: **a seeded account of each role can log in with its username and password, stays logged in across the event day with no idle-timeout expiry, and logging in again on a second device immediately and silently ends the session on the first device while keeping the same account identity.**
+Goal in one testable sentence: **a seeded account of each role can log in with its username and password, stays logged in for 24 hours from login with no idle-timeout expiry, and logging in again on a second device immediately and silently ends the session on the first device while keeping the same account identity.**
 
 ## Context
 
-- **What Unit 1 already built:** the Prisma schema was migrated in full from the approved `../data-model.md` in Unit 1 (OPEN fields omitted) — `Account`, `Device`, `Participant`, `Judge`, `School`, `Team`, `Competition` and every other entity already exist as tables. **This unit adds no new tables and needs no new migration** — it builds the login logic on top of what already exists. The backend module-first skeleton (`backend/src/modules/identity/`) and the frontend `auth` feature folder (`frontend/src/features/auth/`) both already exist, empty.
+- **What Unit 1 already built:** the Prisma schema was migrated in full from the approved `../data-model.md` in Unit 1 (OPEN fields omitted) — `Account`, `Device`, `Participant`, `Judge`, `School`, `Team`, `Competition` and every other entity already exist as tables. **This unit adds no new tables, but it does need one migration.** `Account.sessionExpiresAt` — listed on the entity in `../data-model.md` and required by this unit's session rule (AUTH-001) — was deliberately **omitted** from `schema.prisma` and `0_init` while I-16 was still open (the schema carries a comment saying so). Now that AUTH-001 is resolved, this unit adds `sessionExpiresAt` (nullable `DateTime`) to the `Account` model and ships a migration adding the column. That is the only schema change; the backend module-first skeleton (`backend/src/modules/identity/`) and the frontend `auth` feature folder (`frontend/src/features/auth/`) both already exist, empty.
 - **Where this lives:** the `Account`/`Device` entities belong to the **Participant / Identity** module (`../architecture.md`, "System boundaries") — this unit's backend code goes in `backend/src/modules/identity/`.
 - **The `Account` entity** (`../data-model.md`, "People and access"): `id; username (U); passwordHash; role (CONTROLLER/JUDGE/PLAYER); participantId (nullable); judgeId (nullable); isActive (bool); createdAt; lastLoginAt (nullable); sessionExpiresAt (nullable); activeDeviceId (nullable)`. A player account's `participantId` is set, a judge account's `judgeId` is set, and a controller account has neither — one role per account, several controller accounts allowed [C] (BLD-004).
 - **The `Device` entity**: `id; accountId; deviceLabel; userAgent; firstSeenAt; lastSeenAt; isActive` — supports one active device per account; a student continuing on another tablet keeps saved answers and remaining time (that round-state restoration itself is Unit 07's job; this unit builds the account/device continuity it depends on).
 - **Credentials, decided:**
   - Player: username = the participant number, password = a short random code generated by the system [C] (BLD-003). Participant accounts themselves are **created by Unit 04** (participant import) — this unit does not generate them.
-  - Judge and controller, **resolved 2026-10-01** [T] (BLD-037, I-30): the **same pattern as the player** — a system-generated username (based on name, or a sequential judge/controller number) plus a short, randomly generated password, printed the same way as participant credential slips (PAR-002). No email, no phone, no OTP — username and password only [C]. Judge accounts are **created by Unit 06** (judges and ranges) when the controller adds a judge. **Controller account creation is not specified by any unit** in the build plan — no self-service controller signup flow is documented anywhere in `context/`. For this unit's own testing, controller and judge accounts are **seeded directly** (a seed script or direct insert), not created through a UI this unit builds.
-- **Session length, resolved 2026-10-01** [T] (AUTH-001): the session lasts the **whole event day** (e.g. 24h) with **no idle-timeout expiry**. `sessionExpiresAt` is set **once, at login**, to end-of-event-day — it is never refreshed on activity. The round timer (Unit 07) is the real authority during an active round, not the session.
+  - Judge and controller, **resolved 2026-10-01** [T] (BLD-037, I-30): the **same pattern as the player** — a system-generated username (based on name, or a sequential judge/controller number) plus a short, randomly generated password, printed the same way as participant credential slips (PAR-002). No email, no phone, no OTP — username and password only [C]. Judge accounts are **created by Unit 06** (judges and ranges) when the controller adds a judge. **Controller account creation, resolved 2026-10-02** [T] (ROL-011): the MVP has no self-service controller signup and no unit owns this — the project owner chose a **one-time bootstrap seed command** that creates the first controller account, documented as an intentional manual MVP step. For this unit's own testing, controller and judge accounts are seeded directly; the bootstrap command is the documented way the controller account comes to exist in production. (A self-service/admin creation flow is a later-phase addition, not MVP scope.)
+- **Session length, resolved 2026-10-01, concretized 2026-10-02** [T] (AUTH-001): the session lasts a fixed **24 hours from login** — `sessionExpiresAt` = login time + 24h, set **once, at login**, and **never refreshed on activity** (no idle-timeout expiry). The project owner's own wording: "once you're logged in we will allow the account to be logged in for 24 hours." The round timer (Unit 07) is the real authority during an active round, not the session.
 - **One active device per account, the newest login takes over** [P] (PAR-005), re-confirmed 2026-10-01 (Part 6 R4). Security is already covered by this rule — a stolen or shared credential just gets logged out by the real owner's next login, no separate lockout mechanism needed.
 - **Separate login endpoints per role** [T] (`../code-standards.md`, "API conventions") — one endpoint per role, not one generic endpoint with a role parameter.
 - **Access rules** (`../data-model.md`, "Access rules", resolved 2026-09-30, U-63): enforced through `Account.role` at the service layer, not new schema fields. This unit builds the mechanism (knowing who is logged in, as which role); later units build the role-scoped reads each module exposes.
@@ -30,7 +31,7 @@ Goal in one testable sentence: **a seeded account of each role can log in with i
 
 1. **Password hashing.** Store only a hash, never the plaintext password. Use a standard adaptive hashing algorithm (for example bcrypt, via a maintained package) — this is a normal engineering choice, not a decision requiring sign-off, and is not changed later without reason.
 2. **Login endpoints, one per role** (controller, judge, player): accept `username` + `password`, look up the `Account` by `username` and `role`, verify the password hash, and on success:
-   - Set `sessionExpiresAt` to end-of-event-day (not refreshed later).
+   - Set `sessionExpiresAt` to login time + 24 hours (not refreshed later).
    - Update `lastLoginAt`.
    - Run the device-takeover step (next item).
    - Issue a session token (or equivalent) the client stores and sends on later requests and the WebSocket handshake.
@@ -48,7 +49,7 @@ Goal in one testable sentence: **a seeded account of each role can log in with i
 ### Expected Behavior
 
 - A seeded controller, judge or player account logs in with its username and password through that role's login endpoint, and reaches its role's placeholder landing route.
-- The session lasts the rest of the event day; closing and reopening the browser, or simply leaving it idle, does not log the account out (no idle-timeout expiry).
+- The session lasts 24 hours from login; closing and reopening the browser, or simply leaving it idle, does not log the account out (no idle-timeout expiry).
 - Logging in with the same account's credentials from a second device immediately takes over: the first device's session stops being accepted (its next request or WebSocket action is rejected), with no action needed on the first device and no confirmation step.
 - Logout ends the session; the account must log in again to resume.
 - An inactive account (`Account.isActive = false`) cannot log in, even with the correct password.
@@ -72,7 +73,7 @@ Goal in one testable sentence: **a seeded account of each role can log in with i
 - **Wrong username or password:** reject with a generic `401` and a single generic message — "incorrect username or password", never revealing whether the username exists or which field was wrong [T] (AUTH-002, resolves I-13, confirmed 2026-10-01).
 - **Account exists but `isActive = false`:** reject the same way as a wrong password (do not reveal the account is deactivated).
 - **A request arrives from a device that is not the account's current `activeDeviceId`:** reject — this is expected behavior (the device was taken over), not a bug.
-- **Session expired** (past `sessionExpiresAt`, i.e. past end-of-event-day): reject and require a fresh login.
+- **Session expired** (past `sessionExpiresAt`, i.e. more than 24 hours after login): reject and require a fresh login.
 
 ### Security Considerations
 
@@ -83,7 +84,7 @@ Goal in one testable sentence: **a seeded account of each role can log in with i
 
 ### Constraints
 
-- No schema change and no new migration — `Account` and `Device` already exist from Unit 1.
+- One schema change only: adding `Account.sessionExpiresAt` (nullable `DateTime`) plus its migration (see Context). No other schema change — `Account` and `Device` otherwise already exist from Unit 1.
 - Does not generate participant credentials (Unit 04) or judge credentials (Unit 06) — this unit only authenticates against whatever `Account` rows already exist.
 - Does not build a controller-account creation flow — none is specified anywhere in `context/`; controller accounts are seeded for now.
 - Does not implement competition-specific access scoping ("a judge can enter only the assigned competition," "only members of the competition's participant dataset can take part") — that depends on `Competition`, real `Participant` and `CompetitionJudgeAssignment` data that don't exist until Units 03, 04 and 06.
@@ -107,7 +108,7 @@ Goal in one testable sentence: **a seeded account of each role can log in with i
 2. A seeded judge account logs in with its username and password and reaches its placeholder landing route.
 3. A seeded player account logs in with its username and password and reaches its placeholder landing route.
 4. Logging in again with the same account's credentials, simulating a second device, immediately invalidates the first device's session — a subsequent request or WebSocket action from the first device's session is rejected.
-5. The issued session does not expire from inactivity within the test window (no idle timeout is enforced); `sessionExpiresAt` reflects end-of-event-day, set once at login.
+5. The issued session does not expire from inactivity within the test window (no idle timeout is enforced); `sessionExpiresAt` reflects login time + 24 hours, set once at login.
 6. A wrong password, and a login attempt against a deactivated account, are both rejected with the same generic response — neither reveals which case occurred.
 7. Logout ends the session; a request made with the logged-out session is rejected.
 8. Lint, type check, tests and build pass in CI (BLD-002).

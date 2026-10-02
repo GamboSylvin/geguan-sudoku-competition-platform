@@ -1,9 +1,10 @@
 /**
- * The Identity module. Owns: Players, teams, player and judge accounts, participant membership, competition-specific access.
+ * The Identity module. Owns: Players, teams, player and judge accounts, participant
+ * membership, competition-specific access, and one active device per account.
  *
- * Skeleton only — no feature code (Unit 01, spec 01-foundation). The files follow
- * the decided module layout (BLD-020): controller (HTTP), service (domain rules and
- * the public interface), repository (Prisma access), types, and this barrel.
+ * The barrel exposes only the public interface (Unit 02): the router, the service
+ * (login, the session check later units call, logout, credential helpers) and the
+ * module's types.
  */
 export { identityService } from "./identity.service";
 export { identityRouter } from "./identity.controller";

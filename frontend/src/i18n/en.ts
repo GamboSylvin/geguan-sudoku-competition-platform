@@ -15,6 +15,27 @@ export const en = {
     title: "Sudoku Arena",
     subtitle: "Foundation is in place. Screens arrive in later units.",
   },
+  auth: {
+    title: "Sudoku Arena",
+    chooseRole: "Choose your role",
+    username: "Username",
+    password: "Password",
+    submit: "Log in",
+    logout: "Log out",
+    invalidCredentials: "Incorrect username or password",
+    role: {
+      player: "Player",
+      judge: "Judge",
+      controller: "Controller",
+    },
+    landing: {
+      subtitle: "You are signed in. This screen is a placeholder for a later unit.",
+      signedInAs: "Signed in as",
+      player: "Player home",
+      judge: "Judge home",
+      controller: "Controller home",
+    },
+  },
 } as const;
 
 /** Recursively widens the literal `en` catalogue to `string` leaves, keeping its shape. */

@@ -9,7 +9,8 @@
 // flagged in this model"). Deliberately omitted here:
 //   - PurgeSchedule.includesArchivedScores / includesCorrectionLog /
 //     includesParticipantExcel   (U-59, U-62 — the 15-day purge scope)
-//   - Account.sessionExpiresAt    (I-16 — session length and idle behaviour)
+// Account.sessionExpiresAt is now present: I-16 was resolved by AUTH-001 (the
+// session lasts 24 hours from login) and Unit 02 added the column by migration.
 // The second team round (齐心协力 / partition collaboration) is NOT modelled as
 // gameplay (U-05, U-21); only the TeamRotationState state container exists.
 
@@ -395,11 +396,14 @@ model Account {
   isActive      Boolean    @default(true)
   createdAt     DateTime   @default(now())
   lastLoginAt   DateTime?
+  // The session ends 24 hours after login; set once at login, never refreshed on
+  // activity (AUTH-001, resolves I-16).
+  sessionExpiresAt DateTime?
+  // The opaque server-issued session token (Unit 02). Null when logged out. Unique so
+  // a lookup by token is exact; the token is a random UUID, never derived from the id.
+  sessionToken  String?    @unique
   // One active device per account; the newest login takes over (PAR-005).
   activeDeviceId String?
-
-  // Session length and idle behaviour are OPEN (I-16): `sessionExpiresAt` is
-  // deliberately NOT created here.
 
   participant Participant? @relation(fields: [participantId], references: [id], onDelete: Cascade)
   judge       Judge?       @relation(fields: [judgeId], references: [id], onDelete: SetNull)

@@ -27,6 +27,19 @@ export class NotFoundError extends AppError {
   }
 }
 
+export class UnauthorizedError extends AppError {
+  constructor(
+    message = "Not authenticated",
+    options: { code?: string; details?: unknown } = {},
+  ) {
+    super(message, {
+      statusCode: 401,
+      code: options.code ?? "UNAUTHORIZED",
+      details: options.details,
+    });
+  }
+}
+
 export class ValidationError extends AppError {
   constructor(message = "Validation failed", details?: unknown) {
     super(message, { statusCode: 400, code: "VALIDATION_ERROR", details });

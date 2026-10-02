@@ -1,19 +1,23 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { LocaleProvider } from "./i18n/locale-context";
-import { PlaceholderPage } from "./PlaceholderPage";
+import { LoginPage, RoleHomePage } from "./features/auth";
 
 /**
- * The app entry (Unit 01): the i18n provider, the router and a single placeholder
- * route. Real routes and feature folders are filled in by later units; the
- * skeleton contains no feature code.
+ * The app entry (Unit 02): the i18n provider, the router, the login page and the
+ * per-role placeholder landing routes. Real feature screens are filled in by later
+ * units. There is no global competition-selection screen — the competition link
+ * identifies the competition (ARCH-030).
  */
 export function App() {
   return (
     <LocaleProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<PlaceholderPage />} />
-          <Route path="*" element={<PlaceholderPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/player" element={<RoleHomePage role="PLAYER" />} />
+          <Route path="/judge" element={<RoleHomePage role="JUDGE" />} />
+          <Route path="/controller" element={<RoleHomePage role="CONTROLLER" />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
     </LocaleProvider>

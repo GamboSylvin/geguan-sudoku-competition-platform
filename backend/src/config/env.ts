@@ -25,6 +25,11 @@ const envSchema = z.object({
 
   // File storage (BLD-001).
   STORAGE_ROOT: z.string().default("./storage"),
+
+  // Session length: a fixed window from login, never refreshed on activity
+  // (AUTH-001). Kept configurable so the event day's needs can be tuned without a
+  // code change; the default is the decided 24 hours.
+  SESSION_TTL_HOURS: z.coerce.number().positive().default(24),
 });
 
 export type Env = z.infer<typeof envSchema>;

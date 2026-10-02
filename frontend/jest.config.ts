@@ -11,6 +11,9 @@ const config: Config = {
   roots: ["<rootDir>/src", "<rootDir>/tests"],
   testMatch: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
   moduleNameMapper: {
+    // `@/config/env` is listed first: it reads Vite's `import.meta.env`, which the
+    // CommonJS test transform cannot parse, so tests get the plain-constant mock.
+    "^@/config/env$": "<rootDir>/tests/env-mock.cjs",
     "^@/(.*)$": "<rootDir>/src/$1",
     "\\.(css|less|scss|sass)$": "<rootDir>/tests/style-mock.cjs",
   },

@@ -16,6 +16,14 @@ export const en = {
     database: "Database",
     redis: "Redis",
   },
+  auth: {
+    // One generic message for every rejected login; never say which part was wrong
+    // (AUTH-002). The code beside it lets the client localize.
+    invalidCredentials: "Incorrect username or password",
+    noSession: "Not signed in",
+    sessionExpired: "Your session has ended. Please log in again.",
+    deviceTakenOver: "This account was signed in on another device.",
+  },
 } as const;
 
 /** Recursively widens the literal `en` catalogue to `string` leaves, keeping its shape. */
