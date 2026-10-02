@@ -248,6 +248,12 @@ model RoundSettings {
   teamQuestionCount        Int  @default(10)
   teamTotalTimeSeconds     Int?
   individualTotalWarning   Int? @default(100)
+  // Second Team round (partition collaboration, TEM-006 to TEM-008, added
+  // 2026-10-01). Named with a `partition` prefix, distinct from the rotation
+  // round's `team*` fields, so the two rounds' values never collide.
+  partitionPuzzleCount     Int  @default(3)
+  partitionTotalTimeSeconds Int @default(1800)
+  partitionPointsPerPuzzle Int  @default(20)
 
   round Round @relation(fields: [roundId], references: [id], onDelete: Cascade)
 }
@@ -259,14 +265,14 @@ model RoundSettings {
 model QuestionSet {
   id            String  @id @default(uuid())
   competitionId String
-  // nullable = a shared set across categories (BLD-005)
-  categoryId    String?
+  // required, not nullable: one file per category, not a shared pool
+  // (BLD-028, resolves U-32)
+  categoryId    String
   name          String
-  // Whether each category has its own question file is OPEN (U-32).
   sourceFileId  String?
 
   competition Competition          @relation(fields: [competitionId], references: [id], onDelete: Cascade)
-  category    CompetitionCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  category    CompetitionCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   sourceFile  StoredFile?          @relation(fields: [sourceFileId], references: [id], onDelete: SetNull)
   questions   Question[]
 
