@@ -36,6 +36,37 @@ export const en = {
       controller: "Controller home",
     },
   },
+  competition: {
+    title: "Create a competition",
+    name: "Competition name",
+    description: "Description (optional)",
+    categories: "Categories",
+    categoryCode: "Code",
+    categoryName: "Name",
+    addCategory: "Add category",
+    removeCategory: "Remove",
+    create: "Create competition",
+    wifiNote:
+      "Before the event, ask your network/IT team to properly configure the venue Wi-Fi — about 300 tablets connect at once, and the venue Wi-Fi is the biggest real-world risk.",
+    created: "Competition created",
+    structure: "Structure (created automatically)",
+    rounds: "rounds",
+    roundDuration: "Duration (seconds)",
+    saveRound: "Save",
+    saved: "Saved",
+    publish: "Publish",
+    published: "Published",
+    entryLink: "Entry link",
+    bigScreenLink: "Big-screen link",
+    notReady: "Not ready to publish. Still missing:",
+    genericError: "Something went wrong. Please try again.",
+    duration: {
+      INDIVIDUAL1: "Individual round 1",
+      INDIVIDUAL2: "Individual round 2",
+      TEAM1: "Team round 1",
+      TEAM2: "Team round 2",
+    },
+  },
 } as const;
 
 /** Recursively widens the literal `en` catalogue to `string` leaves, keeping its shape. */
