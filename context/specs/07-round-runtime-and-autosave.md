@@ -1,4 +1,4 @@
-# Unit 07: Round runtime and autosave — DRAFT, awaiting approval
+# Unit 07: Round runtime and autosave — APPROVED (2026-10-04)
 
 > **Draft spec, not yet approved.** This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
 > This unit has no open item blocking it (not listed in `../specs/00-build-plan.md`, "Units that cannot be specified").

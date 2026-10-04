@@ -6,7 +6,7 @@ Update it after every meaningful change. Keep it short: replace stale lines inst
 
 **History is not lost — it lives in [`progress-tracker-history.md`](progress-tracker-history.md).** The three chronological logs that used to sit in this file (the full "Completed" log, the full "Context change log" and the full "Last Updated" log) were moved there verbatim on 2026-10-02. When you add a dated entry, append it to the matching section at the bottom of the history file; keep only the current state here.
 
-Last updated: **2026-10-04**.
+Last updated: **2026-10-04** (Unit 07 built).
 
 ---
 
@@ -16,7 +16,7 @@ Last updated: **2026-10-04**.
 
 ## Current Goal
 
-Build the units in `specs/00-build-plan.md` order. **Unit 06 (judges and ranges) is built; the next unit to approve and build is Unit 07 (round runtime and autosave).** Each unit needs its own spec approved (its header must read `APPROVED`) before code is written for it.
+Build the units in `specs/00-build-plan.md` order. **Unit 07 (round runtime and autosave) is built; the next unit to approve and build is Unit 08 (submission, answer check and scoring).** Each unit needs its own spec approved (its header must read `APPROVED`) before code is written for it.
 
 ## What's Built
 
@@ -26,21 +26,22 @@ Build the units in `specs/00-build-plan.md` order. **Unit 06 (judges and ranges)
 | 02 Authentication and accounts | **Done** (2026-10-02) | Backend `modules/identity` (role-separated login/logout, bcrypt, 24h-from-login session, one-active-device takeover, generic 401), `requireAuth` middleware, platform-written CORS, Socket.io handshake auth, frontend `features/auth` session store. Migration `20261002000000_add_account_session_expires_at` applied live. |
 | 03 Competition setup and lifecycle | **Done** (2026-10-02) | Backend `modules/competition` (create with the fixed 2-stage × 2-round structure, the four-condition publish readiness check, publish → `PUBLISHED`→`WAITING`, the structure lock, controller-only access) and the frontend `features/competition` creation/publish screen. No schema change (tokens come from the schema's `@default(uuid())`). |
 | 06 Judges and ranges | **Done** (2026-10-04) | Backend `modules/identity` (judge list CRUD with one-time credentials, range assignment editable anytime per BLD-008, ROL-010 removal guard, the exported authority-scoping check Unit 10 will call) and frontend `features/judge` (JudgeManagementPage, JudgeRangeAssignmentPanel on the competition setup screen, JudgeLandingPage). No schema change. |
+| 07 Round runtime and autosave | **Done** (2026-10-04) | Backend `modules/round` (server-authoritative timer in Redis with deadline-epoch-ms as truth, preparation → active → paused → resumed transitions, dev-only `start-stage1-round1` trigger) + `modules/gameplay` (participant-scoped autosave, reconnect state read with questions + saved grids + timer snapshot, solution column never sent). Realtime `/player` namespace pushes `round:preparation-tick` / `round:started` / `round:timer-sync` / `round:paused` / `round:resumed`. Frontend `features/player` (round-runtime page mirroring server state) + `features/gameplay` (landscape-gated active round with grid, number pad, debounced autosave). No schema change. |
 
-No other feature code exists yet. The realtime gateway and the other feature modules are still skeleton-only.
+No other feature code exists yet. The orchestrator/scoring/ranking/big-screen modules are still skeleton-only.
 
 ## In Progress
 
-Nothing in flight. Unit 06 is built and verified; the next unit awaits its spec's approval.
+Nothing in flight. Unit 07 is built and verified; the next unit awaits its spec's approval.
 
-- **Unit 06 completion note.** Built 2026-10-04: backend lint + typecheck clean, `tests/judge.test.ts` written and **run green under Docker** (32/32 backend tests pass across all 5 suites, the 10 new judge cases included), frontend lint + typecheck + build clean. No new migrations.
+- **Unit 07 completion note.** Built 2026-10-04: backend lint + typecheck clean, `tests/round.test.ts` written and **run green under Docker** (42/42 backend tests pass across all 6 suites, the 10 new round cases included), frontend lint + typecheck + build clean. No new migrations. Local PostgreSQL 18 Windows service was stopped so Docker's postgres could own host `localhost:5432` for the test run (user-approved).
 - **Unit 03 scope decision (flag for spec reconciliation).** The spec's Context says the 2×2 structure is auto-created "for every category", but its own Goal, Acceptance Criteria and the approved `data-model.md` place the two stages on the **competition** (shared across categories). Implemented per the schema/data model — two stages per competition, not per category. The spec's Context wording is the outlier and should be reconciled.
 
 ## Next Up (recommended order)
 
-**`06` → `07` → `08` → `09` → `10` → `11` → `12` → `13` → `14` → `15`**, with **`04` and `05`** slotted in whenever **U-01 / U-94** resolve. (`02`, `03` and `06` are done.)
+**`07` → `08` → `09` → `10` → `11` → `12` → `13` → `14` → `15`**, with **`04` and `05`** slotted in whenever **U-01 / U-94** resolve. (`02`, `03`, `06` and `07` are done.)
 
-Before starting any unit: get the project owner's explicit approval and make sure that unit's spec header reads `APPROVED`. Units 07–15 are drafted but **not yet approved**.
+Before starting any unit: get the project owner's explicit approval and make sure that unit's spec header reads `APPROVED`. Units 08–15 are drafted but **not yet approved**.
 
 ## Blocked
 
@@ -74,8 +75,8 @@ React + TypeScript + Vite + Tailwind CSS; Node.js + TypeScript + Express.js; Pos
 
 ## Current Architecture State
 
-- **Backend:** module-first (BLD-020) under `backend/src/modules/` — `identity` (with judge list and range assignment from Unit 06) and `competition` exist (the rest are skeletons) — plus `realtime/`, `infra/`, `shared/` (errors, middleware, validation, i18n, clock), `config/`, `prisma/`.
-- **Frontend:** Vite + React + TypeScript + Tailwind (BLD-023), with `features/auth`, `features/competition` and `features/judge` implemented and the other feature folders as placeholders; EN/ZH i18n scaffold.
+- **Backend:** module-first (BLD-020) under `backend/src/modules/` — `identity` (with judge list and range assignment from Unit 06), `competition`, `round` (timer + preparation, Unit 07) and `gameplay` (autosave + reconnect state, Unit 07) exist (the rest are skeletons) — plus `realtime/` (gateway now wires the round lifecycle events to `/player`), `infra/`, `shared/` (errors, middleware, validation, i18n, clock), `config/`, `prisma/`.
+- **Frontend:** Vite + React + TypeScript + Tailwind (BLD-023), with `features/auth`, `features/competition`, `features/judge`, `features/player` and `features/gameplay` implemented and the other feature folders as placeholders; EN/ZH i18n scaffold.
 - `npm run lint`, `npm run typecheck`, `npm test` and `npm run build` pass in both services; the whole stack runs under Docker Compose.
 
 ## Current Database State
@@ -93,6 +94,8 @@ React + TypeScript + Vite + Tailwind CSS; Node.js + TypeScript + Express.js; Pos
 ## Context change log
 
 **Full log: [`progress-tracker-history.md`](progress-tracker-history.md), "Context change log".** Recent entries only:
+
+- 2026-10-04: **Unit 07 (Round runtime and autosave) built and verified** — backend `modules/round` (timer service with Redis-persisted deadlines + hook-based round transitions) + `modules/gameplay` (autosave + reconnect state), realtime `/player` events wired, frontend `features/player` + `features/gameplay`. 42/42 backend tests pass (10 new in `tests/round.test.ts`); both builds clean. No schema change. Local `postgresql-x64-18` Windows service stopped (user-approved) so Docker postgres could own host `localhost:5432`. Files touched: `backend/src/modules/{round,gameplay}/*`, `backend/src/realtime/{events.ts,gateway.ts}`, `backend/src/routes.ts`, `backend/src/shared/i18n/{en,zh}.ts`, `backend/tests/round.test.ts`, `frontend/src/features/{player,gameplay}/*` (new), `frontend/src/App.tsx`, `frontend/src/i18n/{en,zh}.ts`, `frontend/package.json` (added `socket.io-client`), `context/specs/07-round-runtime-and-autosave.md`, `context/progress-tracker.md`.
 
 - 2026-10-02: **Unit 03 built and verified** — backend `modules/competition` + frontend `features/competition`, no schema change. Backend 22/22 tests, frontend 10/10 tests, both builds clean. `progress-tracker.md` updated (Unit 03 → Done; next unit 06). Files touched: `backend/src/modules/competition/*`, `backend/src/shared/errors/app-error.ts`, `backend/src/shared/i18n/{en,zh}.ts`, `backend/src/routes.ts`, `backend/tests/competition.test.ts`, `backend/prisma/seed-test-competition.ts`, `frontend/src/features/competition/*`, `frontend/src/App.tsx`, `frontend/src/i18n/{en,zh}.ts`, `frontend/tests/competition-setup.test.tsx`, `context/progress-tracker.md`.
 
