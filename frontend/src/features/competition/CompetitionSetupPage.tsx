@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useLocale } from "../../i18n/locale-context";
+import { JudgeRangeAssignmentPanel } from "../judge/JudgeRangeAssignmentPanel";
 import {
   createCompetition,
   publishCompetition,
@@ -266,6 +267,9 @@ export function CompetitionSetupPage() {
               {error}
             </p>
           )}
+
+          {/* Judge range assignment (Unit 06) — changeable any time during the event. */}
+          <JudgeRangeAssignmentPanel competitionId={competition.id} />
 
           {!published ? (
             <button

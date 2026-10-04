@@ -67,6 +67,33 @@ export const en = {
       TEAM2: "Team round 2",
     },
   },
+  judge: {
+    title: "Judges",
+    name: "Judge name",
+    create: "Create judge",
+    created: "Judge created",
+    username: "Username",
+    password: "Password",
+    credentialNote:
+      "Print or copy these credentials now — the password is shown only once.",
+    list: "Existing judges",
+    active: "Active",
+    inactive: "Inactive",
+    remove: "Remove",
+    removed: "Removed",
+    blocked: "Cannot remove: still assigned to",
+    assign: "Assign range",
+    assignTo: "Assign on competition",
+    range: "Participants #",
+    from: "From",
+    to: "To",
+    saveAssignment: "Save assignment",
+    unassign: "Unassign",
+    assignedTo: "Assigned to",
+    notAssigned: "Not yet assigned to a competition.",
+    landingTitle: "Your assignment",
+    genericError: "Something went wrong. Please try again.",
+  },
 } as const;
 
 /** Recursively widens the literal `en` catalogue to `string` leaves, keeping its shape. */
