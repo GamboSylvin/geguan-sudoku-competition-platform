@@ -1,8 +1,8 @@
-# Unit 06: Judges and ranges — DRAFT, awaiting approval
+# Unit 06: Judges and ranges — APPROVED (2026-10-04)
 
-> **Draft spec, not yet approved.** This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
-> This unit has no open item blocking it (`../specs/00-build-plan.md`: "No open items remain — judge credential format is resolved (I-30, BLD-037), judge removal is resolved (I-12, ROL-010). Ready for its unit spec.").
-> Present this spec for review before starting the unit, per the methodology.
+> **Approved Unit 6 spec.** Approved 2026-10-04 by the project owner. This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
+> This unit has no open item blocking it (`../specs/00-build-plan.md`: "No open items remain — judge credential format is resolved (I-30, BLD-037), judge removal is resolved (I-12, ROL-010).").
+> Approved 2026-10-04 and now being built (builder: Sylvin).
 
 ## Goal
 

@@ -6,7 +6,7 @@ Update it after every meaningful change. Keep it short: replace stale lines inst
 
 **History is not lost — it lives in [`progress-tracker-history.md`](progress-tracker-history.md).** The three chronological logs that used to sit in this file (the full "Completed" log, the full "Context change log" and the full "Last Updated" log) were moved there verbatim on 2026-10-02. When you add a dated entry, append it to the matching section at the bottom of the history file; keep only the current state here.
 
-Last updated: **2026-10-02**.
+Last updated: **2026-10-04**.
 
 ---
 
@@ -16,7 +16,7 @@ Last updated: **2026-10-02**.
 
 ## Current Goal
 
-Build the units in `specs/00-build-plan.md` order. **Unit 3 (Competition setup and lifecycle) is built; the next unit to approve and build is Unit 06 (judges and ranges).** Each unit needs its own spec approved (its header must read `APPROVED`) before code is written for it.
+Build the units in `specs/00-build-plan.md` order. **Unit 06 (judges and ranges) is built; the next unit to approve and build is Unit 07 (round runtime and autosave).** Each unit needs its own spec approved (its header must read `APPROVED`) before code is written for it.
 
 ## What's Built
 
@@ -24,22 +24,23 @@ Build the units in `specs/00-build-plan.md` order. **Unit 3 (Competition setup a
 |---|---|---|
 | 01 Foundation | **Done** | Repository, Docker/Compose, CI (lint/typecheck/test/build), backend + frontend skeletons, Prisma schema + `0_init` migration, health check, first Jest tests, EN/ZH i18n scaffold. Acceptance criteria 1 and 3 verified live under Docker 2026-10-02. |
 | 02 Authentication and accounts | **Done** (2026-10-02) | Backend `modules/identity` (role-separated login/logout, bcrypt, 24h-from-login session, one-active-device takeover, generic 401), `requireAuth` middleware, platform-written CORS, Socket.io handshake auth, frontend `features/auth` session store. Migration `20261002000000_add_account_session_expires_at` applied live. |
-| 03 Competition setup and lifecycle | **Done** (2026-10-02) | Backend `modules/competition` (create with the fixed 2-stage × 2-round structure, the four-condition publish readiness check, publish → `PUBLISHED`→`WAITING`, the structure lock, controller-only access) and the frontend `features/competition` creation/publish screen. No schema change (tokens come from the schema's `@default(uuid())`). See "In Progress" note below. |
+| 03 Competition setup and lifecycle | **Done** (2026-10-02) | Backend `modules/competition` (create with the fixed 2-stage × 2-round structure, the four-condition publish readiness check, publish → `PUBLISHED`→`WAITING`, the structure lock, controller-only access) and the frontend `features/competition` creation/publish screen. No schema change (tokens come from the schema's `@default(uuid())`). |
+| 06 Judges and ranges | **Done** (2026-10-04) | Backend `modules/identity` (judge list CRUD with one-time credentials, range assignment editable anytime per BLD-008, ROL-010 removal guard, the exported authority-scoping check Unit 10 will call) and frontend `features/judge` (JudgeManagementPage, JudgeRangeAssignmentPanel on the competition setup screen, JudgeLandingPage). No schema change. |
 
 No other feature code exists yet. The realtime gateway and the other feature modules are still skeleton-only.
 
 ## In Progress
 
-Nothing in flight. Unit 03 is complete and verified; the next unit awaits its spec's approval.
+Nothing in flight. Unit 06 is built and verified; the next unit awaits its spec's approval.
 
-- **Unit 03 completion note.** Verified 2026-10-02: backend lint + typecheck clean, 22/22 backend tests pass (9 new in `tests/competition.test.ts`), frontend lint + typecheck + build clean, 10/10 frontend tests pass (3 new in `tests/competition-setup.test.tsx`). Live stack under Docker serves the new endpoints after a backend restart. A scratch seed (`backend/prisma/seed-test-competition.ts`) seeds participant/question/judge data for the readiness check — dev tooling only, not wired into any user-facing flow.
+- **Unit 06 completion note.** Built 2026-10-04: backend lint + typecheck clean, `tests/judge.test.ts` written and **run green under Docker** (32/32 backend tests pass across all 5 suites, the 10 new judge cases included), frontend lint + typecheck + build clean. No new migrations.
 - **Unit 03 scope decision (flag for spec reconciliation).** The spec's Context says the 2×2 structure is auto-created "for every category", but its own Goal, Acceptance Criteria and the approved `data-model.md` place the two stages on the **competition** (shared across categories). Implemented per the schema/data model — two stages per competition, not per category. The spec's Context wording is the outlier and should be reconciled.
 
 ## Next Up (recommended order)
 
-**`03` → `06` → `07` → `08` → `09` → `10` → `11` → `12` → `13` → `14` → `15`**, with **`04` and `05`** slotted in whenever **U-01 / U-94** resolve. (`02` and `03` are done.)
+**`06` → `07` → `08` → `09` → `10` → `11` → `12` → `13` → `14` → `15`**, with **`04` and `05`** slotted in whenever **U-01 / U-94** resolve. (`02`, `03` and `06` are done.)
 
-Before starting any unit: get the project owner's explicit approval and make sure that unit's spec header reads `APPROVED`. Units 06–15 are drafted but **not yet approved**.
+Before starting any unit: get the project owner's explicit approval and make sure that unit's spec header reads `APPROVED`. Units 07–15 are drafted but **not yet approved**.
 
 ## Blocked
 
@@ -73,8 +74,8 @@ React + TypeScript + Vite + Tailwind CSS; Node.js + TypeScript + Express.js; Pos
 
 ## Current Architecture State
 
-- **Backend:** module-first (BLD-020) under `backend/src/modules/` — `identity` and `competition` exist (the rest are skeletons) — plus `realtime/`, `infra/`, `shared/` (errors, middleware, validation, i18n, clock), `config/`, `prisma/`.
-- **Frontend:** Vite + React + TypeScript + Tailwind (BLD-023), with `features/auth` and `features/competition` implemented and the other feature folders as placeholders; EN/ZH i18n scaffold.
+- **Backend:** module-first (BLD-020) under `backend/src/modules/` — `identity` (with judge list and range assignment from Unit 06) and `competition` exist (the rest are skeletons) — plus `realtime/`, `infra/`, `shared/` (errors, middleware, validation, i18n, clock), `config/`, `prisma/`.
+- **Frontend:** Vite + React + TypeScript + Tailwind (BLD-023), with `features/auth`, `features/competition` and `features/judge` implemented and the other feature folders as placeholders; EN/ZH i18n scaffold.
 - `npm run lint`, `npm run typecheck`, `npm test` and `npm run build` pass in both services; the whole stack runs under Docker Compose.
 
 ## Current Database State
