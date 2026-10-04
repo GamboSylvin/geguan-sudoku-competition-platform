@@ -35,4 +35,10 @@ export const zh: MessageCatalogue = {
       judgeRangesRequired: "裁判负责范围必须覆盖所有参赛号。",
     },
   },
+  judge: {
+    forbidden: "只有管理员可以管理裁判。",
+    notFound: "未找到该裁判。",
+    assignmentNotFound: "未找到该裁判分配。",
+    hasActiveAssignment: "该裁判仍被分配到一场尚未结束的比赛。",
+  },
 };

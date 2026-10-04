@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { healthRouter } from "./health";
 import { competitionRouter } from "./modules/competition";
-import { identityRouter } from "./modules/identity";
+import { identityRouter, judgeRouter, judgeAssignmentRouter } from "./modules/identity";
 import { questionRouter } from "./modules/question";
 import { roundRouter } from "./modules/round";
 import { gameplayRouter } from "./modules/gameplay";
@@ -25,6 +25,9 @@ apiRouter.use("/", healthRouter);
 apiRouter.use("/auth", identityRouter);
 
 apiRouter.use("/competitions", competitionRouter);
+// Judge range assignment lives on the competition path (Unit 06 API contract).
+apiRouter.use("/competitions/:id/judge-assignments", judgeAssignmentRouter);
+apiRouter.use("/judges", judgeRouter);
 apiRouter.use("/questions", questionRouter);
 apiRouter.use("/rounds", roundRouter);
 apiRouter.use("/gameplay", gameplayRouter);

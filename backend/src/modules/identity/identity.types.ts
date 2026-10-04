@@ -49,3 +49,57 @@ export const INVALID_CREDENTIALS = "auth.invalidCredentials";
 export const SESSION_INVALID = "auth.sessionExpired";
 /** Raised when the request comes from a device that is not the active one. */
 export const DEVICE_TAKEN_OVER = "auth.deviceTakenOver";
+
+// ---------------------------------------------------------------------------
+// Judges and ranges (Unit 06)
+// ---------------------------------------------------------------------------
+
+/** Raised when a judge id does not resolve to a real judge. */
+export const JUDGE_NOT_FOUND = "judge.notFound";
+/** Raised when a judge-assignment id does not resolve on the given competition. */
+export const JUDGE_ASSIGNMENT_NOT_FOUND = "judge.assignmentNotFound";
+/** Raised when a judge is removed while assigned to an unfinished competition. */
+export const JUDGE_HAS_ACTIVE_ASSIGNMENT = "judge.hasActiveAssignment";
+/** Raised when a non-controller session touches judge management (ROL-002). */
+export const JUDGE_FORBIDDEN = "judge.forbidden";
+
+/** The judge row as the list screen shows it (credentials are never re-shown). */
+export interface JudgeSummary {
+  id: string;
+  name: string;
+  active: boolean;
+  createdAt: string;
+}
+
+/** What a successful judge creation returns: the judge plus its one-time credentials. */
+export interface CreatedJudge extends JudgeSummary {
+  username: string;
+  password: string;
+}
+
+/** One judge's assignment on one competition. */
+export interface JudgeAssignment {
+  id: string;
+  competitionId: string;
+  judgeId: string;
+  fromParticipantNumber: number;
+  toParticipantNumber: number;
+  assignedAt: string;
+  assignedByAccountId: string | null;
+}
+
+export interface CreateJudgeInput {
+  name: string;
+}
+
+export interface AssignJudgeRangeInput {
+  judgeId: string;
+  fromParticipantNumber: number;
+  toParticipantNumber: number;
+}
+
+/** The unfinished competitions that block a judge's removal (ROL-010). */
+export interface BlockingAssignment {
+  competitionId: string;
+  competitionName: string;
+}

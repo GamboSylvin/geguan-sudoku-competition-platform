@@ -41,6 +41,15 @@ export const en = {
         "Judge ranges must cover every participant number.",
     },
   },
+  judge: {
+    // Unit 06. Judge list management and range assignment are controller-only
+    // (ROL-002); the removal guard names the unfinished competition (ROL-010).
+    forbidden: "Only a controller can manage judges.",
+    notFound: "Judge not found.",
+    assignmentNotFound: "Judge assignment not found.",
+    hasActiveAssignment:
+      "This judge is still assigned to an unfinished competition.",
+  },
 } as const;
 
 /** Recursively widens the literal `en` catalogue to `string` leaves, keeping its shape. */
