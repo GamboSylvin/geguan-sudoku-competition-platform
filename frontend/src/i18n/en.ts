@@ -94,6 +94,33 @@ export const en = {
     landingTitle: "Your assignment",
     genericError: "Something went wrong. Please try again.",
   },
+  player: {
+    waitingTitle: "Competition room",
+    waitingSubtitle: "Waiting for the competition to start…",
+    preparationTitle: "Get ready",
+    preparationSubtitle: "The round starts in",
+    preparationRules: "Round rules",
+    preparationRuleDuration: "Answer as many puzzles as you can before the timer runs out.",
+    preparationRuleMovement: "Move freely between the round's puzzles.",
+    preparationRuleFeedback: "You will not see whether an answer is correct while you play.",
+    rotateDevice: "Please rotate your device",
+    rotateDeviceHint: "This screen works only in landscape.",
+    resumeCountdown: "Resuming in",
+    paused: "Paused",
+    genericError: "Something went wrong. Please try again.",
+  },
+  gameplay: {
+    puzzle: "Puzzle",
+    of: "of",
+    previous: "Previous",
+    next: "Next",
+    delete: "Delete",
+    clearAll: "Clear all",
+    confirmDelete: "Clear this cell?",
+    confirmClearAll: "Clear every cell of this puzzle?",
+    points: "points",
+    timeLeft: "Time left",
+  },
 } as const;
 
 /** Recursively widens the literal `en` catalogue to `string` leaves, keeping its shape. */

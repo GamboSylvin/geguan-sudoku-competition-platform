@@ -3,6 +3,7 @@ import { LocaleProvider } from "./i18n/locale-context";
 import { LoginPage, RoleHomePage } from "./features/auth";
 import { CompetitionSetupPage } from "./features/competition";
 import { JudgeLandingPage, JudgeManagementPage } from "./features/judge";
+import { PlayerPage } from "./features/player";
 
 /**
  * The app entry (Unit 02): the i18n provider, the router, the login page and the
@@ -13,6 +14,8 @@ import { JudgeLandingPage, JudgeManagementPage } from "./features/judge";
  * Unit 03 adds the controller's competition-creation and publish screen.
  * Unit 06 adds the controller's judge-management screen, the judge range assignment
  * panel (on the setup screen) and the judge's own assignment landing.
+ * Unit 07 replaces the player's placeholder landing with the round-runtime page
+ * (competition room, preparation, active round, paused/resuming).
  */
 export function App() {
   return (
@@ -20,7 +23,7 @@ export function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/player" element={<RoleHomePage role="PLAYER" />} />
+          <Route path="/player" element={<PlayerPage />} />
           <Route path="/judge" element={<JudgeLandingPage />} />
           <Route path="/controller" element={<RoleHomePage role="CONTROLLER" />} />
           <Route path="/controller/competition/new" element={<CompetitionSetupPage />} />
