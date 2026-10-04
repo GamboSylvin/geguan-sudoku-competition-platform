@@ -1,14 +1,74 @@
 /**
- * The Gameplay module. Owns: The current grid, autosave, reconnection, submission state, player runtime state.
+ * HTTP layer for the Gameplay module (Unit 07). Validates input, then calls the
+ * service; no domain rule lives here.
  *
- * Skeleton only — no feature code (Unit 01, spec 01-foundation). The files follow
- * the decided module layout (BLD-020): controller (HTTP), service (domain rules and
- * the public interface), repository (Prisma access), types, and this barrel.
+ * Routes (both behind `requireAuth`, both participant-scoped in the service):
+ *   - `POST /api/gameplay/:roundId/autosave` — the autosave write path. The
+ *     client calls this roughly twice per second while the player edits (spec
+ *     Implementation Detail 4). Body `{ questionId, grid }`.
+ *   - `GET  /api/gameplay/:roundId/state` — the reconnect path. Returns the
+ *     round's questions, the player's saved grids, and the server-authoritative
+ *     timer snapshot (spec API Contract).
+ *
+ * The caller must be a participant in the round (spec Security Considerations);
+ * a controller or judge session is rejected by the participant check.
  */
-import { Router } from "express";
+import { Router, type NextFunction, type Request, type Response } from "express";
+import { z } from "zod";
+import { UnauthorizedError } from "../../shared/errors";
+import { translate } from "../../shared/i18n";
+import { requireAuth } from "../../shared/middleware";
+import { parseInput } from "../../shared/validation";
+import { gameplayService } from "./gameplay.service";
 
-/**
- * HTTP layer for the Gameplay module. It validates input, then calls the service;
- * no domain rule lives here. No route is mounted yet.
- */
 export const gameplayRouter = Router();
+
+function requireParticipant(req: Request, _res: Response, next: NextFunction): void {
+  if (req.auth?.role !== "PLAYER" || !req.auth.participantId) {
+    next(
+      new UnauthorizedError(translate("en", "gameplay.forbidden"), {
+        code: "gameplay.forbidden",
+      }),
+    );
+    return;
+  }
+  next();
+}
+
+const autosaveSchema = z.object({
+  questionId: z.string().min(1),
+  grid: z.array(z.number().int().nullable()),
+});
+
+gameplayRouter.post(
+  "/:roundId/autosave",
+  requireAuth,
+  requireParticipant,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const input = parseInput(autosaveSchema, req.body);
+      const roundId = req.params.roundId as string;
+      const participantId = req.auth!.participantId!;
+      const result = await gameplayService.autosave(roundId, participantId, input);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+gameplayRouter.get(
+  "/:roundId/state",
+  requireAuth,
+  requireParticipant,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const roundId = req.params.roundId as string;
+      const participantId = req.auth!.participantId!;
+      const state = await gameplayService.getState(roundId, participantId);
+      res.status(200).json(state);
+    } catch (error) {
+      next(error);
+    }
+  },
+);

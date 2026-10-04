@@ -50,6 +50,26 @@ export const en = {
     hasActiveAssignment:
       "This judge is still assigned to an unfinished competition.",
   },
+  round: {
+    // Unit 07. The dev trigger is controller-only and non-production; the pause
+    // and resume surface will be wired to the controller commands in Unit 11.
+    forbidden: "Only a controller can run this round command.",
+    devOnly: "This trigger is available only outside production.",
+    competitionNotWaiting:
+      "The competition is not waiting to start; the first round cannot be triggered.",
+    stageMissing: "The competition's stage 1 is missing.",
+    roundMissing: "The stage's round 1 is missing.",
+    alreadyActive: "Another round is already running for this competition.",
+    noActiveTimer: "No round timer is running for this competition.",
+  },
+  gameplay: {
+    // Unit 07. Autosave and grid restore are participant-scoped: a participant
+    // reads and writes only their own grid, only while the round is active.
+    forbidden: "You cannot access this round's working grid.",
+    roundNotFound: "Round not found.",
+    notActive: "The round is not active.",
+    notAParticipant: "You are not a participant in this round.",
+  },
 } as const;
 
 /** Recursively widens the literal `en` catalogue to `string` leaves, keeping its shape. */

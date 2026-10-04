@@ -22,6 +22,18 @@ export const SYSTEM_EVENTS = {
   pong: "system:pong",
 } as const;
 
+/**
+ * Round events (Unit 07). The server pushes these to the player namespace; the
+ * client never sends them. Payloads are defined in `modules/round/round.types`.
+ */
+export const ROUND_EVENTS = {
+  preparationTick: "round:preparation-tick",
+  started: "round:started",
+  timerSync: "round:timer-sync",
+  paused: "round:paused",
+  resumed: "round:resumed",
+} as const;
+
 export interface SystemConnectedPayload {
   /** ISO timestamp from the single server clock (the server owns time). */
   serverTime: string;

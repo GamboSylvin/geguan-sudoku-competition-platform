@@ -41,4 +41,19 @@ export const zh: MessageCatalogue = {
     assignmentNotFound: "未找到该裁判分配。",
     hasActiveAssignment: "该裁判仍被分配到一场尚未结束的比赛。",
   },
+  round: {
+    forbidden: "只有管理员可以执行该轮次操作。",
+    devOnly: "该触发器仅在非生产环境可用。",
+    competitionNotWaiting: "该比赛不在等待开始状态，无法触发第一轮。",
+    stageMissing: "该比赛缺少第一阶段。",
+    roundMissing: "该阶段缺少第一轮。",
+    alreadyActive: "该比赛已有正在进行的轮次。",
+    noActiveTimer: "该比赛当前没有运行中的轮次计时器。",
+  },
+  gameplay: {
+    forbidden: "你无法访问该轮的答题棋盘。",
+    roundNotFound: "未找到该轮次。",
+    notActive: "该轮次当前未开始。",
+    notAParticipant: "你不是该轮次的参赛选手。",
+  },
 };
