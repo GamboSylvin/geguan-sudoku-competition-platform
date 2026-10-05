@@ -6,7 +6,7 @@ Update it after every meaningful change. Keep it short: replace stale lines inst
 
 **History is not lost — it lives in [`progress-tracker-history.md`](progress-tracker-history.md).** The three chronological logs that used to sit in this file (the full "Completed" log, the full "Context change log" and the full "Last Updated" log) were moved there verbatim on 2026-10-02. When you add a dated entry, append it to the matching section at the bottom of the history file; keep only the current state here.
 
-Last updated: **2026-10-04** (Unit 07 built).
+Last updated: **2026-10-05** (Unit 08 built and verified).
 
 ---
 
@@ -16,7 +16,7 @@ Last updated: **2026-10-04** (Unit 07 built).
 
 ## Current Goal
 
-Build the units in `specs/00-build-plan.md` order. **Unit 07 (round runtime and autosave) is built; the next unit to approve and build is Unit 08 (submission, answer check and scoring).** Each unit needs its own spec approved (its header must read `APPROVED`) before code is written for it.
+Build the units in `specs/00-build-plan.md` order. **Unit 08 (submission, answer check and scoring) is built; the next unit to approve and build is Unit 09 (individual ranking and big-screen ranking).** Each unit needs its own spec approved (its header must read `APPROVED`) before code is written for it.
 
 ## What's Built
 
@@ -27,21 +27,23 @@ Build the units in `specs/00-build-plan.md` order. **Unit 07 (round runtime and 
 | 03 Competition setup and lifecycle | **Done** (2026-10-02) | Backend `modules/competition` (create with the fixed 2-stage × 2-round structure, the four-condition publish readiness check, publish → `PUBLISHED`→`WAITING`, the structure lock, controller-only access) and the frontend `features/competition` creation/publish screen. No schema change (tokens come from the schema's `@default(uuid())`). |
 | 06 Judges and ranges | **Done** (2026-10-04) | Backend `modules/identity` (judge list CRUD with one-time credentials, range assignment editable anytime per BLD-008, ROL-010 removal guard, the exported authority-scoping check Unit 10 will call) and frontend `features/judge` (JudgeManagementPage, JudgeRangeAssignmentPanel on the competition setup screen, JudgeLandingPage). No schema change. |
 | 07 Round runtime and autosave | **Done** (2026-10-04) | Backend `modules/round` (server-authoritative timer in Redis with deadline-epoch-ms as truth, preparation → active → paused → resumed transitions, dev-only `start-stage1-round1` trigger) + `modules/gameplay` (participant-scoped autosave, reconnect state read with questions + saved grids + timer snapshot, solution column never sent). Realtime `/player` namespace pushes `round:preparation-tick` / `round:started` / `round:timer-sync` / `round:paused` / `round:resumed`. Frontend `features/player` (round-runtime page mirroring server state) + `features/gameplay` (landscape-gated active round with grid, number pad, debounced autosave). No schema change. |
+| 08 Submission, answer check and scoring | **Done** (2026-10-05) | Backend `modules/scoring` (pure scoring rules — `gridsEqual`, `computeEarlyBonus` per SCR-008–SCR-011 — plus `finalizeAttempt` writing Attempt + Answer + IndividualRoundResult idempotently) and additive extensions to `modules/gameplay` (`POST /:roundId/submit`, `finalizeParticipation`, `handleRoundEnded` for auto-submit on timer expiry, `advanceAfterRoundFinalized` for INDIVIDUAL-stage round advance). Composition root wires the round-ended listener with a once-per-process guard. Frontend `features/gameplay` gains a submit button + confirmation dialog naming blank-puzzle count + read-only "submission accepted" view; `features/player` carries the new `participationState` field through. The score is never sent to the player (SUB-007/BLD-029); a late submit is recorded as TIMEOUT with no distinct message (SUB-003); a repeated submit is a no-op (PL-009). No schema change. |
 
-No other feature code exists yet. The orchestrator/scoring/ranking/big-screen modules are still skeleton-only.
+No other feature code exists yet. The orchestrator/ranking/big-screen modules are still skeleton-only.
 
 ## In Progress
 
-Nothing in flight. Unit 07 is built and verified; the next unit awaits its spec's approval.
+Nothing in flight. Unit 08 is built and verified; the next unit awaits its spec's approval.
 
+- **Unit 08 completion note.** Built 2026-10-05: backend lint + typecheck + build clean, `tests/scoring.test.ts` written and **run green under Docker** (55/55 backend tests pass across all 7 suites, the 13 new scoring cases included), frontend lint + typecheck + build clean. No new migrations.
 - **Unit 07 completion note.** Built 2026-10-04: backend lint + typecheck clean, `tests/round.test.ts` written and **run green under Docker** (42/42 backend tests pass across all 6 suites, the 10 new round cases included), frontend lint + typecheck + build clean. No new migrations. Local PostgreSQL 18 Windows service was stopped so Docker's postgres could own host `localhost:5432` for the test run (user-approved).
 - **Unit 03 scope decision (flag for spec reconciliation).** The spec's Context says the 2×2 structure is auto-created "for every category", but its own Goal, Acceptance Criteria and the approved `data-model.md` place the two stages on the **competition** (shared across categories). Implemented per the schema/data model — two stages per competition, not per category. The spec's Context wording is the outlier and should be reconciled.
 
 ## Next Up (recommended order)
 
-**`07` → `08` → `09` → `10` → `11` → `12` → `13` → `14` → `15`**, with **`04` and `05`** slotted in whenever **U-01 / U-94** resolve. (`02`, `03`, `06` and `07` are done.)
+**`08` → `09` → `10` → `11` → `12` → `13` → `14` → `15`**, with **`04` and `05`** slotted in whenever **U-01 / U-94** resolve. (`02`, `03`, `06`, `07` and `08` are done.)
 
-Before starting any unit: get the project owner's explicit approval and make sure that unit's spec header reads `APPROVED`. Units 08–15 are drafted but **not yet approved**.
+Before starting any unit: get the project owner's explicit approval and make sure that unit's spec header reads `APPROVED`. Units 09–15 are drafted but **not yet approved**.
 
 ## Blocked
 

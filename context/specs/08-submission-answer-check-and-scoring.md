@@ -1,6 +1,6 @@
-# Unit 08: Submission, answer check and scoring — DRAFT, awaiting approval
+# Unit 08: Submission, answer check and scoring — APPROVED (2026-10-05)
 
-> **Draft spec, not yet approved.** This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
+> **Approved spec.** This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
 > This unit has no open item blocking it (not listed in `../specs/00-build-plan.md`, "Units that cannot be specified"). The build plan's own note — "**Waits:** unique solutions (U-90)" — is resolved: every puzzle has exactly one valid solution, confirmed by the stakeholder [C] (U-90).
 > Present this spec for review before starting the unit, per the methodology.
 
