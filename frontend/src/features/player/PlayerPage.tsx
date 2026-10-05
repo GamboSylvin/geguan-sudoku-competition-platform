@@ -68,6 +68,8 @@ interface GameplayStatePayload {
   questions: RoundQuestionPayload[];
   savedGrids: { questionId: string; grid: (number | null)[]; savedAtMs: number }[];
   timer: { remainingSeconds: number; totalSeconds: number } | null;
+  /** Unit 08: server-reported state of this player's participation. */
+  participationState: "WAITING" | "ACTIVE" | "SUBMITTED" | "AUTO_SUBMITTED" | "RESTARTED";
 }
 
 type ScreenState =
@@ -80,6 +82,7 @@ type ScreenState =
       durationSeconds: number;
       questions: RoundQuestionPayload[];
       savedGrids: GameplayStatePayload["savedGrids"];
+      participationState: GameplayStatePayload["participationState"];
     }
   | { kind: "paused"; pausedRemainingSeconds: number }
   | {
@@ -93,6 +96,7 @@ type ScreenState =
         durationSeconds: number;
         questions: RoundQuestionPayload[];
         savedGrids: GameplayStatePayload["savedGrids"];
+        participationState: GameplayStatePayload["participationState"];
       } | null;
     };
 
@@ -138,6 +142,7 @@ export function PlayerPage() {
             durationSeconds: state.timer?.totalSeconds ?? 0,
             questions: state.questions,
             savedGrids: state.savedGrids,
+            participationState: state.participationState,
           });
         } else if (state.status === "PREPARATION" && state.timer) {
           setScreen({
@@ -188,6 +193,10 @@ export function PlayerPage() {
         durationSeconds: payload.durationSeconds,
         questions: payload.questions,
         savedGrids: [],
+        // A round:started broadcast always lands on a fresh ACTIVE
+        // participation for every player in the round; nothing has been
+        // submitted yet.
+        participationState: "ACTIVE",
       });
     });
 
@@ -218,6 +227,7 @@ export function PlayerPage() {
                 durationSeconds: snapshot.durationSeconds,
                 questions: snapshot.questions,
                 savedGrids: snapshot.savedGrids,
+                participationState: snapshot.participationState,
               }
             : null,
         };
@@ -267,6 +277,7 @@ export function PlayerPage() {
             durationSeconds: current.activeSnapshot.durationSeconds,
             questions: current.activeSnapshot.questions,
             savedGrids: current.activeSnapshot.savedGrids,
+            participationState: current.activeSnapshot.participationState,
           };
         }
         return { kind: "waiting" };
@@ -332,6 +343,7 @@ export function PlayerPage() {
       savedGrids={screen.savedGrids}
       sessionToken={session.token}
       deviceId={session.deviceId}
+      initialParticipationState={screen.participationState}
     />
   );
 }

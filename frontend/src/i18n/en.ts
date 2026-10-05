@@ -120,6 +120,19 @@ export const en = {
     confirmClearAll: "Clear every cell of this puzzle?",
     points: "points",
     timeLeft: "Time left",
+    submit: "Submit",
+    submitConfirmTitle: "Submit your answers?",
+    submitConfirmBody:
+      "You cannot change your answers after submitting. The score is revealed only at the award ceremony.",
+    submitConfirmBlanks: "Puzzles left completely blank: ",
+    submitConfirmNone: "Every puzzle has at least one cell filled in.",
+    submitConfirmCancel: "Keep playing",
+    submitConfirmOk: "Submit now",
+    submitAcceptedTitle: "Submission accepted",
+    submitAcceptedBody:
+      "Your answers are locked in. Wait for the next round — the score is revealed at the award ceremony.",
+    submittedReadOnly: "Your answers (read-only)",
+    submitting: "Submitting…",
   },
 } as const;
 
