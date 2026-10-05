@@ -70,6 +70,11 @@ export const en = {
     notActive: "The round is not active.",
     notAParticipant: "You are not a participant in this round.",
   },
+  scoring: {
+    // Unit 08. The scoring module is invoked server-side only; these strings are
+    // for the few places it surfaces a failure to log.
+    noQuestions: "The round has no questions to score.",
+  },
 } as const;
 
 /** Recursively widens the literal `en` catalogue to `string` leaves, keeping its shape. */

@@ -72,3 +72,29 @@ gameplayRouter.get(
     }
   },
 );
+
+/**
+ * POST /api/gameplay/:roundId/submit — the player-initiated manual submit
+ * (Unit 08). Body is empty: the server already has the latest autosaved grid
+ * per puzzle, and the session identifies the participant.
+ *
+ * 200 with `{ accepted: true, submissionType }`. The score is never returned
+ * (SUB-007/BLD-029). A submit that arrives after the timer expired is
+ * recorded as `TIMEOUT` (SUB-003) and the response is indistinguishable from
+ * a successful manual submit. A repeated submit is a no-op (PL-009).
+ */
+gameplayRouter.post(
+  "/:roundId/submit",
+  requireAuth,
+  requireParticipant,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const roundId = req.params.roundId as string;
+      const participantId = req.auth!.participantId!;
+      const result = await gameplayService.submit(roundId, participantId);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);

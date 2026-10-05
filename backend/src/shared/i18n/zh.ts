@@ -56,4 +56,7 @@ export const zh: MessageCatalogue = {
     notActive: "该轮次当前未开始。",
     notAParticipant: "你不是该轮次的参赛选手。",
   },
+  scoring: {
+    noQuestions: "该轮次没有可评分的题目。",
+  },
 };
