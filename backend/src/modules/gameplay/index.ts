@@ -10,6 +10,6 @@
  *   - `gameplayRouter`: HTTP routes — `POST /:roundId/autosave` and
  *     `GET /:roundId/state`.
  */
-export { gameplayService } from "./gameplay.service";
+export { gameplayService, installIndividualResultFinalizedHook } from "./gameplay.service";
 export { gameplayRouter } from "./gameplay.controller";
 export type * from "./gameplay.types";

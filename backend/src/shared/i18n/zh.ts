@@ -59,4 +59,11 @@ export const zh: MessageCatalogue = {
   scoring: {
     noQuestions: "该轮次没有可评分的题目。",
   },
+  ranking: {
+    forbidden: "只有管理员可以查看排名。",
+    notFound: "未找到该排名。",
+  },
+  bigScreen: {
+    unauthorized: "该大屏链接无效。",
+  },
 };

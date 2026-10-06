@@ -75,6 +75,16 @@ export const en = {
     // for the few places it surfaces a failure to log.
     noQuestions: "The round has no questions to score.",
   },
+  ranking: {
+    // Unit 09. The controller-facing ranking read is controller-only (ROL-002).
+    forbidden: "Only a controller can read a ranking.",
+    notFound: "Ranking not found.",
+  },
+  bigScreen: {
+    // Unit 09. The big screen has no login; its link token is the only gate
+    // (BSC-001). The rejection is generic — it never hints at why the token failed.
+    unauthorized: "This big-screen link is not valid.",
+  },
 } as const;
 
 /** Recursively widens the literal `en` catalogue to `string` leaves, keeping its shape. */

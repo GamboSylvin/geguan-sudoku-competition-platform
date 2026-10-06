@@ -8,3 +8,4 @@
 export { rankingService } from "./ranking.service";
 export { rankingRouter } from "./ranking.controller";
 export type * from "./ranking.types";
+export type { IndividualResultFinalizedEvent } from "./ranking.types";

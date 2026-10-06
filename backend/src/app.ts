@@ -1,8 +1,10 @@
 import express, { type Express } from "express";
 import { apiRouter } from "./routes";
 import { cors, errorHandler, requestLogger } from "./shared/middleware";
-import { gameplayService } from "./modules/gameplay";
+import { gameplayService, installIndividualResultFinalizedHook } from "./modules/gameplay";
 import { roundTimerService } from "./modules/round";
+import { rankingService } from "./modules/ranking";
+import { bigScreenService } from "./modules/big-screen";
 
 /**
  * The Express application: middleware plus route mounting (BLD-020). It is kept
@@ -15,11 +17,22 @@ import { roundTimerService } from "./modules/round";
 // participation and advances the competition (CS-022, invariant 7). Installed
 // once per process — `createApp()` can be called multiple times in tests, and
 // `onRoundEnded` would otherwise accumulate duplicate listeners.
-let roundEndedListenerInstalled = false;
-function installRoundEndedListener(): void {
-  if (roundEndedListenerInstalled) return;
+//
+// Unit 09: subscribe the Ranking module to the Gameplay module's "individual
+// result finalized" signal (recompute the category), and the BigScreen module to
+// the Ranking module's "ranking updated" signal (push the fresh leaderboard to the
+// big screen out of cycle, within the 2-second target, U-58). Same once-guard.
+let listenersInstalled = false;
+function installListeners(): void {
+  if (listenersInstalled) return;
   roundTimerService.onRoundEnded((event) => gameplayService.handleRoundEnded(event));
-  roundEndedListenerInstalled = true;
+  installIndividualResultFinalizedHook((event) =>
+    rankingService.handleIndividualResultFinalized(event),
+  );
+  rankingService.installRankingUpdateHook((payload) =>
+    bigScreenService.pushCurrentForUpdate(payload.competitionId, payload.categoryId),
+  );
+  listenersInstalled = true;
 }
 
 export function createApp(): Express {
@@ -36,7 +49,7 @@ export function createApp(): Express {
   // Central error handler last: never swallow an error silently.
   app.use(errorHandler);
 
-  installRoundEndedListener();
+  installListeners();
 
   return app;
 }

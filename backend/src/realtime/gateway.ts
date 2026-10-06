@@ -4,6 +4,8 @@ import { env } from "../config/env";
 import { logger } from "../infra/logger";
 import { now } from "../shared/clock";
 import { identityService } from "../modules/identity";
+import { bigScreenService } from "../modules/big-screen";
+import type { BigScreenRankingPayload } from "../modules/big-screen";
 import { roundService, roundTimerService } from "../modules/round";
 import type {
   PreparationTickPayload,
@@ -13,6 +15,7 @@ import type {
   TimerSyncPayload,
 } from "../modules/round";
 import {
+  RANKING_EVENTS,
   REALTIME_NAMESPACES,
   ROUND_EVENTS,
   SYSTEM_EVENTS,
@@ -27,35 +30,66 @@ import {
  * Unit 07 subscribes the gateway to the round service's lifecycle and tick
  * listeners, broadcasting each to the player namespace (BLD-033's in-process
  * events inside the competition/game-execution subsystem).
+ * Unit 09 gates the big-screen namespace by the `bigScreenLinkToken` instead of a
+ * session (the big screen has no login, BSC-001) and pushes `ranking:update` to it.
  */
 export function createRealtimeGateway(httpServer: HttpServer): SocketServer {
   const io = new SocketServer(httpServer, {
     cors: { origin: env.FRONTEND_ORIGIN },
   });
 
-  // Authenticate the handshake with the same session token as HTTP: the client
-  // passes `{ token, deviceId }` in `socket.handshake.auth`. A rejected handshake
-  // never reaches a namespace handler.
-  io.use(async (socket, next) => {
-    try {
-      const { token, deviceId } = socket.handshake.auth as {
-        token?: string;
-        deviceId?: string;
-      };
-      socket.data.auth = await identityService.authenticate(token, deviceId);
-      next();
-    } catch (error) {
-      logger.warn("realtime: handshake rejected", {
-        message: error instanceof Error ? error.message : String(error),
-      });
-      next(new Error("unauthorized"));
-    }
-  });
+  // Authenticate the handshake. Every namespace except the big screen uses the
+  // session-token check (`identityService`, same as HTTP). The big screen has no
+  // login (BSC-001): its only credential is the unguessable `bigScreenLinkToken`,
+  // which the big-screen service resolves to a competition. The namespace is read
+  // from `socket.nsp.name` because the auth middleware runs per-namespace.
+  const sessionNamespaces = new Set<string>([
+    REALTIME_NAMESPACES.player,
+    REALTIME_NAMESPACES.judge,
+    REALTIME_NAMESPACES.controller,
+  ]);
 
   for (const namespace of Object.values(REALTIME_NAMESPACES)) {
     const nsp = io.of(namespace);
+
+    nsp.use(async (socket, next) => {
+      try {
+        if (sessionNamespaces.has(namespace)) {
+          const { token, deviceId } = socket.handshake.auth as {
+            token?: string;
+            deviceId?: string;
+          };
+          socket.data.auth = await identityService.authenticate(token, deviceId);
+        } else {
+          // Big screen: token-only authentication, no session.
+          const { token } = socket.handshake.auth as { token?: string };
+          socket.data.bigScreen = await bigScreenService.authenticateBigScreen(token);
+        }
+        next();
+      } catch (error) {
+        logger.warn("realtime: handshake rejected", {
+          namespace,
+          message: error instanceof Error ? error.message : String(error),
+        });
+        next(new Error("unauthorized"));
+      }
+    });
+
     nsp.on("connection", (socket) => {
       logger.info("realtime: client connected", { namespace, socketId: socket.id });
+
+      // Track big-screen connections so the rotation timer runs only while at
+      // least one big screen is watching, and stops when the last one drops.
+      if (namespace === REALTIME_NAMESPACES.bigScreen) {
+        const competitionId = socket.data.bigScreen?.competitionId as string | undefined;
+        if (competitionId) {
+          socket.join(competitionId);
+          void bigScreenService.registerConnection(competitionId);
+          socket.on("disconnect", () => {
+            bigScreenService.unregisterConnection(competitionId);
+          });
+        }
+      }
 
       const payload: SystemConnectedPayload = { serverTime: now().toISOString() };
       socket.emit(SYSTEM_EVENTS.connected, payload);
@@ -134,6 +168,18 @@ export function createRealtimeGateway(httpServer: HttpServer): SocketServer {
   // round timer; the gateway's only job is to put it on the wire.
   roundService.installRoundStartedHook((payload: RoundStartedPayload) => {
     playerNamespace.emit(ROUND_EVENTS.started, payload);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Big-screen ranking pushes (Unit 09)
+  //
+  // The big-screen service decides which category to show and when; the gateway
+  // only puts the already-ranked payload on the wire to that competition's room
+  // (invariant 8 — no computation here).
+  // ---------------------------------------------------------------------------
+  const bigScreenNamespace = io.of(REALTIME_NAMESPACES.bigScreen);
+  bigScreenService.installBigScreenPushHook((payload: BigScreenRankingPayload) => {
+    bigScreenNamespace.to(payload.competitionId).emit(RANKING_EVENTS.update, payload);
   });
 
   return io;

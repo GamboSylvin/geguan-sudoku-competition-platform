@@ -44,6 +44,22 @@ import type {
   WorkingGrid,
 } from "./gameplay.types";
 import type { RoundEndedEvent } from "../round/round.types";
+import type { IndividualResultFinalizedEvent } from "../ranking/ranking.types";
+
+/**
+ * Whoever needs to know one participant's Individual-round result was finalized
+ * (the Ranking module, Unit 09) installs this hook. Installed once at startup;
+ * keeps this module free of any import from ranking (invariant 4, no cycles). The
+ * signal carries only identifiers — the subscriber re-reads the durable results.
+ */
+type IndividualResultFinalizedHook = (event: IndividualResultFinalizedEvent) => void;
+let individualResultFinalizedHook: IndividualResultFinalizedHook | null = null;
+
+export function installIndividualResultFinalizedHook(
+  hook: IndividualResultFinalizedHook,
+): void {
+  individualResultFinalizedHook = hook;
+}
 
 /**
  * Load the caller's participation row for a round and reject when the caller is
@@ -288,6 +304,21 @@ async function finalizeParticipation(input: {
       attemptCount: { increment: 1 },
     },
   });
+
+  // Notify the Ranking module (Unit 09) that a fresh Individual-round result is
+  // durable, so the category's provisional ranking recomputes immediately (U-58).
+  // Only a real finalize fires the signal — a PL-009 no-op (wroteNewAttempt false)
+  // writes nothing and stays silent. Team-stage results are a later unit's build,
+  // so the signal fires only for the Individual stage this unit ranks.
+  if (scored.individualRoundResultId !== "" && isIndividualStage) {
+    individualResultFinalizedHook?.({
+      competitionId: round.stage.competitionId,
+      stageId: round.stageId,
+      roundId: input.roundId,
+      participantId: input.participantId,
+      categoryId: participation.categoryId,
+    });
+  }
 
   return {
     participationId: participation.id,

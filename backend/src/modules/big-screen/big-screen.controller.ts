@@ -1,14 +1,12 @@
 /**
- * The BigScreen module. Owns: Big-screen state, ranking projection, player and team projection, display mode.
- *
- * Skeleton only — no feature code (Unit 01, spec 01-foundation). The files follow
- * the decided module layout (BLD-020): controller (HTTP), service (domain rules and
- * the public interface), repository (Prisma access), types, and this barrel.
+ * HTTP layer for the BigScreen module (Unit 09). The big screen is a receive-only
+ * WebSocket spoke (hub-and-spoke, ARCH-022): it is gated by the `bigScreenLinkToken`
+ * at the Socket.io handshake and thereafter only *receives* `ranking:update` pushes
+ * — it sends nothing and reads nothing over HTTP. There is therefore no HTTP route
+ * on this module; the router is exported only to keep the decided module layout
+ * (BLD-020) uniform and to give `routes.ts` a stable mount. The controller-driven
+ * display switching commands (Unit 11) will add real routes here.
  */
 import { Router } from "express";
 
-/**
- * HTTP layer for the BigScreen module. It validates input, then calls the service;
- * no domain rule lives here. No route is mounted yet.
- */
 export const bigScreenRouter = Router();

@@ -33,5 +33,7 @@ apiRouter.use("/rounds", roundRouter);
 apiRouter.use("/gameplay", gameplayRouter);
 apiRouter.use("/orchestrator", orchestratorRouter);
 apiRouter.use("/scoring", scoringRouter);
+// Unit 09: the ranking read lives on the competition path (mergeParams reads `:id`).
+apiRouter.use("/competitions/:id/categories", rankingRouter);
 apiRouter.use("/ranking", rankingRouter);
 apiRouter.use("/big-screen", bigScreenRouter);

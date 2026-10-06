@@ -34,6 +34,16 @@ export const ROUND_EVENTS = {
   resumed: "round:resumed",
 } as const;
 
+/**
+ * Ranking events (Unit 09). The server pushes `ranking:update` to the big-screen
+ * namespace on each rotation tick and on each fresh result; the big screen renders
+ * exactly what it receives and never computes a rank (invariant 8). The client
+ * never sends these.
+ */
+export const RANKING_EVENTS = {
+  update: "ranking:update",
+} as const;
+
 export interface SystemConnectedPayload {
   /** ISO timestamp from the single server clock (the server owns time). */
   serverTime: string;
