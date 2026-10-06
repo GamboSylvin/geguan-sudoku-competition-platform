@@ -1,2 +1,2 @@
-/** big-screen feature folder (Unit 01 scaffold). Big-screen views arrive in a later slice. */
-export {};
+/** The big-screen feature (Unit 09): the no-login, receive-only ranking display. */
+export { BigScreenPage } from "./BigScreenPage";

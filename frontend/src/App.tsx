@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { LocaleProvider } from "./i18n/locale-context";
 import { LoginPage, RoleHomePage } from "./features/auth";
+import { BigScreenPage } from "./features/big-screen";
 import { CompetitionSetupPage } from "./features/competition";
 import { JudgeLandingPage, JudgeManagementPage } from "./features/judge";
 import { PlayerPage } from "./features/player";
@@ -28,6 +29,7 @@ export function App() {
           <Route path="/controller" element={<RoleHomePage role="CONTROLLER" />} />
           <Route path="/controller/competition/new" element={<CompetitionSetupPage />} />
           <Route path="/controller/judges" element={<JudgeManagementPage />} />
+          <Route path="/big-screen/:token" element={<BigScreenPage />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>

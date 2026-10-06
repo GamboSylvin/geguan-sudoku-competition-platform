@@ -129,4 +129,18 @@ export const zh: MessageCatalogue = {
     submittedReadOnly: "您的答案(只读)",
     submitting: "正在提交…",
   },
+  bigScreen: {
+    title: "实时排名",
+    connecting: "正在连接…",
+    invalidLink: "该大屏链接无效。",
+    waiting: "等待排名更新…",
+    final: "最终",
+    provisional: "暂定",
+    colRank: "名次",
+    colPlayer: "选手",
+    colScore: "得分",
+    colTime: "用时",
+    empty: "暂无成绩。",
+    pageOf: "/",
+  },
 };

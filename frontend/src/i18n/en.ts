@@ -134,6 +134,20 @@ export const en = {
     submittedReadOnly: "Your answers (read-only)",
     submitting: "Submitting…",
   },
+  bigScreen: {
+    title: "Live ranking",
+    connecting: "Connecting…",
+    invalidLink: "This big-screen link is not valid.",
+    waiting: "Waiting for the ranking…",
+    final: "Final",
+    provisional: "Provisional",
+    colRank: "Rank",
+    colPlayer: "Player",
+    colScore: "Score",
+    colTime: "Time",
+    empty: "No results yet.",
+    pageOf: "of",
+  },
 } as const;
 
 /** Recursively widens the literal `en` catalogue to `string` leaves, keeping its shape. */
