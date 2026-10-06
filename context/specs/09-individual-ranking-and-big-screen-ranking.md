@@ -1,4 +1,4 @@
-# Unit 09: Individual ranking and big-screen ranking — DRAFT, awaiting approval
+# Unit 09: Individual ranking and big-screen ranking — APPROVED (2026-10-07)
 
 > **Draft spec, not yet approved.** This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
 > This unit has no open item blocking it. The build plan's own note — tie-break (U-22) — has a usable Working Position (SCR-017); the still-open combined/sum extension is handled explicitly below, not guessed.

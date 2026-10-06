@@ -6,7 +6,7 @@ Update it after every meaningful change. Keep it short: replace stale lines inst
 
 **History is not lost — it lives in [`progress-tracker-history.md`](progress-tracker-history.md).** The three chronological logs that used to sit in this file (the full "Completed" log, the full "Context change log" and the full "Last Updated" log) were moved there verbatim on 2026-10-02. When you add a dated entry, append it to the matching section at the bottom of the history file; keep only the current state here.
 
-Last updated: **2026-10-05** (Unit 08 built and verified).
+Last updated: **2026-10-07** (Unit 09 built and verified).
 
 ---
 
@@ -16,7 +16,7 @@ Last updated: **2026-10-05** (Unit 08 built and verified).
 
 ## Current Goal
 
-Build the units in `specs/00-build-plan.md` order. **Unit 08 (submission, answer check and scoring) is built; the next unit to approve and build is Unit 09 (individual ranking and big-screen ranking).** Each unit needs its own spec approved (its header must read `APPROVED`) before code is written for it.
+Build the units in `specs/00-build-plan.md` order. **Unit 09 (individual ranking and big-screen ranking) is built; the next unit to approve and build is Unit 10 (judge supervision and single-student restart).** Each unit needs its own spec approved (its header must read `APPROVED`) before code is written for it.
 
 ## What's Built
 
@@ -28,22 +28,24 @@ Build the units in `specs/00-build-plan.md` order. **Unit 08 (submission, answer
 | 06 Judges and ranges | **Done** (2026-10-04) | Backend `modules/identity` (judge list CRUD with one-time credentials, range assignment editable anytime per BLD-008, ROL-010 removal guard, the exported authority-scoping check Unit 10 will call) and frontend `features/judge` (JudgeManagementPage, JudgeRangeAssignmentPanel on the competition setup screen, JudgeLandingPage). No schema change. |
 | 07 Round runtime and autosave | **Done** (2026-10-04) | Backend `modules/round` (server-authoritative timer in Redis with deadline-epoch-ms as truth, preparation → active → paused → resumed transitions, dev-only `start-stage1-round1` trigger) + `modules/gameplay` (participant-scoped autosave, reconnect state read with questions + saved grids + timer snapshot, solution column never sent). Realtime `/player` namespace pushes `round:preparation-tick` / `round:started` / `round:timer-sync` / `round:paused` / `round:resumed`. Frontend `features/player` (round-runtime page mirroring server state) + `features/gameplay` (landscape-gated active round with grid, number pad, debounced autosave). No schema change. |
 | 08 Submission, answer check and scoring | **Done** (2026-10-05) | Backend `modules/scoring` (pure scoring rules — `gridsEqual`, `computeEarlyBonus` per SCR-008–SCR-011 — plus `finalizeAttempt` writing Attempt + Answer + IndividualRoundResult idempotently) and additive extensions to `modules/gameplay` (`POST /:roundId/submit`, `finalizeParticipation`, `handleRoundEnded` for auto-submit on timer expiry, `advanceAfterRoundFinalized` for INDIVIDUAL-stage round advance). Composition root wires the round-ended listener with a once-per-process guard. Frontend `features/gameplay` gains a submit button + confirmation dialog naming blank-puzzle count + read-only "submission accepted" view; `features/player` carries the new `participationState` field through. The score is never sent to the player (SUB-007/BLD-029); a late submit is recorded as TIMEOUT with no distinct message (SUB-003); a repeated submit is a no-op (PL-009). No schema change. |
+| 09 Individual ranking and big-screen ranking | **Done** (2026-10-07) | Backend `modules/ranking` (recompute-on-read category ranking from finalized `IndividualRoundResult` rows, provisional + final `RankingSnapshot` with `isFinal` once every active participant finishes both Individual rounds, shared-rank "1224" ties via the single named `breakTie` seam — U-22's unconfirmed extension NOT implemented) and `modules/big-screen` (no-login token auth per BSC-001, per-competition rotation timer over `ScoringConfiguration.rankingCycleSeconds`, out-of-cycle push on a ranking update so the 2-second target U-58 is met, stop-on-last-disconnect). Gameplay fires the `individualResultFinalized` hook from `finalizeParticipation`; the realtime gateway authenticates `/big-screen` by `bigScreenLinkToken` (session namespaces keep session auth) and emits `ranking:update`. Frontend `features/big-screen` (receive-only leaderboard at `/big-screen/:token`, local pagination of server-sent rows — never computes a rank, invariant 8). Controller-only read `GET /api/competitions/:id/categories/:categoryId/ranking` (ROL-002); no score/rank to a player session (SUB-007/BLD-029). No schema change. |
 
-No other feature code exists yet. The orchestrator/ranking/big-screen modules are still skeleton-only.
+No other feature code exists yet. The orchestrator module is still skeleton-only.
 
 ## In Progress
 
-Nothing in flight. Unit 08 is built and verified; the next unit awaits its spec's approval.
+Nothing in flight. Unit 09 is built and verified; the next unit awaits its spec's approval.
 
+- **Unit 09 completion note.** Built 2026-10-07: backend lint + typecheck + build clean, `tests/ranking.test.ts` written and **run green under Docker** (64/64 backend tests pass across all 8 suites, the 9 new ranking cases included), frontend lint + typecheck + build clean. No new migrations.
 - **Unit 08 completion note.** Built 2026-10-05: backend lint + typecheck + build clean, `tests/scoring.test.ts` written and **run green under Docker** (55/55 backend tests pass across all 7 suites, the 13 new scoring cases included), frontend lint + typecheck + build clean. No new migrations.
 - **Unit 07 completion note.** Built 2026-10-04: backend lint + typecheck clean, `tests/round.test.ts` written and **run green under Docker** (42/42 backend tests pass across all 6 suites, the 10 new round cases included), frontend lint + typecheck + build clean. No new migrations. Local PostgreSQL 18 Windows service was stopped so Docker's postgres could own host `localhost:5432` for the test run (user-approved).
 - **Unit 03 scope decision (flag for spec reconciliation).** The spec's Context says the 2×2 structure is auto-created "for every category", but its own Goal, Acceptance Criteria and the approved `data-model.md` place the two stages on the **competition** (shared across categories). Implemented per the schema/data model — two stages per competition, not per category. The spec's Context wording is the outlier and should be reconciled.
 
 ## Next Up (recommended order)
 
-**`08` → `09` → `10` → `11` → `12` → `13` → `14` → `15`**, with **`04` and `05`** slotted in whenever **U-01 / U-94** resolve. (`02`, `03`, `06`, `07` and `08` are done.)
+**`08` → `09` → `10` → `11` → `12` → `13` → `14` → `15`**, with **`04` and `05`** slotted in whenever **U-01 / U-94** resolve. (`02`, `03`, `06`, `07`, `08` and `09` are done.)
 
-Before starting any unit: get the project owner's explicit approval and make sure that unit's spec header reads `APPROVED`. Units 09–15 are drafted but **not yet approved**.
+Before starting any unit: get the project owner's explicit approval and make sure that unit's spec header reads `APPROVED`. Units 10–15 are drafted but **not yet approved**.
 
 ## Blocked
 
@@ -77,8 +79,8 @@ React + TypeScript + Vite + Tailwind CSS; Node.js + TypeScript + Express.js; Pos
 
 ## Current Architecture State
 
-- **Backend:** module-first (BLD-020) under `backend/src/modules/` — `identity` (with judge list and range assignment from Unit 06), `competition`, `round` (timer + preparation, Unit 07) and `gameplay` (autosave + reconnect state, Unit 07) exist (the rest are skeletons) — plus `realtime/` (gateway now wires the round lifecycle events to `/player`), `infra/`, `shared/` (errors, middleware, validation, i18n, clock), `config/`, `prisma/`.
-- **Frontend:** Vite + React + TypeScript + Tailwind (BLD-023), with `features/auth`, `features/competition`, `features/judge`, `features/player` and `features/gameplay` implemented and the other feature folders as placeholders; EN/ZH i18n scaffold.
+- **Backend:** module-first (BLD-020) under `backend/src/modules/` — `identity` (with judge list and range assignment from Unit 06), `competition`, `round` (timer + preparation, Unit 07), `gameplay` (autosave + reconnect state + submit, Units 07/08), `scoring` (Unit 08), `ranking` (Unit 09) and `big-screen` (Unit 09) exist (the rest are skeletons) — plus `realtime/` (gateway wires the round lifecycle events to `/player` and the big-screen ranking pushes to `/big-screen`, the latter gated by the no-login `bigScreenLinkToken`), `infra/`, `shared/` (errors, middleware, validation, i18n, clock), `config/`, `prisma/`.
+- **Frontend:** Vite + React + TypeScript + Tailwind (BLD-023), with `features/auth`, `features/competition`, `features/judge`, `features/player`, `features/gameplay` and `features/big-screen` implemented and the other feature folders as placeholders; EN/ZH i18n scaffold.
 - `npm run lint`, `npm run typecheck`, `npm test` and `npm run build` pass in both services; the whole stack runs under Docker Compose.
 
 ## Current Database State
@@ -96,6 +98,8 @@ React + TypeScript + Vite + Tailwind CSS; Node.js + TypeScript + Express.js; Pos
 ## Context change log
 
 **Full log: [`progress-tracker-history.md`](progress-tracker-history.md), "Context change log".** Recent entries only:
+
+- 2026-10-07: **Unit 09 (Individual ranking and big-screen ranking) built and verified** — backend `modules/ranking` (recompute-on-read, provisional + final `RankingSnapshot`, shared-rank "1224" ties via the `breakTie` seam, U-22 extension not implemented) + `modules/big-screen` (token auth BSC-001, per-competition rotation over `rankingCycleSeconds`, out-of-cycle push on a ranking update for the U-58 2-second target), gameplay fires the `individualResultFinalized` hook, gateway authenticates `/big-screen` by `bigScreenLinkToken` and emits `ranking:update`, frontend `features/big-screen` (receive-only, never computes, invariant 8). 64/64 backend tests pass (9 new in `tests/ranking.test.ts`); both builds clean. No schema change. Files touched: `backend/src/modules/{ranking,big-screen}/*` (new), `backend/src/modules/gameplay/*` (hook), `backend/src/{routes.ts,app.ts}`, `backend/src/realtime/{events.ts,gateway.ts}`, `backend/src/shared/i18n/{en,zh}.ts`, `backend/tests/ranking.test.ts`, `frontend/src/features/big-screen/*` (new), `frontend/src/App.tsx`, `frontend/src/i18n/{en,zh}.ts`, `context/specs/09-individual-ranking-and-big-screen-ranking.md`, `context/progress-tracker.md`.
 
 - 2026-10-04: **Unit 07 (Round runtime and autosave) built and verified** — backend `modules/round` (timer service with Redis-persisted deadlines + hook-based round transitions) + `modules/gameplay` (autosave + reconnect state), realtime `/player` events wired, frontend `features/player` + `features/gameplay`. 42/42 backend tests pass (10 new in `tests/round.test.ts`); both builds clean. No schema change. Local `postgresql-x64-18` Windows service stopped (user-approved) so Docker postgres could own host `localhost:5432`. Files touched: `backend/src/modules/{round,gameplay}/*`, `backend/src/realtime/{events.ts,gateway.ts}`, `backend/src/routes.ts`, `backend/src/shared/i18n/{en,zh}.ts`, `backend/tests/round.test.ts`, `frontend/src/features/{player,gameplay}/*` (new), `frontend/src/App.tsx`, `frontend/src/i18n/{en,zh}.ts`, `frontend/package.json` (added `socket.io-client`), `context/specs/07-round-runtime-and-autosave.md`, `context/progress-tracker.md`.
 
