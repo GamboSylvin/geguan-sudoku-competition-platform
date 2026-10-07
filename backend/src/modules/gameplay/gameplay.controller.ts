@@ -98,3 +98,30 @@ gameplayRouter.post(
     }
   },
 );
+
+/**
+ * POST /api/gameplay/:roundId/left-page — the player client reports a
+ * page-visibility-leave event during an active round (Unit 10). The server
+ * increments `RoundParticipation.leftAnswerPageCount`. Body is empty: the
+ * session identifies the participant; the client is never trusted with the
+ * count value itself, only with the leave signal.
+ *
+ * 200 with `{ leftAnswerPageCount }` — the new server-side count. A signal
+ * arriving while the round is not ACTIVE is a no-op (200 with the current
+ * count), so the client never has to retry or apologize for a late event.
+ */
+gameplayRouter.post(
+  "/:roundId/left-page",
+  requireAuth,
+  requireParticipant,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const roundId = req.params.roundId as string;
+      const participantId = req.auth!.participantId!;
+      const result = await gameplayService.recordLeftAnswerPage(roundId, participantId);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);

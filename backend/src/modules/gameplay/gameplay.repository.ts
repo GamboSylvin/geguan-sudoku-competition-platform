@@ -93,3 +93,26 @@ export async function listGridsForRound(
   }
   return entries;
 }
+
+/**
+ * Delete every saved grid the player has for a round. Called by the Orchestrator
+ * module's restart operation (Unit 10) so the student comes back to a blank
+ * grid. The keyspace is the same one `listGridsForRound` scans, so this is the
+ * same shape, just `DEL` instead of `GET`.
+ */
+export async function clearGridsForRound(
+  roundId: string,
+  participantId: string,
+): Promise<number> {
+  const pattern = gridScanPattern(roundId, participantId);
+  const keys: string[] = [];
+  let cursor = "0";
+  do {
+    const [next, batch] = await redis.scan(cursor, "MATCH", pattern, "COUNT", 100);
+    cursor = next;
+    keys.push(...batch);
+  } while (cursor !== "0");
+
+  if (keys.length === 0) return 0;
+  return redis.del(...keys);
+}

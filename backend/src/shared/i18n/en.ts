@@ -85,6 +85,19 @@ export const en = {
     // (BSC-001). The rejection is generic — it never hints at why the token failed.
     unauthorized: "This big-screen link is not valid.",
   },
+  orchestrator: {
+    // Unit 10. The restart is rejected when the round is not currently running
+    // (spec: restart is allowed only while the round is ACTIVE or PAUSED).
+    roundNotRunning: "The round is not running.",
+    participantNotFound: "The participant is not on this round.",
+  },
+  judgeSupervision: {
+    // Unit 10. Every judge-facing endpoint is JUDGE-only and range-scoped by
+    // Unit 06's authority check. The two messages below are the only rejections
+    // a judge can hit; everything else is a normal row.
+    forbidden: "Only a judge can use this endpoint.",
+    outOfRange: "This participant is outside your assigned range.",
+  },
 } as const;
 
 /** Recursively widens the literal `en` catalogue to `string` leaves, keeping its shape. */
