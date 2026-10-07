@@ -111,6 +111,63 @@ export function fetchJudgeMe(): Promise<JudgeMeView> {
   return request<JudgeMeView>("/api/judges/me", { method: "GET" });
 }
 
+// ---------------------------------------------------------------------------
+// Unit 10: judge supervision (status view + single-student restart)
+// ---------------------------------------------------------------------------
+
+export type ParticipationStateView =
+  | "WAITING"
+  | "ACTIVE"
+  | "SUBMITTED"
+  | "AUTO_SUBMITTED"
+  | "RESTARTED";
+
+export type RoundStatusView =
+  | "WAITING"
+  | "PREPARATION"
+  | "ACTIVE"
+  | "PAUSED"
+  | "FINISHED";
+
+/** One row of the judge dashboard. */
+export interface JudgeStudentView {
+  participantId: string;
+  participantNumber: number;
+  participantName: string;
+  competitionId: string;
+  competitionName: string;
+  categoryId: string;
+  categoryName: string;
+  connected: boolean;
+  roundId: string | null;
+  roundStatus: RoundStatusView | null;
+  participationState: ParticipationStateView | null;
+  leftAnswerPageCount: number;
+  attemptCount: number;
+  remainingSeconds: number | null;
+  totalSeconds: number | null;
+}
+
+export interface RestartStudentResultView {
+  participationId: string;
+  attemptCount: number;
+  remainingSeconds: number;
+  totalSeconds: number;
+}
+
+export function fetchJudgeStudents(): Promise<{ students: JudgeStudentView[] }> {
+  return request<{ students: JudgeStudentView[] }>("/api/judge/students", {
+    method: "GET",
+  });
+}
+
+export function restartStudent(participantId: string): Promise<RestartStudentResultView> {
+  return request<RestartStudentResultView>(
+    `/api/judge/students/${encodeURIComponent(participantId)}/restart`,
+    { method: "POST" },
+  );
+}
+
 /** Pull the blocking competition names out of a removal rejection, if present. */
 export function blockingCompetitionsFrom(error: unknown): string[] | null {
   if (

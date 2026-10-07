@@ -294,6 +294,36 @@ export function ActiveRoundScreen({
     setShowSubmitConfirm(false);
   }, [submitting]);
 
+  // Unit 10: report page-visibility leaves. When the tab becomes hidden during
+  // an active round, tell the server so it can increment the participation's
+  // leftAnswerPageCount. The server is the authority on the count and silently
+  // ignores the signal when the round is no longer ACTIVE (the client cannot
+  // time the event perfectly), so the client simply fires and forgets — no
+  // retry, no error surfacing. Stops reporting once the player has submitted
+  // (the read-only review view doesn't count as "answering").
+  useEffect(() => {
+    if (submitted) return;
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "hidden") return;
+      void fetch(`${API_BASE_URL}/api/gameplay/${roundId}/left-page`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-session-token": sessionToken,
+          "x-device-id": deviceId,
+        },
+        body: "{}",
+        // keepalive lets the request outlive the page-hide transition.
+        keepalive: true,
+      }).catch(() => {
+        // Silent: the server owns the counter; a lost signal is acceptable and
+        // the judge's view stays approximately correct.
+      });
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [roundId, sessionToken, deviceId, submitted]);
+
   if (!isLandscape) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6">

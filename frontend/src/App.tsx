@@ -3,7 +3,7 @@ import { LocaleProvider } from "./i18n/locale-context";
 import { LoginPage, RoleHomePage } from "./features/auth";
 import { BigScreenPage } from "./features/big-screen";
 import { CompetitionSetupPage } from "./features/competition";
-import { JudgeLandingPage, JudgeManagementPage } from "./features/judge";
+import { JudgeDashboardPage, JudgeLandingPage, JudgeManagementPage } from "./features/judge";
 import { PlayerPage } from "./features/player";
 
 /**
@@ -17,6 +17,7 @@ import { PlayerPage } from "./features/player";
  * panel (on the setup screen) and the judge's own assignment landing.
  * Unit 07 replaces the player's placeholder landing with the round-runtime page
  * (competition room, preparation, active round, paused/resuming).
+ * Unit 10 adds the judge's supervision dashboard at /judge/dashboard.
  */
 export function App() {
   return (
@@ -26,6 +27,7 @@ export function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/player" element={<PlayerPage />} />
           <Route path="/judge" element={<JudgeLandingPage />} />
+          <Route path="/judge/dashboard" element={<JudgeDashboardPage />} />
           <Route path="/controller" element={<RoleHomePage role="CONTROLLER" />} />
           <Route path="/controller/competition/new" element={<CompetitionSetupPage />} />
           <Route path="/controller/judges" element={<JudgeManagementPage />} />
