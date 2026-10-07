@@ -527,11 +527,56 @@ async function advanceAfterRoundFinalized(
   );
 }
 
+/**
+ * Record that the player navigated away from the answer page during an active
+ * round (Unit 10, "leftAnswerPageCount"). The counter is information-only —
+ * no penalty, no effect on scoring (PAR-005).
+ *
+ * Accepted only while the round is `ACTIVE`; a signal arriving at any other
+ * time (preparation, paused, finished) is a silent no-op so the client does not
+ * have to time the event perfectly. The client is trusted for the *signal* (we
+ * cannot observe page visibility server-side) but never for the *value* — the
+ * count is owned and incremented server-side, never overwritten from the wire.
+ *
+ * Idempotency is the caller's problem: a client that double-fires the event
+ * will see the counter go up by two. The gameplay client debounces at the
+ * source.
+ */
+async function recordLeftAnswerPage(
+  roundId: string,
+  participantId: string,
+): Promise<{ leftAnswerPageCount: number }> {
+  const round = await prisma.round.findUnique({
+    where: { id: roundId },
+    select: { id: true, status: true },
+  });
+  if (!round) {
+    throw new NotFoundError(translate("en", "gameplay.roundNotFound"), {
+      code: "gameplay.roundNotFound",
+    });
+  }
+
+  const participation = await requireParticipation(roundId, participantId);
+
+  if (round.status !== "ACTIVE") {
+    // Not an error — the client cannot perfectly time the visibility event.
+    return { leftAnswerPageCount: participation.leftAnswerPageCount };
+  }
+
+  const updated = await prisma.roundParticipation.update({
+    where: { id: participation.id },
+    data: { leftAnswerPageCount: { increment: 1 } },
+    select: { leftAnswerPageCount: true },
+  });
+  return { leftAnswerPageCount: updated.leftAnswerPageCount };
+}
+
 export const gameplayService = {
   autosave,
   getState,
   submit,
   handleRoundEnded,
+  recordLeftAnswerPage,
 };
 
 export type { WorkingGrid };

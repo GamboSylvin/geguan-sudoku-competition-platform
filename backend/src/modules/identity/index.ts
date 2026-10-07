@@ -12,4 +12,6 @@ export { identityService } from "./identity.service";
 export { identityRouter } from "./identity.controller";
 export { judgeService } from "./judge.service";
 export { judgeRouter, judgeAssignmentRouter } from "./judge.controller";
+export { judgeSupervisionService } from "./judge-supervision.service";
+export { judgeSupervisionRouter } from "./judge-supervision.controller";
 export type * from "./identity.types";

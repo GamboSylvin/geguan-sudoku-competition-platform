@@ -66,4 +66,12 @@ export const zh: MessageCatalogue = {
   bigScreen: {
     unauthorized: "该大屏链接无效。",
   },
+  orchestrator: {
+    roundNotRunning: "该轮次当前不在进行中。",
+    participantNotFound: "该参赛选手不在此轮次中。",
+  },
+  judgeSupervision: {
+    forbidden: "只有裁判可以使用此接口。",
+    outOfRange: "该参赛选手不在您的负责范围内。",
+  },
 };

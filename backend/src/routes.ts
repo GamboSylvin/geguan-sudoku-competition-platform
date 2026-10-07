@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { healthRouter } from "./health";
 import { competitionRouter } from "./modules/competition";
-import { identityRouter, judgeRouter, judgeAssignmentRouter } from "./modules/identity";
+import { identityRouter, judgeRouter, judgeAssignmentRouter, judgeSupervisionRouter } from "./modules/identity";
 import { questionRouter } from "./modules/question";
 import { roundRouter } from "./modules/round";
 import { gameplayRouter } from "./modules/gameplay";
@@ -28,6 +28,9 @@ apiRouter.use("/competitions", competitionRouter);
 // Judge range assignment lives on the competition path (Unit 06 API contract).
 apiRouter.use("/competitions/:id/judge-assignments", judgeAssignmentRouter);
 apiRouter.use("/judges", judgeRouter);
+// Unit 10: the judge's own supervision endpoints live under the singular /judge
+// (the management endpoints under /judges are controller-only).
+apiRouter.use("/judge", judgeSupervisionRouter);
 apiRouter.use("/questions", questionRouter);
 apiRouter.use("/rounds", roundRouter);
 apiRouter.use("/gameplay", gameplayRouter);
