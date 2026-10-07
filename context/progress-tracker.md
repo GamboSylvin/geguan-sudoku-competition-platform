@@ -6,7 +6,7 @@ Update it after every meaningful change. Keep it short: replace stale lines inst
 
 **History is not lost — it lives in [`progress-tracker-history.md`](progress-tracker-history.md).** The three chronological logs that used to sit in this file (the full "Completed" log, the full "Context change log" and the full "Last Updated" log) were moved there verbatim on 2026-10-02. When you add a dated entry, append it to the matching section at the bottom of the history file; keep only the current state here.
 
-Last updated: **2026-10-07** (Unit 09 built and verified).
+Last updated: **2026-10-08** (**UI-008**: project owner decision, no dedicated design pass before the MVP/event — current Tailwind-default screens ship as-is; closes `FILL-BEFORE-CODING.md` row B5 with Tailwind's own border-radius/spacing scale, fixes U-65/U-66's timing without resolving their content, both still open to revisit after the event. Previously, 2026-10-07: Unit 09 built and verified; 9 project-owner decisions resolved — PAR-011, PAR-012, BLD-040, SCR-020, BLD-041, BLD-042, BLD-043, BIZ-001; Unit 05's spec drafted, flags 2 new findings needing confirmation; three code-side follow-ups pending, see Known Issues and Next Up).
 
 ---
 
@@ -43,31 +43,31 @@ Nothing in flight. Unit 09 is built and verified; the next unit awaits its spec'
 
 ## Next Up (recommended order)
 
-**`08` → `09` → `10` → `11` → `12` → `13` → `14` → `15`**, with **`04` and `05`** slotted in whenever **U-01 / U-94** resolve. (`02`, `03`, `06`, `07`, `08` and `09` are done.)
+**`05` → `10` → `11` → `12` → `13` → `14` → `15`**, with **`04`** slotted in whenever the rest of **U-01** resolves (a real participant file with data, a past results sheet). (`02`, `03`, `06`, `07`, `08` and `09` are done.)
 
-Before starting any unit: get the project owner's explicit approval and make sure that unit's spec header reads `APPROVED`. Units 10–15 are drafted but **not yet approved**.
+Before starting any unit: get the project owner's explicit approval and make sure that unit's spec header reads `APPROVED`. **Units 05 and 10–15 are all drafted but not yet approved.** Unit 05's spec flags two findings needing the project owner's confirmation before it's built: (1) a category can have several `QuestionSet`s (one per imported file/variant), not just one as `data-model.md`'s prose implied; (2) the irregular ("不规则") variant's import is explicitly out of scope — its region shapes aren't extractable from the current file format, a narrower, new gap than U-94.
 
 ## Blocked
 
 **Nothing blocks the units being built.** The coding gate is passed.
 
-- **Units 04 (participant import) and 05 (question import) are blocked with no spec** — they wait on the stakeholder, not the team: **U-01** (the real sample participant Excel and a past results sheet, never sent) and **U-94** (whether production question files can supply the puzzle's given cells as text, not just an embedded picture). Do not start or guess these. `specs/00-build-plan.md`'s "Units that cannot be specified until an open item is answered" table is authoritative.
+- **Unit 04 (participant import) is blocked with no spec** — waits on the stakeholder, not the team: **U-01**, a real participant file with data rows and a past results sheet, neither sent (confirmed still unavailable, 2026-10-07). Do not start or guess it. `specs/00-build-plan.md`'s "Units that cannot be specified until an open item is answered" table is authoritative.
+- **Unit 05 (question import) is no longer blocked** (2026-10-07: BLD-041/BLD-042/BLD-043 resolved its three open items) and now has a drafted spec, awaiting approval — see Next Up for the two findings it flags.
 
 ## Open Questions
 
 **Authoritative list: `context-feeders/decisions/unmade-decisions.md`** (open items live there; resolved ones move to `project-decisions.md`). Non-blocking items in flight:
 
-- **U-01 / U-94** — sample participant Excel / past results sheet; the given-cells-as-text format. Block Units 04/05 only.
-- **U-22** — ranking tie-break's submission-time extension (core rule resolved as a Working Position, SCR-017). Not blocking.
+- **U-01** — real sample files partly received 2026-10-07 (`context/samples/`): a participant-file column template (no data rows) and 12 real question files across 3 grade groups. Stakeholder confirmed 2026-10-07 there's currently no real participant data or past results sheet to send — still blocks Unit 04 only. Reading the files raised six follow-up questions, **all now resolved**: **PAR-011** (no Team column, inferred from School+Category+flag), **PAR-012** (ignore the pre-filled participant number), **BLD-040** (question files are a pool — Unit 05 needs a new manual round-selection step), **BLD-041** (the grade-pair folders ARE the real category scheme — reverses the earlier BLD-027 answer, U6–U20), **BLD-042** (the audio column is ignored), and **BLD-043** (the given-cells/solution image problem, U-94 — a temporary OCR exception, explicitly not the target state). **Unit 05 is unblocked** — see Next Up.
 - **U-40** — extra participant-Excel columns (Working Position: ignore unrecognized columns, PAR-008). Not blocking.
-- **U-65 / U-66** — default visual style and screen layouts, deferred to the design phase (BLD-009). Not blocking.
+- **U-65 / U-66** — default visual style and screen layouts. **Timing fixed 2026-10-08 (UI-008):** no dedicated design pass before the MVP/event — current Tailwind-default screens ship as-is; the stakeholder's actual preference stays open to revisit after the event. Not blocking.
 - **U-46** (remainder) — venue-network facts, deferred to closer to the event date. Not blocking.
-- **U-96** — a measurable business-goal metric. Informational only.
 - **B5** (`FILL-BEFORE-CODING.md`) — the two UI token tables (border radius, spacing scale). Needed only before the first UI/design unit.
 - **C1 / C2** (`FILL-BEFORE-CODING.md`) — where the event-day server runs; the missing CI automated-review step. Needed before a real deployment, not before coding.
 
 ## Known Issues
 
+- **New schema drift, found 2026-10-07, not yet fixed in code.** `data-model.md` now makes `Question.roundId` nullable (BLD-040, resolves U-100 — a question file is a pool, a question is assigned to an Individual round by a new manual controller step, not at import). `backend/prisma/schema.prisma` still has `roundId` required — needs a migration before Unit 05 is built. **Also pending:** Unit 09's live `breakTie` function (and the as-yet-unbuilt Unit 15) need updating for **SCR-020** (resolves U-22, confirmed 2026-10-07): a tie breaks by summed submission time (both rounds for an individual, all counted players for a school), not shared rank. Both are context-folder changes already made; the code hasn't caught up yet.
 - **Schema drift vs. the approved data model (found and fixed 2026-10-02).** `backend/prisma/schema.prisma` had diverged from the approved `data-model.md` on two points: (1) `RoundSettings` was missing the partition-round fields `partitionPuzzleCount` / `partitionTotalTimeSeconds` / `partitionPointsPerPuzzle` (defaults 3 / 1800 / 20), added to the data model by the 2026-10-01 amendment; (2) `QuestionSet.categoryId` was nullable in the schema but required in the approved data model (BLD-028 resolved U-32). Both were reconciled to the data model and applied live via migration `20261002081521_add_partition_round_settings_and_required_question_set_category` (purely additive + a NOT NULL tightening). Backend typecheck clean, 13/13 tests pass.
 - The module list and schema (I-01) predate the stakeholder's answers. **Both parts are now closed**: the data-model part 2026-09-30 (A6), the module-list part 2026-10-01 (BLD-032, ten modules — see `architecture.md`, "System boundaries").
 - Question delivery differs from the client's original document, which preloads questions on the tablets (BLD-006: fetch at the round start).

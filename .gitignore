@@ -25,3 +25,6 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Microsoft Office lock files (created while a file is open on someone's machine)
+~$*

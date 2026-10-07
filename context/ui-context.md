@@ -1,6 +1,6 @@
 # UI Context (DRAFT v1, 2026-09-26)
 
-> **Partial draft.** Behaviour and content of the screens are documented; the visual design is not. Do not invent colours, layouts, fonts or component choices.
+> **Partial draft, ships as the MVP's final look (UI-008, 2026-10-08).** Behaviour and content of the screens are documented; the visual design below is a working-position default, not a stakeholder-confirmed design — but the project owner decided no dedicated design pass will happen before the MVP/event, so these defaults are what ships. Do not invent colours, layouts, fonts or component choices beyond what is recorded here.
 > Status tags: [C] client-confirmed · [S] client's document · [T] team/project-owner decision, not client-confirmed · [O] open. See `README.md`.
 
 ## Theme
@@ -12,7 +12,7 @@
 
 None recorded. A school brand slot is kept open (see "Theme" above).
 
-The design comes **after the first slice** (the Individual stage, end to end) [C] (BLD-009). A default visual style is now a working position (U-65, above); the token tables below fill in that default, not a stakeholder-confirmed final design. When defined, every component must use named tokens, never raw values.
+**No dedicated design pass before the MVP/event, project owner decision (UI-008, 2026-10-08):** the design phase originally planned for "after the first slice" [C] (BLD-009) will not happen within the remaining build time. A default visual style is a working position (U-65, above); the token tables below fill in that default, and it now ships as-is rather than waiting for a stakeholder-confirmed final design — still open to revisit after the event. Every component must use named tokens, never raw values.
 
 ## Colors
 
@@ -42,25 +42,25 @@ The design comes **after the first slice** (the Individual stage, end to end) [C
 
 ## Border Radius / Rounding
 
-**[[FILL-BEFORE-UNIT: border radius scale = ________ ; owner: project owner; needed before the first UI/design unit, after the first slice (BLD-009)]]** Found open 2026-10-01 during a methodology completeness check — this section exists in the template and in this file but was never tracked as a blank anywhere. Not blocking the first slice (Individual stage, end to end): no UI unit before the design phase needs a decided radius scale. **Candidate default, not yet chosen:** Tailwind CSS's own default scale (already the decided styling tool, BLD-023), the same "Working Position" treatment already given to Theme/Colors (U-65) — proposing it here, not deciding it.
+**Resolved 2026-10-08** [T] (UI-008, closes `FILL-BEFORE-CODING.md` row B5): since no design pass will happen before the MVP/event, the candidate default proposed 2026-10-01 — Tailwind CSS's own scale (BLD-023), the same Working-Position treatment already given to Theme/Colors (U-65) — is now the value actually used, not just a proposal. Still a working position, not a stakeholder-confirmed choice; revisit after the event.
 
 | Context | Value |
 |---|---|
-| Inline / small UI | ________ |
-| Cards / panels | ________ |
-| Modals / overlays | ________ |
+| Inline / small UI | Tailwind `rounded` (0.25rem / 4px) — buttons, inputs, badges |
+| Cards / panels | Tailwind `rounded-lg` (0.5rem / 8px) |
+| Modals / overlays | Tailwind `rounded-xl` (0.75rem / 12px) |
 
 ## Spacing Scale
 
-**[[FILL-BEFORE-UNIT: spacing scale = ________ ; owner: project owner; needed before the first UI/design unit, after the first slice (BLD-009)]]** Same finding, same date, same reasoning as Border Radius above — never tracked, not blocking the first slice. **Candidate default, not yet chosen:** Tailwind CSS's own default spacing scale, consistent with BLD-023 and the U-65 Working-Position pattern.
+**Resolved 2026-10-08** [T] (UI-008, closes `FILL-BEFORE-CODING.md` row B5): same reasoning as Border Radius above — the candidate default proposed 2026-10-01, Tailwind CSS's own spacing scale (BLD-023, U-65 Working-Position pattern), is now the value actually used since no design pass will happen before the event. Still a working position; revisit after the event.
 
 | Scale | Variable | Value |
 |---|---|---|
-| Extra small | ________ | ________ |
-| Small | ________ | ________ |
-| Medium | ________ | ________ |
-| Large | ________ | ________ |
-| Extra large | ________ | ________ |
+| Extra small | `--space-xs` | Tailwind `2` (0.5rem / 8px) |
+| Small | `--space-sm` | Tailwind `4` (1rem / 16px) |
+| Medium | `--space-md` | Tailwind `6` (1.5rem / 24px) |
+| Large | `--space-lg` | Tailwind `8` (2rem / 32px) |
+| Extra large | `--space-xl` | Tailwind `12` (3rem / 48px) |
 
 ## Component Library
 
@@ -69,7 +69,7 @@ The design comes **after the first slice** (the Individual stage, end to end) [C
 ## Layout patterns
 
 - **Answer screen [C] (UI-001):** landscape; the puzzle on the left, a number pad on the right; previous, next and question-number buttons; a delete button that clears the selected cell; a clear-all button that starts the puzzle over. Delete and clear-all ask for confirmation. Each question's point value is shown [S].
-- Layouts of the judge, controller and big-screen views, and of the login, competition room, preparation, waiting and results screens: **deliberately left to the design phase, confirmed 2026-10-01** [C] (U-66) — not blocking now. No mockups or layout preferences given yet; scheduled for after the first slice, same timing already set for the visual design generally [C] (BLD-009).
+- Layouts of the judge, controller and big-screen views, and of the login, competition room, preparation, waiting and results screens: originally **deliberately left to the design phase, confirmed 2026-10-01** [C] (U-66) — **that design phase is now not happening before the MVP/event** [T] (UI-008, 2026-10-08). Each unit's own functional, minimally-styled layout (built directly from its spec's screen description) ships as the MVP's layout; no mockups or a separate layout pass are coming before the event. Still open to revisit afterward.
 
 ## Responsive rules
 
@@ -82,7 +82,7 @@ The design comes **after the first slice** (the Individual stage, end to end) [C
 - Before the final submit the student is asked to confirm; the confirmation states how many puzzles are blank [T]. After submitting, the student sees "accepted" and no immediate score [T].
 - The pause notice for players is a blocking message [T]. On resume, a "3, 2, 1, Start" shows first [T].
 - The controller's warning when a round's points do not add up to 100 (Individual rounds): shown on the setup screen next to the points, updated as typed, and as a summary when starting the stage; never blocking [T].
-- **Touch target sizes, contrast and keyboard use, resolved 2026-10-01** [C] (U-69): no formal accessibility standard imposed (no WCAG requirement) — just reasonable practice for the age range (U6–U20) and touch-first devices: touch targets/buttons sized for comfortable tapping (~44px minimum), high contrast, no keyboard dependency.
+- **Touch target sizes, contrast and keyboard use, resolved 2026-10-01** [C] (U-69): no formal accessibility standard imposed (no WCAG requirement) — just reasonable practice for the age range (**grades 1–6, roughly ages 6–12** — the category scheme reversed 2026-10-07, BLD-041; narrower than the earlier "U6–U20" working position) and touch-first devices: touch targets/buttons sized for comfortable tapping (~44px minimum), high contrast, no keyboard dependency.
 
 ## Language
 
@@ -113,7 +113,7 @@ The interface is **English and Chinese**, not one or the other; the translation 
 
 ## Accessibility requirements
 
-**Resolved 2026-10-01** [C] (U-69): no formal accessibility standard imposed (no WCAG requirement) — just reasonable practice for the age range (U6–U20) and touch-first devices. Touch targets/buttons sized for comfortable tapping (~44px minimum); high contrast; no keyboard dependency. See "Interaction patterns" above for the autosave-failure indicator.
+**Resolved 2026-10-01** [C] (U-69): no formal accessibility standard imposed (no WCAG requirement) — just reasonable practice for the age range (grades 1–6, roughly ages 6–12 — BLD-041, 2026-10-07) and touch-first devices. Touch targets/buttons sized for comfortable tapping (~44px minimum); high contrast; no keyboard dependency. See "Interaction patterns" above for the autosave-failure indicator.
 
 ## Icons
 

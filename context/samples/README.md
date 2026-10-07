@@ -1,6 +1,22 @@
-# Samples — put the sample files here
+# Samples — real files received
 
-> **[[FILL-BEFORE-UNIT: import units — the two sample files below = ________ ; owner: the person completing the context]]**
+**Received 2026-10-07**, replacing the earlier placeholder instructions below. These are real files from the client, read and analyzed in full — see `context-feeders/decisions/project-decisions.md` (PAR-011, PAR-012, BLD-041, BLD-042, BLD-043) for how they were resolved, and `unmade-decisions.md` (U-01) for what's still open. **Still missing:** a participant file with actual data rows, and a past results sheet — the stakeholder confirmed 2026-10-07 there's currently nothing more to send for either.
+
+| File / folder | What it is | Status |
+|---|---|---|
+| `选手信息.xlsx` | The real participant-file **column template**: `比赛名称`, `选手编号`, `姓名`, `年龄`, `省`, `市`, `区（县）`, `学校名称`, `组别`, `个人赛`, `团队赛`, `备注`. No data rows. | Structure resolved — **no explicit Team column** (PAR-011, resolves U-97): team membership is School+Category+`团队赛`=1; **the pre-filled `选手编号` column is ignored** (PAR-012, resolves U-98), the system always generates its own. Still missing: a copy with real data rows. |
+| `一二年级组/` | 4 real question files for grades 1–2 (4×4 and 6×6 grids): standard, irregular, diagonal variants. | Real data; given cells are image-only — **resolved via a temporary OCR exception** (BLD-043); **the grade-pair folders ARE the real category scheme** (BLD-041, confirmed 2026-10-07, reversing the earlier BLD-027 answer) |
+| `三四年级组/` | 4 real question files for grades 3–4 (6×6 and 9×9 grids): standard, irregular, size-comparison variants. | Same as above |
+| `五六年级组/` | 4 real question files for grades 5–6 (6×6 and 9×9 grids): standard, fortress, anti-knight variants. | Same as above |
+
+Every question file shares the same 9 columns: `题目` (instructions), `题目配图` (question image, empty), `题目音频` (question audio, empty — **ignored at import**, BLD-042), `*类目` (variant name), `*分数` (points — confirms BLD-038), `*数独底图` (the base-grid image, `DISPIMG`-embedded — **read via a temporary OCR exception**, BLD-043), `*水平长度`/`*垂直长度` (grid width/height — confirms BLD-011's generic grid model: real files use 4×4, 6×6 **and** 9×9), `*正确答案` (correct answer — **blank cells only**; the given cells come from OCR on `*数独底图` instead, BLD-043). Row counts per file range from 30 to 100, far more than "6 questions per round" — **resolved** (BLD-040, resolves U-100): each file is a pool; Unit 05 imports it whole, a separate manual step selects 6 per Individual round. The 3 grade-pair folders (1–2, 3–4, 5–6) **are the real category scheme** (BLD-041, confirmed 2026-10-07).
+
+**Privacy:** these files were checked for real student names before being added — the participant file is a blank template, and the question files contain no participant data. If a future sample ever does contain real names, replace them with fake ones before adding it here; this folder is part of the context and may be read by an agent.
+
+---
+
+<details>
+<summary>Original placeholder instructions (superseded 2026-10-07, kept for reference)</summary>
 
 The person completing the context provides two sample files and places them **in this folder**, with exactly these names:
 
@@ -13,4 +29,4 @@ The person completing the context provides two sample files and places them **in
 
 Already known from an earlier look at sample material (recorded in `../competition-rules.md`, not blocking): the question file carries a points-per-question column, but points stay controller-customizable regardless; a complete-solution column is **missing** from the source files today, and **the given (pre-filled) cells exist only as an embedded picture, not as text** — OCR is ruled out, so there is no way today to build an interactive, correctly-locked grid from the files as they stand (U-94, still open, carried back to the stakeholder 2026-10-01) — a starter set is hand-transcribed in the meantime (BLD-026).
 
-**Privacy:** if the sample Excel contains real student names, replace them with fake ones before placing the file here. This folder is part of the context and may be read by an agent.
+</details>

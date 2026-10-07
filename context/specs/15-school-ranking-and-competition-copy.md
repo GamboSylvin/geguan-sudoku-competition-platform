@@ -18,7 +18,7 @@ Goal in one testable sentence: **a school's total — (sum of every one of its p
 - **The individual sum counts every one of the school's players in the category, not only the team's members** [T] (SCR-018, resolves U-04): "school total" reflects the school's overall performance in the category, a genuinely different, larger set of players than the 2–6 on the team. This requires summing `IndividualRoundResult.totalScore` (both rounds) across **every** `Participant` with that `schoolId` and `categoryId`, not just `Team.participants`.
 - **Team part is the sum of both Team rounds** [C]: `TeamRoundResult.score` from Unit 13 (rotation) + Unit 14 (partition), for that school's one team in the category [C] ("exactly one team per school per category," `../data-model.md`).
 - **Computed once the category's data is complete:** the school total for a category needs every one of that school's players' Individual results finalized (Unit 08/09) **and** both Team rounds finalized for that school's team (Units 13, 14) — in practice, this lines up with the category reaching the end of the fixed structure, the same point Unit 11's whole-competition-finish check looks at.
-- **School ranking tie-break — same unresolved extension as Unit 09, not guessed here either:** the team's proposed extension (for a school, the sum of submission times of all that school's players) is **not confirmed** (still open, U-22, `unmade-decisions.md` §1). **A genuine tie in school total gets shared rank**, exactly as Unit 09 resolved it for individual ranking — this unit reuses that same tie-break function rather than inventing a school-specific one.
+- **School ranking tie-break, now confirmed** [T] (SCR-020, resolves U-22, 2026-10-07, project-owner decision): a genuine tie in school total is broken by the **sum of submission times of all the school's counted players** (the same players SCR-004 sums for the score), earlier wins. This unit's `breakTie` reuse (step 2) must apply this rule at the school level — a different aggregate (sum over players, not over rounds) from Unit 09's individual-level version (sum over a participant's two rounds), so the two cannot literally share one function unchanged; each level sums its own relevant set of submission times under the same "earlier total wins" principle.
 - **Participant/team seed data:** since Units 04/05 remain gated, this unit's own testing uses the same seeded `Participant`/`Team`/`School` data established by earlier units (03, 06, 08, 13, 14).
 - **Competition copy, resolved** [C] (CA-004, cited as CMP-100 in `context/`, consistent with Unit 03's citation): copying a competition **keeps settings, questions and judges** — it **never carries over participants, always re-imported fresh** [T] (CMP-103, resolves U-10), "since student data is deleted 15 days after the original competition regardless" (`../data-model.md`). The copy is a **new** `Competition` row (`status = CREATED`, `copiedFromCompetitionId` set to the source), which must go through Unit 03's normal publish flow again, including a fresh participant import (Unit 04) before it can publish.
 - **A resolved nuance on "keeps... judges":** the same `Judge` entities get new `CompetitionJudgeAssignment` rows on the copy, carrying over their **ranges as a starting point** — but since participants aren't copied, the new competition's participant numbers will be freshly generated on its next import and may not land on the same counts as the original. **The controller is expected to review and adjust ranges after the new import**, using Unit 06's existing "changeable at any time" range-editing — this unit does not guarantee the copied ranges are still accurate post-import, only that they're copied as a starting point.
@@ -27,7 +27,7 @@ Goal in one testable sentence: **a school's total — (sum of every one of its p
 ## Implementation Details
 
 1. **School total computation.** Triggered once, per category, when every one of that school's players has a finalized `IndividualRoundResult` for both Individual rounds **and** that school's team has finalized `TeamRoundResult` rows for both Team rounds: `schoolTotal = (Σ IndividualRoundResult.totalScore for every Participant with this schoolId/categoryId) × ScoringConfiguration.schoolCoefficient + (rotationResult.score + partitionResult.score)`, stored as an exact decimal (no floating-point rounding).
-2. **School ranking.** Sort schools within a category descending by `schoolTotal`; a genuine tie shares rank (reusing Unit 09's tie-break function). Store as `RankingSnapshot` (`scope = SCHOOL`, `isFinal = true`).
+2. **School ranking.** Sort schools within a category descending by `schoolTotal`; a genuine tie is broken by the sum of submission times of all the school's counted players, earlier wins (SCR-020) — a school-level `breakTie`, same principle as Unit 09's individual-level one but a different aggregate (sum over players here, not over a participant's two rounds). Store as `RankingSnapshot` (`scope = SCHOOL`, `isFinal = true`).
 3. **Competition copy.** Given a source `competitionId`, create a new `Competition` (`status = CREATED`, `copiedFromCompetitionId` = source). Deep-copy: `CompetitionCategory` rows, the fixed `Stage`/`Round`/`RoundSettings` structure (carrying over the source's customized values, not just defaults), `ScoringConfiguration`, `QuestionSet`/`Question` rows (new rows, scoped to the new competition), and `CompetitionJudgeAssignment` rows (same `Judge` entities, same ranges as a starting point). **Do not copy** `School`/`Team`/`Participant`/`Account` (player), `Attempt`/`Answer`/`IndividualRoundResult`/`TeamRoundResult`, `ScoreCorrection`, `RankingSnapshot`, or any `StoredFile`/`ImportBatch`.
 4. **Frontend.** A school-ranking view (reusing Unit 09's big-screen/results display patterns) and a "copy this competition" action on the controller's competition list/detail screen, landing on the new competition's (unpublished) setup screen.
 
@@ -65,25 +65,25 @@ Goal in one testable sentence: **a school's total — (sum of every one of its p
 ### Constraints
 
 - No schema change — every entity this unit touches already exists from Unit 1.
-- Does not implement the unconfirmed school-level submission-time tie-break extension (U-22) — reuses Unit 09's shared-rank fallback.
+- **The school-level submission-time tie-break is now confirmed** (SCR-020, resolves U-22) — implementing it (sum over the school's counted players) is in scope for this unit, not deferred.
 - Does not rebuild Unit 12's export — once `RankingSnapshot(scope=SCHOOL)` rows exist, Unit 12's already-generic export mechanism picks them up with no changes needed here.
 - Does not validate or auto-adjust copied judge ranges against the new competition's (not-yet-imported) participant numbers — the controller reviews and adjusts them after the fresh import, using Unit 06's existing range-editing.
 - Nothing tagged `[O]`/OPEN may be implemented as if decided.
 
 ### Implementation Notes
 
-- Reuse Unit 09's `breakTie()` function directly rather than writing a parallel school-level tie-break — the resolution is identical (shared rank, pending the same open extension).
+- Write a school-level `breakTie` (sum of submission times across the school's counted players) alongside Unit 09's individual-level one (sum across a participant's two rounds, once that unit's own `breakTie` is updated for SCR-020) — both follow "earlier total wins" but sum a different set, so they are two small functions, not one shared one.
 - The deep-copy operation should be a single transaction — a partially copied competition (e.g. questions copied but judges not) would be a confusing state to debug or clean up.
 
 ### Related Features
 
-- **Depends on:** Unit 09 (individual ranking, the tie-break function reused here), Unit 13 (rotation `TeamRoundResult`), Unit 14 (partition `TeamRoundResult`), Unit 03 (the structure/publish flow the copy re-enters), Unit 06 (judge range editing, used post-copy).
+- **Depends on:** Unit 09 (individual ranking and its `breakTie` pattern), Unit 13 (rotation `TeamRoundResult`), Unit 14 (partition `TeamRoundResult`), Unit 03 (the structure/publish flow the copy re-enters), Unit 06 (judge range editing, used post-copy).
 - **Depended on by:** Unit 12 (export, once school-level data exists, with no rebuild needed).
 
 ## Acceptance Criteria
 
 1. A school's total is computed as an exact decimal: (sum of every one of its players' individual two-round totals in the category) × the coefficient, plus the team's rotation-round score plus its partition-round score.
-2. Schools are ranked within each category on that total; a genuine tie shares rank.
+2. Schools are ranked within each category on that total; a genuine tie is broken by the sum of submission times of the school's counted players, earlier wins (SCR-020).
 3. Copying a competition creates a new `CREATED` competition with the same categories, round settings, scoring configuration, question sets/questions and judge assignments as the source.
 4. The copy carries over zero participants, teams, player accounts, attempts, answers, results, corrections, rankings, or files.
 5. The copy must be published again through Unit 03's normal flow before it can run.
@@ -92,7 +92,6 @@ Goal in one testable sentence: **a school's total — (sum of every one of its p
 
 ## Out of Scope
 
-- The unconfirmed school-level submission-time tie-break extension (U-22) — shared rank is used instead.
 - Rebuilding or extending Unit 12's export mechanism — it already picks up school-level data generically.
 - Validating or auto-adjusting copied judge ranges against a not-yet-imported participant set.
 - Any screen's finished visual design (deferred to the design phase, U-66, BLD-009).
