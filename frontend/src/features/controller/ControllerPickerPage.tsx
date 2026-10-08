@@ -115,12 +115,20 @@ export function ControllerPickerPage() {
                   {t(`controller.status.${c.status}`)}
                 </p>
               </div>
-              <Link
-                to={`/controller/competitions/${encodeURIComponent(c.id)}/live`}
-                className="rounded-md bg-slate-800 px-3 py-1 text-sm text-white hover:bg-slate-700"
-              >
-                {t("controller.pickOpen")}
-              </Link>
+              <div className="flex gap-2">
+                <Link
+                  to={`/controller/competitions/${encodeURIComponent(c.id)}/results`}
+                  className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100"
+                >
+                  {t("controller.pickResults")}
+                </Link>
+                <Link
+                  to={`/controller/competitions/${encodeURIComponent(c.id)}/live`}
+                  className="rounded-md bg-slate-800 px-3 py-1 text-sm text-white hover:bg-slate-700"
+                >
+                  {t("controller.pickOpen")}
+                </Link>
+              </div>
             </li>
           ))}
         </ul>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useLocale } from "../../i18n/locale-context";
 import { clearSession } from "../auth/session";
 import { StudentsSupervisionPanel } from "../judge/StudentsSupervisionPanel";
@@ -310,6 +310,13 @@ export function ControllerLivePage() {
           </p>
         </div>
         <div className="flex gap-2">
+          {/* Unit 12: the results screen is the dashboard's sibling, reached from here. */}
+          <Link
+            to={`/controller/competitions/${encodeURIComponent(id ?? "")}/results`}
+            className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100"
+          >
+            {t("controller.results")}
+          </Link>
           <button
             type="button"
             className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100"
