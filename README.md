@@ -15,7 +15,7 @@ A live Sudoku competition platform (individual and team stages, judge supervisio
 | Cursor | `.cursorrules` |
 | Windsurf | `.windsurfrules` |
 
-**Project status:** actively being built. `CLAUDE.md`'s "Current status" section and [`context/progress-tracker.md`](context/progress-tracker.md) are the two places this is kept accurate day to day — read those for the real, current picture rather than trusting a summary here, which would only go stale again. In short: only Unit 1 (Foundation) has shipped code today; anyone pulling this repository will see a running skeleton with a health check and a placeholder page, not a finished product.
+**Project status:** actively being built, final push before the event. `CLAUDE.md`'s "Current status" section and [`context/progress-tracker.md`](context/progress-tracker.md) are the two places this is kept accurate day to day — read those for the real, current picture rather than trusting a summary here, which would only go stale again. In short: 10 of 15 units have shipped code (login, competition setup, judge management, round runtime, submission/scoring, individual ranking, big-screen display, judge supervision) — anyone pulling this repository will see a working Individual-stage competition flow, not just a skeleton.
 
 Full product and technical documentation lives in [`context/`](context/) (start at [`context/README.md`](context/README.md)) and is the source of truth for what is decided, open, or still to be built.
 
@@ -55,7 +55,7 @@ Full product and technical documentation lives in [`context/`](context/) (start 
   { "status": "ok", "uptimeSeconds": 12, "dependencies": { "database": "up", "redis": "up" } }
   ```
   (HTTP 503 with `"status": "error"` if the database or Redis isn't reachable — check the Docker logs.)
-- `http://localhost:5173` shows a **placeholder page** with the i18n scaffold (English/Chinese) wired up. There is no login, no competition setup, no gameplay yet — those are later build units.
+- `http://localhost:5173` serves the real app: login (with a role picker), competition setup, judge management, the round runtime and gameplay screens, submission, individual ranking, the big-screen leaderboard, and the judge supervision dashboard — all with the i18n scaffold (English/Chinese) wired up. Question import, team-stage rounds, controller live commands, results/export and school ranking are not built yet — see `context/progress-tracker.md`.
 
 To stop the stack:
 ```bash

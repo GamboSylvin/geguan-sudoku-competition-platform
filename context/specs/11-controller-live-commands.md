@@ -1,8 +1,7 @@
-# Unit 11: Controller live commands — DRAFT, awaiting approval
+# Unit 11: Controller live commands — APPROVED (2026-10-08)
 
-> **Draft spec, not yet approved.** This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
+> **Approved spec** [T] (BLD-046, blanket project-owner approval for the final build push). This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
 > This unit has no open item blocking it — build plan: "**No open items remain** — reset is settled: never; awards after an early finish is resolved (U-89); whether the system computes award tiers at all for a normal finish is resolved, none needed (U-27, RES-007); cancel is resolved, kept (U-31, ROL-009)."
-> Present this spec for review before starting the unit, per the methodology.
 
 ## Goal
 

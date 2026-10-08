@@ -1,7 +1,7 @@
 # Unit 09: Individual ranking and big-screen ranking — APPROVED (2026-10-07)
 
 > **Draft spec, not yet approved.** This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
-> This unit has no open item blocking it. **U-22 is now fully resolved** (SCR-020, 2026-10-07, project-owner decision: the tie-break submission-time extension sums across both rounds for an individual) — after this unit was already built and approved. The code's `breakTie` function still implements the pre-SCR-020 shared-rank fallback described below; bringing it in line with SCR-020 is a pending follow-up for whoever codes next, not yet done.
+> This unit has no open item blocking it. **U-22 is now fully resolved** (SCR-020, 2026-10-07, project-owner decision: the tie-break submission-time extension sums across both rounds for an individual) — after this unit was already built and approved. **Resolved in code 2026-10-08:** `breakTie` now implements SCR-020's individual-level tie-break (lower summed submission time across both Individual rounds wins; an equal score *and* an equal summed time is still a genuine shared rank) — done as one of Unit 05's three code-side prerequisites, since it touches this already-built unit's live code. The school-level version (summed over a school's counted players) is a separate, still-unbuilt function for Unit 15.
 > Present this spec for review before starting the unit, per the methodology.
 
 ## Goal
@@ -67,7 +67,7 @@ Goal in one testable sentence: **a finalized Individual-round result updates its
 ### Constraints
 
 - No schema change — `RankingSnapshot` already exists from Unit 1.
-- **Tie-break now confirmed** (SCR-020, resolves U-22, 2026-10-07) — sum of both rounds' submission times, earlier wins. The live code does not implement this yet; it still returns shared rank for every tie. Bringing `breakTie` in line with SCR-020 is a pending code follow-up, not a context-folder gap.
+- **Tie-break now confirmed** (SCR-020, resolves U-22, 2026-10-07) — sum of both rounds' submission times, earlier wins. **Implemented in code 2026-10-08.**
 - Does not build team or school ranking — Units 13/14 (team results) and 15 (school total and ranking) build on top of this unit's pattern.
 - Does not build controller-driven big-screen display switching (one-student close-up, team split, paused/finished modes) — Unit 11.
 - Does not reveal any score or rank to a player session — Unit 12.
@@ -75,7 +75,7 @@ Goal in one testable sentence: **a finalized Individual-round result updates its
 
 ### Implementation Notes
 
-- The tie-break is a single, named function (`breakTie(a, b)`) — exactly so that implementing SCR-020 (sum of both rounds' submission times) only means changing that one function, not the surrounding ranking computation. It currently still returns "shared" and needs updating.
+- The tie-break is a single, named function (`breakTie(a, b)`) — exactly so that implementing SCR-020 (sum of both rounds' submission times) only means changing that one function, not the surrounding ranking computation. **Done 2026-10-08.**
 - At ~800 concurrent clients (U-60), recomputing a whole category's ranking on every single finalized result should stay cheap (sort within one category, not the whole competition) — categories are ranked separately specifically so this stays small.
 
 ### Related Features
@@ -99,5 +99,5 @@ Goal in one testable sentence: **a finalized Individual-round result updates its
 - Team ranking and school ranking (Units 13, 14, 15).
 - Controller-driven big-screen display switching: one-student close-up, team split view, the paused and finished displays (Unit 11).
 - Revealing any score or rank to a player session before `FINISHED` (Unit 12).
-- ~~The unconfirmed submission-time tie-break extension (U-22)~~ — now confirmed (SCR-020); implementing it in `breakTie` is in scope as a follow-up, not out of scope.
+- ~~The unconfirmed submission-time tie-break extension (U-22)~~ — now confirmed (SCR-020) and implemented in `breakTie`, 2026-10-08.
 - Any screen's finished visual design (deferred to the design phase, U-66, BLD-009).

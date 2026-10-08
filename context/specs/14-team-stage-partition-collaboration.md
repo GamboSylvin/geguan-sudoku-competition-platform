@@ -1,9 +1,8 @@
-# Unit 14: Team stage — partition collaboration (second round) — DRAFT, awaiting approval
+# Unit 14: Team stage — partition collaboration (second round) — APPROVED (2026-10-08)
 
-> **Draft spec, not yet approved.** This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
+> **Approved spec** [T] (BLD-046, blanket project-owner approval for the final build push). This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
 > This unit has no open item blocking it — build plan: "**Waits:** nothing blocking — the real regulation numbers for TEM-006 to TEM-008 can replace the working positions later without a rebuild."
 > **A data-model gap was found while drafting this spec, and is now fixed.** `RoundSettings` had no field for this round's puzzle count, total time or points-per-puzzle (TEM-006–TEM-008), unlike the rotation round's `teamQuestionCount`/`teamTotalTimeSeconds`/`teamPointsPerQuestion`. **Resolved 2026-10-01, directed by the project owner:** `partitionPuzzleCount`/`partitionTotalTimeSeconds`/`partitionPointsPerPuzzle` added to `RoundSettings` in `../data-model.md` (see its "Amendment: partition-round settings added" note) — this unit no longer waits on anything.
-> Present this spec for review before starting the unit, per the methodology.
 
 ## Goal
 

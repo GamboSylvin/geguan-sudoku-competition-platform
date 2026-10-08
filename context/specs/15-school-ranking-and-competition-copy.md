@@ -1,8 +1,7 @@
-# Unit 15: School ranking and competition copy — DRAFT, awaiting approval
+# Unit 15: School ranking and competition copy — APPROVED (2026-10-08)
 
-> **Draft spec, not yet approved.** This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
+> **Approved spec** [T] (BLD-046, blanket project-owner approval for the final build push). This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
 > This unit has no open item blocking it (not listed in `../specs/00-build-plan.md`, "Units that cannot be specified").
-> Present this spec for review before starting the unit, per the methodology.
 
 ## Goal
 

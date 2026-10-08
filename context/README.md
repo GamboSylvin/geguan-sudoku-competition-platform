@@ -1,4 +1,4 @@
-# Context folder — Sudoku Arena (DRAFT v1, 2026-09-26)
+# Context folder — Sudoku Arena (last checked 2026-10-08)
 
 This folder is the single source of truth a coding agent reads before it builds anything. It follows the `building-with-ai` methodology.
 **Every `FILL-BEFORE-CODING` blank is filled and section E is approved by the project owner (2026-09-30); the coding gate is passed.** See `progress-tracker.md`, "Blocked". Anything marked **TBD — to be decided by the project owner** is blank on purpose (today only the event-day hosting, `FILL-BEFORE-DEPLOYMENT`).
@@ -10,18 +10,16 @@ This folder is the single source of truth a coding agent reads before it builds 
 | root `CLAUDE.md` (outside this folder) | The entry point an agent reads first, in order. It also keeps the documentation-phase rules for `context-feeders/requirements/`, `context-feeders/decisions/` and `context-feeders/archive/` | Merged 2026-09-26 |
 | `project-overview.md` | Product, users, flow, features, scope | Mostly written |
 | `competition-rules.md` | The competition and scoring rules that have been decided, and the ones still open | Written from the decisions so far |
-| `architecture.md` | Stack, boundaries, invariants, storage, access model | Mostly written: the backend stack is decided (Node.js with TypeScript, Express.js) with the module-first folder structure (2026-09-30), Prisma (ORM/migrations) and Docker/Docker Compose; the data model is approved (`data-model.md`, 2026-09-30); hosting and the final module list/API are still blank (see `FILL-BEFORE-CODING.md`) |
+| `architecture.md` | Stack, boundaries, invariants, storage, access model | Written: stack, module-first folder structure, module list (ten modules, BLD-032) and the data model are all decided; only the event-day hosting location stays open (`FILL-BEFORE-CODING.md` row C1, needed before deployment, not before coding) |
 | `code-standards.md` | Implementation rules | Skeleton: the stack is decided (Node.js with TypeScript, Express.js, Prisma, Jest); the API and the remaining testing conventions are still to be written |
 | `ai-workflow-rules.md` | How the agent must behave while building | Mostly written; git, CI and review are decided; team roles are recorded; team sync rhythm is open |
-| `ui-context.md` | Screens, states, interaction rules | Partial: look, layouts and sizes are open |
-| `progress-tracker.md` | Phase, blockers, open items, next steps | Written |
-| `FILL-BEFORE-CODING.md` | The checklist of every blank to fill before coding, with owners | Written |
-| `data-model.md` | The data model and schema | Written and **approved** 2026-09-30 (A6); the Prisma schema is its concrete form |
-| `specs/00-build-plan.md` | Units, order, dependencies, definition of done | **Approved** 2026-09-30 (A7): 14 units; a 15th added during the `main`/`louise` merge — team-round-2 (TEM-005) inserted as Unit 14 right after rotation relay; school ranking shifted to Unit 15, now depending on both team rounds |
-| `specs/01-foundation.md` | The spec of Unit 1 (foundation), in the feature-spec structure | **Approved** 2026-09-30 (A7) |
-| `samples/` | Where the sample participant Excel and question PDF are placed | Empty, to be filled |
-
-Not yet written: the specs of the later units (`specs/NN-unit-name.md`). They follow the build plan.
+| `ui-context.md` | Screens, states, interaction rules | Tokens filled with Tailwind defaults; **no dedicated design pass before the event** (UI-008, 2026-10-08) — ships as-is, the look/layout questions (U-65/U-66) stay open to revisit after the event, but don't block building |
+| `progress-tracker.md` | Phase, blockers, open items, next steps | Written — **read this one in full, it's the most current file in the project** |
+| `FILL-BEFORE-CODING.md` | The checklist of every blank to fill before coding, with owners | Written, all rows closed or explicitly deferred past coding |
+| `data-model.md` | The data model and schema | Written and **approved** 2026-09-30 (A6), amended several times since; the Prisma schema is its concrete form (one amendment, `Question.roundId` nullable, not yet migrated — see `progress-tracker.md`, "Known Issues") |
+| `specs/00-build-plan.md` | Units, order, dependencies, definition of done | **Approved** 2026-09-30 (A7): 15 units |
+| `specs/01-foundation.md` through `specs/15-*.md` | Each unit's own spec | 10 units built (`01,02,03,06,07,08,09,10`); specs `05` and `11`–`15` are drafted and **approved**, ready to build; Unit `04` has no spec yet, blocked on U-01 — see `progress-tracker.md` |
+| `samples/` | Real participant/question sample files from the client | Populated 2026-10-07 — see `samples/README.md` |
 
 **Blanks:** search the folder for `FILL-BEFORE-CODING` (needed before the first unit), `FILL-BEFORE-UNIT` (needed before a named unit) and `FILL-BEFORE-DEPLOYMENT`. **Do not write code while a `FILL-BEFORE-CODING` marker remains.**
 
