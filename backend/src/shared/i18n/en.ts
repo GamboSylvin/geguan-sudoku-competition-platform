@@ -150,6 +150,20 @@ export const en = {
       notInPool: "One of the selected questions is not in this category's pool.",
     },
   },
+  results: {
+    // The results screen, the correction form and the export action are all
+    // controller-only surfaces, so each message names what went wrong plainly.
+    forbidden: "Only a controller can view results, correct a score or export.",
+    competitionNotFound: "Competition not found.",
+    competitionCancelled:
+      "This competition was cancelled; its results are never released.",
+    reasonRequired: "A reason is required to correct a score.",
+    unsupportedTargetType:
+      "Only a participant's score can be corrected; team and school results do not exist yet.",
+    resultNotFound: "There is no result for that participant in that round.",
+    roundNotFound: "That round does not belong to this competition.",
+    invalidScore: "The corrected score must be a whole number of 0 or more.",
+  },
 } as const;
 
 /** Recursively widens the literal `en` catalogue to `string` leaves, keeping its shape. */

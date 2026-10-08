@@ -116,4 +116,14 @@ export const zh: MessageCatalogue = {
       notInPool: "所选题目中有不属于该组别题库的条目。",
     },
   },
+  results: {
+    forbidden: "只有管理员可以查看成绩、修改分数或导出。",
+    competitionNotFound: "未找到该比赛。",
+    competitionCancelled: "该比赛已取消，其成绩不予发布。",
+    reasonRequired: "修改分数必须填写原因。",
+    unsupportedTargetType: "目前只能修改选手成绩，团体与学校成绩尚不存在。",
+    resultNotFound: "该选手在此轮次没有成绩记录。",
+    roundNotFound: "该轮次不属于此比赛。",
+    invalidScore: "修改后的分数必须是大于或等于 0 的整数。",
+  },
 };

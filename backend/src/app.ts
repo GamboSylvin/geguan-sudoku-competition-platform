@@ -5,6 +5,7 @@ import { gameplayService, installCompetitionFinishedHook, installIndividualResul
 import { roundTimerService } from "./modules/round";
 import { rankingService } from "./modules/ranking";
 import { bigScreenService } from "./modules/big-screen";
+import { purgeService, resultsService } from "./modules/results";
 
 /**
  * The Express application: middleware plus route mounting (BLD-020). It is kept
@@ -35,10 +36,23 @@ function installListeners(): void {
   // Unit 11: when the competition finishes by itself (spec Detail 8), the screens
   // switch to the final ranking. The controller's "finish early" sets FINAL in its
   // own command path, so this hook covers only the natural finish.
-  installCompetitionFinishedHook((event) => {
-    if (event.finishedEarly) return;
-    void bigScreenService.setMode({ competitionId: event.competitionId, mode: "FINAL" });
+  //
+  // Unit 12: the same hook starts the 15-day retention countdown (RES-004). Both
+  // finish paths — natural and early — announce through `notifyCompetitionFinished`,
+  // so one subscriber covers both. The schedule write is idempotent, and the purge
+  // job also back-fills any ended competition that has no schedule, so a missed
+  // announcement self-heals. Only `installCompetitionFinishedHook` supports a single
+  // subscriber, so the two reactions live in one function.
+  installCompetitionFinishedHook(async (event) => {
+    if (!event.finishedEarly) {
+      await bigScreenService.setMode({ competitionId: event.competitionId, mode: "FINAL" });
+    }
+    // Reads `finishedAt` itself and is idempotent, so it needs no state passed in.
+    await resultsService.ensurePurgeScheduled(event.competitionId);
   });
+  // The retention poll. Started once per process, `unref()`'d, and never reachable
+  // over HTTP (spec Security Considerations: schedule-driven only).
+  purgeService.startPurgeScheduler();
   listenersInstalled = true;
 }
 
