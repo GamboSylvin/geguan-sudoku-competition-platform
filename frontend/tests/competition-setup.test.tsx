@@ -79,6 +79,41 @@ function jsonResponse(status: number, body: unknown) {
   return { ok: status >= 200 && status < 300, status, json: async () => body };
 }
 
+/**
+ * `CompetitionSetupPage` also mounts the judge-range panel (Unit 06), which fetches
+ * the judge list on mount. Routing the mock on method + URL — instead of queueing
+ * responses in call order — keeps that extra request from consuming the response
+ * meant for publish, and fails loudly on any request a test did not anticipate.
+ */
+type Route = { method: string; url: RegExp; status: number; body: unknown };
+
+function mockFetch(routes: Route[]): void {
+  global.fetch = jest.fn().mockImplementation((input: unknown, init?: RequestInit) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : String((input as { url: string }).url);
+    const method = (init?.method ?? "GET").toUpperCase();
+    const route = routes.find((candidate) => candidate.method === method && candidate.url.test(url));
+    if (!route) {
+      throw new Error(`Unexpected fetch in test: ${method} ${url}`);
+    }
+    return Promise.resolve(jsonResponse(route.status, route.body));
+  }) as unknown as typeof fetch;
+}
+
+function baseRoutes(): Route[] {
+  return [
+    { method: "GET", url: /\/api\/judges$/, status: 200, body: { judges: [] } },
+    { method: "POST", url: /\/api\/competitions$/, status: 201, body: createdBody() },
+    // The question panel (Unit 05) is mounted on this screen and loads the selected
+    // category's pool as soon as a competition exists.
+    {
+      method: "GET",
+      url: /\/questions\/pool$/,
+      status: 200,
+      body: { categoryId: "cat-1", groups: [] },
+    },
+  ];
+}
+
 async function createCompetition() {
   fireEvent.change(screen.getByLabelText("Competition name"), {
     target: { value: "Autumn Cup" },
@@ -96,7 +131,7 @@ afterEach(() => {
 
 describe("competition setup page", () => {
   it("creates a competition and shows the auto-generated structure with its defaults", async () => {
-    global.fetch = jest.fn().mockResolvedValue(jsonResponse(201, createdBody()));
+    mockFetch(baseRoutes());
     renderPage();
 
     await createCompetition();
@@ -104,18 +139,22 @@ describe("competition setup page", () => {
     // Two stages, four rounds, each round's default duration shown.
     expect(screen.getByText("INDIVIDUAL")).toBeInTheDocument();
     expect(screen.getByText("TEAM")).toBeInTheDocument();
-    expect(screen.getByText("Individual round 1")).toBeInTheDocument();
+    // "Individual round 1" appears in the structure list and again as an option of the
+    // question panel's round picker (Unit 5), so it is matched loosely here.
+    expect(screen.getAllByText("Individual round 1").length).toBeGreaterThan(0);
     expect(screen.getByText("Team round 2")).toBeInTheDocument();
     const durations = screen.getAllByLabelText("Duration (seconds)") as HTMLInputElement[];
     expect(durations.map((input) => input.value)).toEqual(["1200", "1800", "1800", "1800"]);
   });
 
   it("names every unmet condition when publish is refused", async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValueOnce(jsonResponse(201, createdBody()))
-      .mockResolvedValueOnce(
-        jsonResponse(422, {
+    mockFetch([
+      ...baseRoutes(),
+      {
+        method: "POST",
+        url: /\/api\/competitions\/comp-1\/publish$/,
+        status: 422,
+        body: {
           error: {
             code: "competition.notReady",
             details: {
@@ -125,8 +164,9 @@ describe("competition setup page", () => {
               ],
             },
           },
-        }),
-      );
+        },
+      },
+    ]);
     renderPage();
 
     await createCompetition();
@@ -140,18 +180,21 @@ describe("competition setup page", () => {
   });
 
   it("shows both links after a successful publish", async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValueOnce(jsonResponse(201, createdBody()))
-      .mockResolvedValueOnce(
-        jsonResponse(200, {
+    mockFetch([
+      ...baseRoutes(),
+      {
+        method: "POST",
+        url: /\/api\/competitions\/comp-1\/publish$/,
+        status: 200,
+        body: {
           id: "comp-1",
           status: "WAITING",
           publishedAt: new Date().toISOString(),
           entryLinkToken: "entry-token",
           bigScreenLinkToken: "screen-token",
-        }),
-      );
+        },
+      },
+    ]);
     renderPage();
 
     await createCompetition();

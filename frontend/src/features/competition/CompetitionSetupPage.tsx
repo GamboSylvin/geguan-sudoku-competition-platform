@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useLocale } from "../../i18n/locale-context";
 import { JudgeRangeAssignmentPanel } from "../judge/JudgeRangeAssignmentPanel";
+import { QuestionPanel } from "../question/QuestionPanel";
 import {
   createCompetition,
   publishCompetition,
@@ -270,6 +271,24 @@ export function CompetitionSetupPage() {
 
           {/* Judge range assignment (Unit 06) — changeable any time during the event. */}
           <JudgeRangeAssignmentPanel competitionId={competition.id} />
+
+          {/* Question import, pool and per-round selection (Unit 05, BLD-040). Only
+              Individual rounds hold a selection; Team rounds draw from the pool. */}
+          <QuestionPanel
+            competitionId={competition.id}
+            categories={competition.categories.map((category) => ({
+              id: category.id,
+              name: category.name,
+            }))}
+            individualRounds={competition.stages
+              .filter((stage) => stage.type === "INDIVIDUAL")
+              .flatMap((stage) =>
+                stage.rounds.map((round) => ({
+                  id: round.id,
+                  name: stageRoundLabel(t, stage, round),
+                })),
+              )}
+          />
 
           {!published ? (
             <button
