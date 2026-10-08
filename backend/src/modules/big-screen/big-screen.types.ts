@@ -35,6 +35,36 @@ export interface BigScreenRankingPayload {
  */
 export type BigScreenPushHook = (payload: BigScreenRankingPayload) => void;
 
+/**
+ * The display modes (Unit 11, BSC-002). `RANKING` is Unit 09's rotating
+ * leaderboard; `PAUSED` and `FINAL` are this unit's additions, set automatically by
+ * the controller's pause and finish commands and manually from the same endpoint.
+ * `PLAYER_CLOSEUP` and `TEAM_SPLIT` exist in the schema's enum but no screen or
+ * data backs them yet — they are explicitly out of scope for Unit 11.
+ */
+export type BigScreenMode =
+  | "RANKING"
+  | "PAUSED"
+  | "FINAL"
+  | "PLAYER_CLOSEUP"
+  | "TEAM_SPLIT";
+
+/**
+ * The display state pushed to the screens on `big-screen:mode`, and returned to the
+ * controller by the mode endpoint. The screen renders the mode it is told and never
+ * decides one itself (invariant 8, in spirit: the screen computes nothing).
+ */
+export interface BigScreenModePayload {
+  competitionId: string;
+  mode: BigScreenMode;
+  /** The category the controller picked manually; null while rotating. */
+  targetId: string | null;
+  rotationEnabled: boolean;
+}
+
+/** Who puts a mode change on the wire (the realtime gateway) installs this. */
+export type BigScreenModeHook = (payload: BigScreenModePayload) => void;
+
 /** What `authenticateBigScreen` resolves a valid link token to. */
 export interface BigScreenContext {
   competitionId: string;

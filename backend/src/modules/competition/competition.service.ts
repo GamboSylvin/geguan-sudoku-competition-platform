@@ -402,6 +402,32 @@ export async function publishCompetition(id: string): Promise<PublishResult> {
 }
 
 // ---------------------------------------------------------------------------
+// Reads (Unit 11's controller dashboard needs to pick a competition and then read
+// its structure to know which commands are legal right now)
+// ---------------------------------------------------------------------------
+
+/** Every competition, newest first — the dashboard's picker list. */
+export async function listCompetitions(): Promise<
+  Awaited<ReturnType<typeof repository.listCompetitions>>
+> {
+  return repository.listCompetitions();
+}
+
+/**
+ * One competition with its full structure (categories, stages, rounds, round
+ * settings, scoring configuration) — the same shape create/update return, so the
+ * dashboard reads exactly what it would have gotten when it created the thing.
+ * 404s on an unknown id.
+ */
+export async function getCompetition(id: string): Promise<CompetitionWithStructure> {
+  const competition = await repository.findCompetitionById(id);
+  if (!competition) {
+    throw notFoundError();
+  }
+  return competition;
+}
+
+// ---------------------------------------------------------------------------
 // Public interface
 // ---------------------------------------------------------------------------
 
@@ -411,4 +437,6 @@ export const competitionService = {
   checkPublishReadiness,
   publishCompetition,
   validateRoundSettingsPatch,
+  listCompetitions,
+  getCompetition,
 };

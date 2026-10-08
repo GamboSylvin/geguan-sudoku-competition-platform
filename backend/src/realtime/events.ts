@@ -44,6 +44,16 @@ export const RANKING_EVENTS = {
   update: "ranking:update",
 } as const;
 
+/**
+ * Big-screen display-control events (Unit 11, BSC-002). The server pushes
+ * `bigScreen:mode` to the competition's big-screen room whenever the controller
+ * changes what the screens show, so a connected screen reacts immediately instead
+ * of waiting for the next rotation tick. The client never sends these.
+ */
+export const BIG_SCREEN_EVENTS = {
+  mode: "bigScreen:mode",
+} as const;
+
 export interface SystemConnectedPayload {
   /** ISO timestamp from the single server clock (the server owns time). */
   serverTime: string;

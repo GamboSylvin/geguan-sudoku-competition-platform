@@ -27,6 +27,9 @@ import { rankingService } from "../ranking/ranking.service";
 import * as repository from "./big-screen.repository";
 import type {
   BigScreenContext,
+  BigScreenMode,
+  BigScreenModeHook,
+  BigScreenModePayload,
   BigScreenPushHook,
   BigScreenRankingPayload,
 } from "./big-screen.types";
@@ -39,6 +42,13 @@ let pushHook: BigScreenPushHook | null = null;
 
 export function installBigScreenPushHook(hook: BigScreenPushHook): void {
   pushHook = hook;
+}
+
+/** Who puts a display-mode change on the wire (Unit 11) installs this. */
+let modeHook: BigScreenModeHook | null = null;
+
+export function installBigScreenModeHook(hook: BigScreenModeHook): void {
+  modeHook = hook;
 }
 
 // ---------------------------------------------------------------------------
@@ -92,6 +102,12 @@ async function tickOnce(competitionId: string): Promise<void> {
   const state = rotations.get(competitionId);
   if (!state) return;
 
+  // Unit 11: the controller owns what the screens show. A non-RANKING mode shows
+  // no leaderboard at all, and a RANKING mode with rotation off stays on the one
+  // category the controller picked instead of advancing.
+  const display = await readDisplayState(competitionId);
+  if (display.mode !== "RANKING") return;
+
   const competition = await repository.findCompetitionForRotation(competitionId);
   if (!competition) {
     stopRotation(competitionId);
@@ -100,9 +116,18 @@ async function tickOnce(competitionId: string): Promise<void> {
   const categories = competition.categories;
   if (categories.length === 0) return;
 
-  const index = state.nextIndex % categories.length;
+  let index: number;
+  if (!display.rotationEnabled && display.targetId) {
+    // Manual selection: show exactly that category, and do not advance the
+    // rotation cursor, so turning rotation back on resumes where it left off.
+    const picked = categories.findIndex((c) => c.id === display.targetId);
+    if (picked < 0) return; // the target is not this competition's; show nothing
+    index = picked;
+  } else {
+    index = state.nextIndex % categories.length;
+    state.nextIndex = (index + 1) % categories.length;
+  }
   const category = categories[index]!;
-  state.nextIndex = (index + 1) % categories.length;
 
   const ranking = await rankingService.getCategoryRanking(competitionId, category.id);
   // A category with no Individual stage (defensive — Unit 03 always creates one) or
@@ -205,10 +230,94 @@ async function pushCurrentForUpdate(
   await runTick(competitionId);
 }
 
+// ---------------------------------------------------------------------------
+// Display-mode control (Unit 11, BSC-002)
+// ---------------------------------------------------------------------------
+
+/**
+ * The competition's display state. A competition has no row until the first
+ * command writes one, so the defaults live here in one place rather than being
+ * repeated by every caller: `RANKING`, no manual target, rotation on — the state
+ * Unit 09 already behaved as before this unit existed.
+ */
+async function readDisplayState(competitionId: string): Promise<BigScreenModePayload> {
+  const row = await repository.findDisplayState(competitionId);
+  if (!row) {
+    return {
+      competitionId,
+      mode: "RANKING",
+      targetId: null,
+      // No row means "nobody has touched the display yet": behave exactly as
+      // Unit 09 did, which is to rotate through every category.
+      rotationEnabled: true,
+    };
+  }
+  return {
+    competitionId,
+    mode: row.mode as BigScreenMode,
+    targetId: row.targetId,
+    rotationEnabled: row.rotationEnabled,
+  };
+}
+
+/**
+ * Set what the big screens show. Called by the controller's mode endpoint and
+ * automatically by this unit's own pause / finish-early / natural-finish paths
+ * (spec Detail 9: `PAUSED` is triggered by step 2, `FINAL` by steps 4 and 8).
+ *
+ * Writes the durable state first, then pushes, so a screen that connects after
+ * the push still reads the right mode. Switching to `RANKING` pushes a
+ * leaderboard immediately rather than waiting for the next cycle tick — the
+ * controller clicked something and the screens should show it now.
+ */
+async function setMode(input: {
+  competitionId: string;
+  mode: BigScreenMode;
+  /** The category to pin for RANKING; null keeps the rotation's own cursor. */
+  targetId?: string | null;
+  rotationEnabled?: boolean | null;
+}): Promise<BigScreenModePayload> {
+  const current = await readDisplayState(input.competitionId);
+  // A field left out (`undefined`) *or* explicitly cleared (`null`) keeps the
+  // current value, so a caller that only changes the mode does not disturb the
+  // pinned category or the rotation toggle.
+  const next: BigScreenModePayload = {
+    competitionId: input.competitionId,
+    mode: input.mode,
+    targetId: input.targetId ?? current.targetId,
+    rotationEnabled: input.rotationEnabled ?? current.rotationEnabled,
+  };
+
+  await repository.upsertDisplayState({
+    competitionId: next.competitionId,
+    mode: next.mode,
+    targetId: next.targetId,
+    rotationEnabled: next.rotationEnabled,
+  });
+
+  modeHook?.(next);
+
+  if (next.mode === "RANKING") {
+    // Push now, so the screens do not sit on the previous mode until the next
+    // cycle tick (which can be minutes away).
+    await runTick(input.competitionId);
+  }
+
+  return next;
+}
+
+/** The display state the controller's dashboard reads back. */
+async function getMode(competitionId: string): Promise<BigScreenModePayload> {
+  return readDisplayState(competitionId);
+}
+
 export const bigScreenService = {
   installBigScreenPushHook,
+  installBigScreenModeHook,
   authenticateBigScreen,
   registerConnection,
   unregisterConnection,
   pushCurrentForUpdate,
+  setMode,
+  getMode,
 };

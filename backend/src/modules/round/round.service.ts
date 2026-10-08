@@ -34,8 +34,17 @@ import {
   resume as resumeTimer,
   startPreparationTimer,
   startRoundTimer,
+  stopRoundEarly,
+  cancelPreparation,
+  restartRoundTimerFullDuration,
   getActiveRoundId,
 } from "./round-timer.service";
+import {
+  ORCHESTRATOR_COMPETITION_CLOSED,
+  ORCHESTRATOR_STAGE_NOT_FOUND,
+  ORCHESTRATOR_STAGE_NOT_WAITING,
+  ORCHESTRATOR_STAGE_OUT_OF_SEQUENCE,
+} from "../orchestrator/orchestrator.types";
 import type {
   RoundQuestionPayload,
   RoundStartedPayload,
@@ -61,12 +70,113 @@ export function installRoundStartedHook(hook: RoundStartedHook): void {
 // ---------------------------------------------------------------------------
 
 /**
+ * Start a named stage's first round's preparation. **Unit 11's real command**
+ * (`POST /api/competitions/:id/stages/:stageId/start`) — the dev-only trigger
+ * below is a thin special case of it and stays for the tests that use it.
+ *
+ * Because `Stage` rows are per-competition and every category runs against the
+ * same two stages, starting a stage here *is* starting it "for every category at
+ * once" (spec Context, "Start a stage"): there is one `Stage` row, one round 1,
+ * one preparation countdown, and the participants of every category join it.
+ *
+ * Rejections: 404 no such competition; 404 the stage is not this competition's;
+ * 409 the competition is in a terminal state (`FINISHED`/`CANCELLED`); 409 the
+ * stage is not `WAITING` (already started, or already active — spec Error Cases);
+ * 409 a previous stage has not finished (out of sequence); 409 another round is
+ * already running; 422 the stage has no round 1.
+ */
+async function startStagePreparation(
+  competitionId: string,
+  stageId: string,
+): Promise<StartedPreparationResult> {
+  const competition = await repository.findCompetitionWithStructure(competitionId);
+  if (!competition) {
+    throw new NotFoundError(translate("en", "competition.notFound"), {
+      code: "competition.notFound",
+    });
+  }
+  if (competition.status === "CANCELLED" || competition.status === "FINISHED") {
+    throw new ConflictError(translate("en", "orchestrator.competitionClosed"), {
+      code: ORCHESTRATOR_COMPETITION_CLOSED,
+      details: { status: competition.status },
+    });
+  }
+
+  const stage = competition.stages.find((s) => s.id === stageId);
+  if (!stage) {
+    throw new NotFoundError(translate("en", "orchestrator.stageNotFound"), {
+      code: ORCHESTRATOR_STAGE_NOT_FOUND,
+    });
+  }
+  if (stage.status !== "WAITING") {
+    // "Start a stage that's already active, or out of sequence: rejected."
+    throw new ConflictError(translate("en", "orchestrator.stageNotWaiting"), {
+      code: ORCHESTRATOR_STAGE_NOT_WAITING,
+      details: { status: stage.status },
+    });
+  }
+
+  // Out of sequence: every earlier stage must already be finished (RND-006 — a
+  // stage never starts by itself, and the controller may not skip one).
+  const earlierUnfinished = competition.stages.filter(
+    (s) => s.sequence < stage.sequence && s.status !== "FINISHED",
+  );
+  if (earlierUnfinished.length > 0) {
+    throw new ConflictError(translate("en", "orchestrator.stageOutOfSequence"), {
+      code: ORCHESTRATOR_STAGE_OUT_OF_SEQUENCE,
+      details: { status: earlierUnfinished[0]?.status ?? "WAITING" },
+    });
+  }
+
+  const round = stage.rounds.find((r) => r.sequence === 1);
+  if (!round) {
+    throw new UnprocessableEntityError(translate("en", "round.roundMissing"), {
+      code: "round.roundMissing",
+    });
+  }
+
+  const alreadyActive = await getActiveRoundId(competitionId);
+  if (alreadyActive) {
+    throw new ConflictError(translate("en", "round.alreadyActive"), {
+      code: "round.alreadyActive",
+    });
+  }
+
+  // The preparation length is locked the moment preparation starts (RND-002/004):
+  // it is read once, here, and never re-read for this round.
+  const preparationSeconds = round.settings?.preparationSeconds ?? 60;
+  const startedAt = now();
+  // Only the very first stage start opens the competition (Competition.startedAt
+  // is the event's real start, not a per-stage one).
+  const firstStart = competition.startedAt === null;
+
+  await repository.setCompetitionStatus(competitionId, "PREPARATION", {
+    ...(firstStart ? { startedAt } : {}),
+  });
+  await repository.setStageStatus(stage.id, "PREPARATION", { startedAt });
+  await repository.setRoundStatus(round.id, "PREPARATION", { startedAt });
+  await repository.upsertRuntimeState({
+    competitionId,
+    currentStageId: stage.id,
+    currentRoundId: round.id,
+    phase: "PREPARATION",
+  });
+
+  await startPreparationTimer(round.id, competitionId, stage.id, preparationSeconds);
+
+  return {
+    competitionId,
+    stageId: stage.id,
+    roundId: round.id,
+    status: "PREPARATION",
+    preparationSeconds,
+  };
+}
+
+/**
  * Start stage 1 round 1's preparation for a WAITING competition. Dev-only: the
  * HTTP route refuses to run in production and requires a controller session.
- *
- * 404 if the competition does not exist; 409 if it is not WAITING or another
- * round is already running; 422 if the expected fixed structure (an INDIVIDUAL
- * stage 1 with a round 1) is missing.
+ * Kept as the narrow form Unit 11's `startStagePreparation` generalizes.
  */
 async function startStage1Round1Preparation(
   competitionId: string,
@@ -89,44 +199,7 @@ async function startStage1Round1Preparation(
       code: "round.stageMissing",
     });
   }
-  const round = stage.rounds.find((r) => r.sequence === 1);
-  if (!round) {
-    throw new UnprocessableEntityError(translate("en", "round.roundMissing"), {
-      code: "round.roundMissing",
-    });
-  }
-
-  const alreadyActive = await getActiveRoundId(competitionId);
-  if (alreadyActive) {
-    throw new ConflictError(translate("en", "round.alreadyActive"), {
-      code: "round.alreadyActive",
-    });
-  }
-
-  // The preparation length is locked the moment preparation starts (RND-002/004):
-  // it is read once, here, and never re-read for this round.
-  const preparationSeconds = round.settings?.preparationSeconds ?? 60;
-  const startedAt = now();
-
-  await repository.setCompetitionStatus(competitionId, "PREPARATION", { startedAt });
-  await repository.setStageStatus(stage.id, "PREPARATION", { startedAt });
-  await repository.setRoundStatus(round.id, "PREPARATION", { startedAt });
-  await repository.upsertRuntimeState({
-    competitionId,
-    currentStageId: stage.id,
-    currentRoundId: round.id,
-    phase: "PREPARATION",
-  });
-
-  await startPreparationTimer(round.id, competitionId, stage.id, preparationSeconds);
-
-  return {
-    competitionId,
-    stageId: stage.id,
-    roundId: round.id,
-    status: "PREPARATION",
-    preparationSeconds,
-  };
+  return startStagePreparation(competitionId, stage.id);
 }
 
 // ---------------------------------------------------------------------------
@@ -250,11 +323,55 @@ function getActiveRoundForCompetition(competitionId: string): Promise<string | n
   return getActiveRoundId(competitionId);
 }
 
+/**
+ * End the competition's currently-running round before its deadline (Unit 11's
+ * "end a round early", SUB-004). Thin wrapper over the timer service's stop, so
+ * the durable-state bookkeeping stays in one place; the caller (the Orchestrator)
+ * then drives Unit 08's auto-submit and advance chain. Returns null when nothing
+ * is running — the command is a no-op in that case, not an error, because the
+ * round may have ended on its own between the controller's click and this call.
+ */
+async function stopRoundEarlyForCompetition(
+  competitionId: string,
+): Promise<TimerSnapshot | null> {
+  const roundId = await getActiveRoundId(competitionId);
+  if (!roundId) return null;
+  return stopRoundEarly(roundId);
+}
+
+/**
+ * Abandon a running preparation countdown (Unit 11's finish-early / cancel).
+ * Returns false when no preparation was running.
+ */
+async function cancelPreparationForCompetition(
+  competitionId: string,
+): Promise<boolean> {
+  const roundId = await getActiveRoundId(competitionId);
+  if (!roundId) return false;
+  return cancelPreparation(roundId);
+}
+
+/**
+ * Give a running round its full duration again (Unit 11's reset/rematch,
+ * ROL-005 / resolves U-13 — a rematch grants **full** round time, not remaining).
+ * Returns null when the round has no live timer.
+ */
+async function grantFullRoundDuration(
+  roundId: string,
+  durationSeconds: number,
+): Promise<TimerSnapshot | null> {
+  return restartRoundTimerFullDuration(roundId, durationSeconds);
+}
+
 export const roundService = {
   startStage1Round1Preparation,
+  startStagePreparation,
   installRoundStartedHook,
   pause,
   resume,
   remaining,
   getActiveRoundForCompetition,
+  stopRoundEarlyForCompetition,
+  cancelPreparationForCompetition,
+  grantFullRoundDuration,
 };

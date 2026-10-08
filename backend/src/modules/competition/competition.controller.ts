@@ -88,6 +88,43 @@ competitionRouter.post(
 );
 
 /**
+ * GET /api/competitions — the controller dashboard's picker list (Unit 11, spec
+ * Detail 10). Read-only, newest first. No audit row: a read changes nothing.
+ */
+competitionRouter.get(
+  "/",
+  requireAuth,
+  requireController,
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const competitions = await competitionService.listCompetitions();
+      res.status(200).json({ competitions });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * GET /api/competitions/:id — one competition with its full structure, so the
+ * dashboard can see which stage/round is where and enable only the commands the
+ * current state allows. 404 `competition.notFound` on an unknown id.
+ */
+competitionRouter.get(
+  "/:id",
+  requireAuth,
+  requireController,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = parseInput(idParamSchema, req.params);
+      res.status(200).json(await competitionService.getCompetition(id));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
  * PATCH /api/competitions/:id — edits name/description and categories (pre-publish
  * only) or round settings (any time within this unit's scope). 200 with the updated
  * competition.

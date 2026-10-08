@@ -11,7 +11,11 @@ import { roundTimerService } from "../src/modules/round";
  * strictly to the judge's own assigned range) and the single-student restart
  * (archives the current attempt, blanks the grid, keeps the round's shared
  * timer unchanged, increments the restart-visible attemptCount). The judge
- * has no other powers (U-55).
+ * has no other powers (U-55). Unit 11's Detail 6 adds one exception: a
+ * CONTROLLER session reaches these same endpoints with no range restriction,
+ * because the controller drives the whole event. The tests below assert both
+ * sides of that — the controller's wider view, and that every other role is
+ * still refused.
  *
  * They run against the real database and Redis the CI provisions; everything
  * created here is removed afterwards. Round status is driven through the
@@ -29,6 +33,8 @@ const users = {
 
 let controllerToken = "";
 let controllerDevice = "";
+let playerToken = "";
+let playerDevice = "";
 
 const createdCompetitionIds: string[] = [];
 const createdJudgeIds: string[] = [];
@@ -197,6 +203,13 @@ beforeAll(async () => {
   const controller = await login("controller", users.controller);
   controllerToken = controller.body.token;
   controllerDevice = controller.body.deviceId;
+
+  // A player proves the judge endpoints still reject every role except the two
+  // the spec allows (judge, and controller since Unit 11 Detail 6).
+  await createAccount(users.player, "PLAYER");
+  const player = await login("player", users.player);
+  playerToken = player.body.token;
+  playerDevice = player.body.deviceId;
 });
 
 afterAll(async () => {
@@ -252,10 +265,39 @@ describe("status view (AC 1, 2, 6)", () => {
     expect(res.body.students).toEqual([]);
   });
 
-  it("rejects a controller session (judge-only endpoint, U-55)", async () => {
+  // Unit 11 spec Detail 6 reverses Unit 10's judge-only rule for this one role:
+  // the controller drives the event and must see every student, not just one
+  // judge's range. It names the competition instead, because it has no range.
+  it("gives a controller session every student in the competition, not one judge's range (Unit 11 Detail 6)", async () => {
+    const ctx = await makeCompetitionWithTwoParticipants(`Controller status ${suffix}`, {
+      from: 1,
+      to: 10,
+    });
+
+    const res = await authedController(
+      request(app).get(`/api/judge/students?competitionId=${ctx.competitionId}`),
+    );
+    expect(res.status).toBe(200);
+
+    const ids = (res.body.students as { participantId: string }[]).map((s) => s.participantId);
+    // Both participants are visible: the out-of-range one a judge would never see.
+    expect(ids).toContain(ctx.inRangeParticipantId);
+    expect(ids).toContain(ctx.outOfRangeParticipantId);
+  });
+
+  it("rejects a controller session that names no competition, because there is nothing to scope to", async () => {
     const res = await authedController(request(app).get("/api/judge/students"));
-    expect(res.status).toBe(403);
-    expect(res.body.error.code).toBe("judgeSupervision.forbidden");
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("competition.notFound");
+  });
+
+  it("still rejects a session that is neither judge nor controller (U-55)", async () => {
+    const playerRes = await request(app)
+      .get("/api/judge/students")
+      .set("x-session-token", playerToken)
+      .set("x-device-id", playerDevice);
+    expect(playerRes.status).toBe(403);
+    expect(playerRes.body.error.code).toBe("judgeSupervision.forbidden");
   });
 
   it("rejects an unauthenticated call", async () => {
@@ -397,10 +439,42 @@ describe("single-student restart (AC 3, 4, 5)", () => {
     expect(attempts[1]!.isArchived).toBe(false);
   });
 
-  it("rejects a restart request from a controller session", async () => {
+  // The controller restarts a student no judge can see, on the same code path a
+  // judge uses (Unit 11 Detail 6), and the spec's Security Considerations require
+  // that takeover to leave its own AuditLog row even though there is no dedicated
+  // "takeover" state.
+  it("restarts an out-of-range student for a controller session and logs the takeover", async () => {
+    const ctx = await makeCompetitionWithTwoParticipants(`Controller restart ${suffix}`, {
+      from: 1,
+      to: 10,
+    });
+    await authedController(request(app).post("/api/rounds/dev/start-stage1-round1")).send({
+      competitionId: ctx.competitionId,
+    });
+    await prisma.round.update({ where: { id: ctx.roundId }, data: { status: "ACTIVE" } });
+
     const res = await authedController(
-      request(app).post(`/api/judge/students/anything/restart`),
+      request(app).post(`/api/judge/students/${ctx.outOfRangeParticipantId}/restart`),
     ).send({});
+    expect(res.status).toBe(200);
+    expect(res.body.attemptCount).toBe(1);
+
+    const audit = await prisma.auditLog.findMany({
+      where: {
+        competitionId: ctx.competitionId,
+        action: "orchestrator.participant.restart",
+        targetId: ctx.outOfRangeParticipantId,
+      },
+    });
+    expect(audit).toHaveLength(1);
+  });
+
+  it("rejects a restart from a session that is neither judge nor controller (U-55)", async () => {
+    const res = await request(app)
+      .post("/api/judge/students/anything/restart")
+      .set("x-session-token", playerToken)
+      .set("x-device-id", playerDevice)
+      .send({});
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe("judgeSupervision.forbidden");
   });

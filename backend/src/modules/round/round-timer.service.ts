@@ -260,8 +260,16 @@ async function tick(roundId: string): Promise<void> {
  * This function is what `round.service` plugs its "start the active phase" hook
  * into, so the question-fetch and the `round:started` broadcast happen exactly
  * once, exactly at the deadline, on the server.
+ *
+ * `options.earlyEnded` is set only by Unit 11's "end a round early" command,
+ * which reaches the same transition deliberately instead of at the deadline
+ * (SUB-004). It writes the `Round.earlyEnded` flag the schema has always carried
+ * and nothing else ever sets.
  */
-async function completePhase(state: TimerState): Promise<void> {
+async function completePhase(
+  state: TimerState,
+  options: { earlyEnded?: boolean } = {},
+): Promise<void> {
   if (state.mode === "preparation") {
     const hook = startActivePhaseHook;
     if (!hook) {
@@ -273,7 +281,10 @@ async function completePhase(state: TimerState): Promise<void> {
   }
   // mode === "round": the round ends here. Scoring and the next round's
   // preparation are Unit 08's job (invariant 7); this unit only emits the signal.
-  await repository.setRoundStatus(state.roundId, "FINISHED", { endedAt: now() });
+  await repository.setRoundStatus(state.roundId, "FINISHED", {
+    endedAt: now(),
+    earlyEnded: state.mode === "round" && Boolean(options.earlyEnded),
+  });
   await repository.upsertRuntimeState({
     competitionId: state.competitionId,
     currentStageId: state.stageId,
@@ -364,6 +375,46 @@ export async function startRoundTimer(
   return {
     roundId,
     status: state.status,
+    remainingSeconds: durationSeconds,
+    totalSeconds: durationSeconds,
+  };
+}
+
+/**
+ * Grant a round its full duration again (Unit 11's reset/rematch, ROL-005 /
+ * resolves U-13). This is the timer half of a rematch and is deliberately
+ * separate from `startRoundTimer`: an already-running round keeps its mode,
+ * status and question set — only the deadline moves back to `now + full
+ * duration`, and any pause is cleared so the round is running again. Returns
+ * null when the round has no live timer (nothing running to rematch).
+ *
+ * The durable `Round.status` and `RoundParticipation` writes are the caller's
+ * job: the timer owns only the clock (invariant 3 — the server clock/deadline is
+ * the timer authority, nothing else may set a deadline).
+ */
+export async function restartRoundTimerFullDuration(
+  roundId: string,
+  durationSeconds: number,
+): Promise<TimerSnapshot | null> {
+  const state = await loadTimerState(roundId);
+  if (!state || state.status === "FINISHED") return null;
+  if (state.mode !== "round") return null;
+
+  const restarted: TimerState = {
+    ...state,
+    status: "ACTIVE",
+    deadlineMs: nowMs() + durationSeconds * 1000,
+    totalSeconds: durationSeconds,
+    pausedRemainingSeconds: null,
+  };
+  await saveTimerState(restarted);
+  await setActiveRound(restarted.competitionId, roundId);
+  scheduleWakeup(restarted);
+  emitStart(restarted);
+
+  return {
+    roundId,
+    status: restarted.status,
     remainingSeconds: durationSeconds,
     totalSeconds: durationSeconds,
   };
@@ -492,6 +543,51 @@ export async function resume(roundId: string): Promise<TimerSnapshot> {
 }
 
 /**
+ * End the running round's phase immediately, before its deadline (Unit 11's "end
+ * a round early", SUB-004). It performs exactly the same transition the deadline
+ * tick would have — `completePhase` is the single place that ends a round — with
+ * the one addition that `Round.earlyEnded` is set, and with the wakeup cancelled
+ * first so the deadline tick cannot fire a second time.
+ *
+ * The deadline authority stays on the server (invariant 3): this function is a
+ * command, not a client-supplied time. It is idempotent — a round with no live
+ * timer returns null and the caller reports "nothing to end".
+ *
+ * Only a round-mode timer can be ended early. A preparation countdown is not a
+ * round in progress; ending it would start the active phase instead, which is
+ * the opposite of the command's meaning.
+ */
+export async function stopRoundEarly(roundId: string): Promise<TimerSnapshot | null> {
+  const state = await loadTimerState(roundId);
+  if (!state) return null;
+  if (state.status === "FINISHED") return null;
+  if (state.mode !== "round") return null;
+
+  cancelWakeup(roundId);
+  await completePhase(state, { earlyEnded: true });
+
+  return { roundId, status: "FINISHED", remainingSeconds: 0, totalSeconds: state.totalSeconds };
+}
+
+/**
+ * Abandon a running preparation countdown (Unit 11's "finish the competition
+ * early" / "cancel", RND-007 / ROL-009). The round never entered its active
+ * phase, so there is nothing to score: the timer state is dropped, the round
+ * goes back to `WAITING` and the competition's active-round slot is released.
+ * Returns false when no preparation countdown was running.
+ */
+export async function cancelPreparation(roundId: string): Promise<boolean> {
+  const state = await loadTimerState(roundId);
+  if (!state || state.status === "FINISHED" || state.mode !== "preparation") return false;
+
+  cancelWakeup(roundId);
+  await deleteTimerState(roundId);
+  await clearActiveRound(state.competitionId, roundId);
+  await repository.setRoundStatus(roundId, "WAITING");
+  return true;
+}
+
+/**
  * The authoritative remaining seconds for a round. Zero if the round is not
  * running. Safe to call any time, including after the round has finished.
  */
@@ -573,6 +669,9 @@ async function listRuntimeStatesNeedingRecovery() {
 export const roundTimerService = {
   startPreparationTimer,
   startRoundTimer,
+  stopRoundEarly,
+  cancelPreparation,
+  restartRoundTimerFullDuration,
   pause,
   resume,
   remaining,

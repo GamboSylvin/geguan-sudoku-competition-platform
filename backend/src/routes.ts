@@ -37,7 +37,10 @@ apiRouter.use("/judge", judgeSupervisionRouter);
 apiRouter.use("/competitions/:id/categories", questionRouter);
 apiRouter.use("/rounds", roundRouter);
 apiRouter.use("/gameplay", gameplayRouter);
-apiRouter.use("/orchestrator", orchestratorRouter);
+// Unit 11: every controller live command is competition-scoped, so the orchestrator's
+// router is mounted on the competition path with `mergeParams` reading `:id` (the same
+// pattern Units 05 and 09 use). Nothing is served at the bare /orchestrator path.
+apiRouter.use("/competitions/:id", orchestratorRouter);
 apiRouter.use("/scoring", scoringRouter);
 // Unit 09: the ranking read lives on the competition path (mergeParams reads `:id`).
 apiRouter.use("/competitions/:id/categories", rankingRouter);

@@ -68,7 +68,7 @@ export function findCompetitionWithStructure(
 export function setRoundStatus(
   roundId: string,
   status: RoundStatus,
-  timestamps: { startedAt?: Date; endedAt?: Date } = {},
+  timestamps: { startedAt?: Date; endedAt?: Date; earlyEnded?: boolean } = {},
 ): Promise<Round> {
   return prisma.round.update({
     where: { id: roundId },

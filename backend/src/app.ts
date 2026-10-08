@@ -1,7 +1,7 @@
 import express, { type Express } from "express";
 import { apiRouter } from "./routes";
 import { cors, errorHandler, requestLogger } from "./shared/middleware";
-import { gameplayService, installIndividualResultFinalizedHook } from "./modules/gameplay";
+import { gameplayService, installCompetitionFinishedHook, installIndividualResultFinalizedHook } from "./modules/gameplay";
 import { roundTimerService } from "./modules/round";
 import { rankingService } from "./modules/ranking";
 import { bigScreenService } from "./modules/big-screen";
@@ -32,6 +32,13 @@ function installListeners(): void {
   rankingService.installRankingUpdateHook((payload) =>
     bigScreenService.pushCurrentForUpdate(payload.competitionId, payload.categoryId),
   );
+  // Unit 11: when the competition finishes by itself (spec Detail 8), the screens
+  // switch to the final ranking. The controller's "finish early" sets FINAL in its
+  // own command path, so this hook covers only the natural finish.
+  installCompetitionFinishedHook((event) => {
+    if (event.finishedEarly) return;
+    void bigScreenService.setMode({ competitionId: event.competitionId, mode: "FINAL" });
+  });
   listenersInstalled = true;
 }
 

@@ -65,13 +65,26 @@ export const zh: MessageCatalogue = {
   },
   bigScreen: {
     unauthorized: "该大屏链接无效。",
+    invalidMode: "不支持该显示模式。",
   },
   orchestrator: {
     roundNotRunning: "该轮次当前不在进行中。",
     participantNotFound: "该参赛选手不在此轮次中。",
+    forbidden: "只有管理员可以执行该指令。",
+    competitionClosed: "该比赛已结束或已取消，无法再执行任何指令。",
+    stageNotFound: "该阶段不属于此比赛。",
+    stageNotWaiting: "该阶段已经开始。",
+    stageOutOfSequence: "前一个阶段尚未结束。",
+    roundNotFound: "未找到该轮次。",
+    roundNotInCompetition: "该轮次不属于此比赛。",
+    nothingToPause: "当前没有运行中的计时器可以暂停。",
+    nothingToResume: "当前没有已暂停的计时器可以恢复。",
+    resetNotAllowed: "已结束或已取消的比赛无法重新开始。",
+    teamNotFound: "未找到该队伍。",
+    bigScreenForbidden: "大屏不能发送显示指令。",
   },
   judgeSupervision: {
-    forbidden: "只有裁判可以使用此接口。",
+    forbidden: "只有裁判或管理员可以使用此接口。",
     outOfRange: "该参赛选手不在您的负责范围内。",
   },
   question: {

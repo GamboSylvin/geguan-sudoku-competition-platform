@@ -84,18 +84,35 @@ export const en = {
     // Unit 09. The big screen has no login; its link token is the only gate
     // (BSC-001). The rejection is generic — it never hints at why the token failed.
     unauthorized: "This big-screen link is not valid.",
+    // Unit 11: the controller sets the display mode (BSC-002).
+    invalidMode: "This display mode is not supported.",
   },
   orchestrator: {
     // Unit 10. The restart is rejected when the round is not currently running
     // (spec: restart is allowed only while the round is ACTIVE or PAUSED).
     roundNotRunning: "The round is not running.",
     participantNotFound: "The participant is not on this round.",
+    // Unit 11. Every command below is controller-only and writes an AuditLog row.
+    forbidden: "Only a controller can run this command.",
+    competitionClosed:
+      "This competition has already finished or been cancelled; no further command is accepted.",
+    stageNotFound: "The stage is not part of this competition.",
+    stageNotWaiting: "This stage has already started.",
+    stageOutOfSequence: "An earlier stage has not finished yet.",
+    roundNotFound: "Round not found.",
+    roundNotInCompetition: "The round is not part of this competition.",
+    nothingToPause: "There is no running timer to pause.",
+    nothingToResume: "There is no paused timer to resume.",
+    resetNotAllowed: "A finished or cancelled competition cannot be reset.",
+    teamNotFound: "Team not found.",
+    bigScreenForbidden: "A big screen cannot send display commands.",
   },
   judgeSupervision: {
     // Unit 10. Every judge-facing endpoint is JUDGE-only and range-scoped by
-    // Unit 06's authority check. The two messages below are the only rejections
-    // a judge can hit; everything else is a normal row.
-    forbidden: "Only a judge can use this endpoint.",
+    // Unit 06's authority check. Unit 11 admits the CONTROLLER role on the same
+    // endpoints (spec Detail 6 — not a separate code path), so the message names
+    // both roles.
+    forbidden: "Only a judge or the controller can use this endpoint.",
     outOfRange: "This participant is outside your assigned range.",
   },
   question: {

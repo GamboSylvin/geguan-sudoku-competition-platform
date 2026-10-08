@@ -39,6 +39,35 @@ export function findCompetitionById(
   });
 }
 
+/**
+ * The dashboard's competition picker (Unit 11, spec Detail 10). Newest first, and only
+ * the few columns a list row needs — the full structure is a separate read.
+ */
+export function listCompetitions(): Promise<
+  {
+    id: string;
+    name: string;
+    status: string;
+    createdAt: Date;
+    publishedAt: Date | null;
+    startedAt: Date | null;
+    finishedAt: Date | null;
+  }[]
+> {
+  return prisma.competition.findMany({
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      createdAt: true,
+      publishedAt: true,
+      startedAt: true,
+      finishedAt: true,
+    },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Creation (the structure is computed by the service; this only writes it)
 // ---------------------------------------------------------------------------

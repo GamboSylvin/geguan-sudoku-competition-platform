@@ -5,7 +5,7 @@ import { logger } from "../infra/logger";
 import { now } from "../shared/clock";
 import { identityService } from "../modules/identity";
 import { bigScreenService } from "../modules/big-screen";
-import type { BigScreenRankingPayload } from "../modules/big-screen";
+import type { BigScreenModePayload, BigScreenRankingPayload } from "../modules/big-screen";
 import { roundService, roundTimerService } from "../modules/round";
 import type {
   PreparationTickPayload,
@@ -15,6 +15,7 @@ import type {
   TimerSyncPayload,
 } from "../modules/round";
 import {
+  BIG_SCREEN_EVENTS,
   RANKING_EVENTS,
   REALTIME_NAMESPACES,
   ROUND_EVENTS,
@@ -84,6 +85,12 @@ export function createRealtimeGateway(httpServer: HttpServer): SocketServer {
         const competitionId = socket.data.bigScreen?.competitionId as string | undefined;
         if (competitionId) {
           socket.join(competitionId);
+          // Unit 11: a screen that connects mid-command must not sit on the default
+          // display. Send the controller's current mode to this socket alone, then
+          // let the rotation timer handle the leaderboards.
+          void bigScreenService.getMode(competitionId).then((mode) => {
+            socket.emit(BIG_SCREEN_EVENTS.mode, mode);
+          });
           void bigScreenService.registerConnection(competitionId);
           socket.on("disconnect", () => {
             bigScreenService.unregisterConnection(competitionId);
@@ -180,6 +187,11 @@ export function createRealtimeGateway(httpServer: HttpServer): SocketServer {
   const bigScreenNamespace = io.of(REALTIME_NAMESPACES.bigScreen);
   bigScreenService.installBigScreenPushHook((payload: BigScreenRankingPayload) => {
     bigScreenNamespace.to(payload.competitionId).emit(RANKING_EVENTS.update, payload);
+  });
+  // Unit 11: what the screens show is the controller's, not the rotation's, so a
+  // mode change goes on the wire to that competition's room immediately.
+  bigScreenService.installBigScreenModeHook((payload: BigScreenModePayload) => {
+    bigScreenNamespace.to(payload.competitionId).emit(BIG_SCREEN_EVENTS.mode, payload);
   });
 
   return io;
