@@ -207,6 +207,43 @@ async function startStage1Round1Preparation(
 // ---------------------------------------------------------------------------
 
 /**
+ * Open (or re-activate) a `RoundParticipation` row for every active participant
+ * of the competition, in state `ACTIVE`. This is the only place the row is
+ * created in application code: `requireParticipation` in the Gameplay module
+ * treats it as "is this account a participant in this round" (data-model,
+ * "Access rules"), so without it autosave and reconnect 403
+ * `gameplay.notAParticipant` for every real player, and Unit 08's round-ended
+ * auto-submit sweep — which looks only for `state: "ACTIVE"` rows — finds nobody
+ * to finalize. Scoped to the Individual stage's participants today; the Team
+ * stage's runtime (Units 13/14) is not wired up yet, so nothing team-specific is
+ * built here.
+ */
+async function openParticipationsForRound(
+  competitionId: string,
+  roundId: string,
+): Promise<number> {
+  const participants = await repository.listActiveParticipants(competitionId);
+  for (const participant of participants) {
+    try {
+      await repository.upsertActiveParticipation({
+        roundId,
+        participantId: participant.id,
+        categoryId: participant.categoryId,
+      });
+    } catch (error) {
+      // Never let one bad row stop the round from starting (same posture as
+      // Unit 08's `handleRoundEnded`): log and continue with the others.
+      logger.error("round.startActive: failed to open a participation row", {
+        roundId,
+        participantId: participant.id,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  return participants.length;
+}
+
+/**
  * Called by the timer service when a preparation countdown reaches zero. Fetches
  * the round's questions — only now, never earlier (BLD-006) — flips the durable
  * state to ACTIVE, starts the round timer, and notifies the installed
@@ -247,6 +284,15 @@ async function startActivePhaseFromTimer(state: TimerState): Promise<void> {
       currentRoundId: state.roundId,
       phase: "ROUND_ACTIVE",
     });
+
+    // Open a participation row for every active participant of the competition
+    // — across every category, since the round is shared by all of them — in
+    // state ACTIVE. This is what makes the round playable at all: Gameplay's
+    // `requireParticipation` (autosave, reconnect, submit) treats this row as
+    // "is this account a participant in this round", and Unit 08's round-ended
+    // auto-submit sweep only finds rows already `ACTIVE`. No `Attempt` is
+    // written here — those are created at finalize (manual submit or timeout).
+    await openParticipationsForRound(state.competitionId, state.roundId);
 
     await startRoundTimer(state.roundId, state.competitionId, state.stageId, durationSeconds);
 

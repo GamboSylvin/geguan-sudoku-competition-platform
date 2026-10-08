@@ -7,7 +7,15 @@
  * lives in Redis per BLD-007 and is accessed through `round-timer.store.ts`, not
  * here. Only durable round/stage/competition state changes go through this file.
  */
-import type { Competition, CompetitionRuntimeState, Round, RoundStatus, Stage, StageStatus } from "@prisma/client";
+import type {
+  Competition,
+  CompetitionRuntimeState,
+  Round,
+  RoundParticipation,
+  RoundStatus,
+  Stage,
+  StageStatus,
+} from "@prisma/client";
 import { prisma } from "../../infra";
 
 /** A round with the rows the timer needs to do its job, in one shape. */
@@ -136,6 +144,55 @@ export function findRuntimeState(
   competitionId: string,
 ): Promise<CompetitionRuntimeState | null> {
   return prisma.competitionRuntimeState.findUnique({ where: { competitionId } });
+}
+
+// ---------------------------------------------------------------------------
+// RoundParticipation — created and activated when a round goes ACTIVE
+// ---------------------------------------------------------------------------
+
+/**
+ * Every still-active participant of a competition, across **every** category.
+ * `Stage`/`Round` rows are per-competition (Unit 03's structure), not per
+ * category, so one round is shared by every category's participants and there is
+ * nothing to iterate category by category.
+ */
+export function listActiveParticipants(
+  competitionId: string,
+): Promise<{ id: string; categoryId: string }[]> {
+  return prisma.participant.findMany({
+    where: { competitionId, active: true },
+    select: { id: true, categoryId: true },
+  });
+}
+
+/**
+ * Open a participant's row for a round, in state `ACTIVE`. An **upsert**, not a
+ * blind `create`: if a row already exists — pre-created as `WAITING` by a future
+ * import step, or left behind by the orchestrator's restart — it is activated
+ * rather than failing the schema's `@@unique([roundId, participantId])`. No
+ * `Attempt` is created here; `Attempt` rows are written only at finalize
+ * (`scoring.repository.ts`), and autosave works through Redis alone.
+ */
+export function upsertActiveParticipation(input: {
+  roundId: string;
+  participantId: string;
+  categoryId: string;
+}): Promise<RoundParticipation> {
+  return prisma.roundParticipation.upsert({
+    where: {
+      roundId_participantId: {
+        roundId: input.roundId,
+        participantId: input.participantId,
+      },
+    },
+    create: {
+      roundId: input.roundId,
+      participantId: input.participantId,
+      categoryId: input.categoryId,
+      state: "ACTIVE",
+    },
+    update: { state: "ACTIVE" },
+  });
 }
 
 // ---------------------------------------------------------------------------

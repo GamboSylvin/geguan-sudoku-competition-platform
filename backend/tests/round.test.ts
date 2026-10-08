@@ -37,6 +37,7 @@ let playerBToken = "";
 let playerBDevice = "";
 
 const createdCompetitionIds: string[] = [];
+const createdJudgeIds: string[] = [];
 const createdParticipantIds: string[] = [];
 const createdSchoolIds: string[] = [];
 
@@ -67,8 +68,24 @@ function login(role: "controller" | "judge" | "player", username: string) {
  * A published (WAITING) competition with one participant and one question on
  * stage 1 round 1 — the minimum the dev trigger and the gameplay endpoints
  * need. Scratch data, same pattern as Unit 03's tests.
+ *
+ * `options`:
+ *   - `seedParticipation` (default true) — hand-seed the `RoundParticipation`
+ *     row, the way the pre-fix tests had to because nothing created it. The
+ *     regression tests below pass **false** so the round has to create it
+ *     itself through the real timer path.
+ *   - `preparationSeconds` / `durationSeconds` — shorten the two timers so a
+ *     test can watch a whole round start *and* end in a couple of seconds.
  */
-async function makePublishedCompetition(name: string) {
+async function makePublishedCompetition(
+  name: string,
+  options: {
+    seedParticipation?: boolean;
+    preparationSeconds?: number;
+    durationSeconds?: number;
+  } = {},
+) {
+  const { seedParticipation = true, preparationSeconds, durationSeconds } = options;
   const competition = await competitionService.createCompetition({
     name,
     categories: [{ code: "U8", name: "Under 8" }],
@@ -134,6 +151,7 @@ async function makePublishedCompetition(name: string) {
   }
 
   const judge = await prisma.judge.create({ data: { name: `Judge ${suffix}` } });
+  createdJudgeIds.push(judge.id);
   await prisma.competitionJudgeAssignment.create({
     data: {
       competitionId: competition.id,
@@ -143,21 +161,43 @@ async function makePublishedCompetition(name: string) {
     },
   });
 
+  // Shorten the round's timers when the test asks for it, so the real
+  // preparation-zero and round-end transitions happen inside the test.
+  if (preparationSeconds !== undefined || durationSeconds !== undefined) {
+    const current = await prisma.roundSettings.findUnique({ where: { roundId: round1.id } });
+    await prisma.roundSettings.upsert({
+      where: { roundId: round1.id },
+      create: {
+        roundId: round1.id,
+        durationSeconds: durationSeconds ?? current?.durationSeconds ?? 1200,
+        preparationSeconds: preparationSeconds ?? current?.preparationSeconds ?? 60,
+      },
+      update: {
+        ...(durationSeconds !== undefined ? { durationSeconds } : {}),
+        ...(preparationSeconds !== undefined ? { preparationSeconds } : {}),
+      },
+    });
+  }
+
   await competitionService.publishCompetition(competition.id);
 
-  // Participation rows are created by Unit 04 in the real flow; here we seed
-  // the one our test player will be scoped to.
-  await prisma.roundParticipation.create({
-    data: {
-      roundId: round1.id,
-      participantId: participant.id,
-      categoryId: category.id,
-    },
-  });
+  if (seedParticipation) {
+    // The pre-fix pattern: the round never created a participation row, so the
+    // test had to seed the one its player would be scoped to. The regression
+    // tests below deliberately omit this.
+    await prisma.roundParticipation.create({
+      data: {
+        roundId: round1.id,
+        participantId: participant.id,
+        categoryId: category.id,
+      },
+    });
+  }
 
   return {
     competitionId: competition.id,
     participantId: participant.id,
+    categoryId: category.id,
     roundId: round1.id,
     stageId: individualStage.id,
   };
@@ -174,7 +214,14 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await prisma.competition.deleteMany({ where: { id: { in: createdCompetitionIds } } });
+  // Judges created here have no linked account row, but delete defensively in
+  // the same order judge.test.ts / judge-supervision.test.ts use, so a future
+  // judge-with-account seed does not re-introduce the leak.
+  await prisma.account.deleteMany({ where: { judgeId: { in: createdJudgeIds } } });
+  await prisma.judge.deleteMany({ where: { id: { in: createdJudgeIds } } });
   await prisma.account.deleteMany({ where: { username: { in: Object.values(users) } } });
+  // Player accounts created dynamically inside individual tests.
+  await prisma.account.deleteMany({ where: { username: { startsWith: "it7-player-" } } });
   await disconnectRedis().catch(() => undefined);
   await disconnectPrisma().catch(() => undefined);
 });
@@ -390,4 +437,177 @@ describe("timer service pause/resume (spec Implementation Detail 3)", () => {
     expect(second.status).toBe("PAUSED");
     expect(second.remainingSeconds).toBe(first.remainingSeconds);
   }, 10000);
+});
+
+// ---------------------------------------------------------------------------
+// Regression: the round creates and activates its own RoundParticipation rows
+// ---------------------------------------------------------------------------
+
+/**
+ * Poll `predicate` until it returns truthy or the timeout expires, and return
+ * the truthy value (or throw). The round's transitions are driven by the real
+ * 250 ms timer tick, never by a test flipping a status by hand, so this is how
+ * the test waits for them.
+ */
+async function waitFor<T>(
+  label: string,
+  predicate: () => Promise<T | null>,
+  timeoutMs = 15000,
+): Promise<T> {
+  const deadline = Date.now() + timeoutMs;
+  let last: T | null = null;
+  while (Date.now() < deadline) {
+    last = await predicate();
+    if (last) return last;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error(`timed out after ${timeoutMs}ms waiting for ${label} (last: ${JSON.stringify(last)})`);
+}
+
+/**
+ * The regression test this bug shipped without. Every other suite in this repo
+ * hand-seeds a `RoundParticipation` row before touching gameplay, which is
+ * exactly why all of them stayed green while the real flow 403'd for every
+ * participant. Nothing here is seeded: the round has to create the row itself,
+ * through the real preparation-zero timer hook.
+ */
+describe("RoundParticipation is created by the round itself (regression, 2026-10-08)", () => {
+  it("opens an ACTIVE participation row for every participant at countdown zero, with no seeding", async () => {
+    const ctx = await makePublishedCompetition(`NoSeedActive ${suffix}`, {
+      seedParticipation: false,
+      preparationSeconds: 1,
+      durationSeconds: 60,
+    });
+
+    // Before the trigger: nothing exists (the schema default WAITING is not
+    // what makes a round playable — the row must exist at all).
+    const before = await prisma.roundParticipation.count({ where: { roundId: ctx.roundId } });
+    expect(before).toBe(0);
+
+    await authedController(request(app).post("/api/rounds/dev/start-stage1-round1")).send({
+      competitionId: ctx.competitionId,
+    });
+
+    const row = await waitFor("an ACTIVE participation row", async () =>
+      prisma.roundParticipation.findUnique({
+        where: { roundId_participantId: { roundId: ctx.roundId, participantId: ctx.participantId } },
+      }),
+    );
+    expect(row.state).toBe("ACTIVE");
+    expect(row.categoryId).toBe(ctx.categoryId);
+
+    // The round really did go ACTIVE through the timer, not through a test write.
+    const round = await prisma.round.findUniqueOrThrow({ where: { id: ctx.roundId } });
+    expect(round.status).toBe("ACTIVE");
+  }, 20000);
+
+  it("lets a real participant autosave and reconnect with no manually seeded row", async () => {
+    const ctx = await makePublishedCompetition(`NoSeedGameplay ${suffix}`, {
+      seedParticipation: false,
+      preparationSeconds: 1,
+      durationSeconds: 60,
+    });
+    const username = `it7-player-noseed-${suffix}`;
+    await createAccount(username, "PLAYER", ctx.participantId);
+    const loginRes = await login("player", username);
+
+    await authedController(request(app).post("/api/rounds/dev/start-stage1-round1")).send({
+      competitionId: ctx.competitionId,
+    });
+    await waitFor("an ACTIVE participation row", () =>
+      prisma.roundParticipation.findUnique({
+        where: { roundId_participantId: { roundId: ctx.roundId, participantId: ctx.participantId } },
+      }),
+    );
+
+    const question = await prisma.question.findFirstOrThrow({
+      where: { roundId: ctx.roundId },
+      orderBy: { sequence: "asc" },
+    });
+    const grid: (number | null)[] = [
+      1, 2, 3, 4,
+      null, null, null, null,
+      null, null, null, null,
+      4, 3, 2, 1,
+    ];
+
+    // The call that used to 403 `gameplay.notAParticipant`.
+    const autosave = await request(app)
+      .post(`/api/gameplay/${ctx.roundId}/autosave`)
+      .set("x-session-token", loginRes.body.token)
+      .set("x-device-id", loginRes.body.deviceId)
+      .send({ questionId: question.id, grid });
+    expect(autosave.status).toBe(200);
+
+    // Reconnect (a page refresh mid-round) reads the same state back.
+    const state = await request(app)
+      .get(`/api/gameplay/${ctx.roundId}/state`)
+      .set("x-session-token", loginRes.body.token)
+      .set("x-device-id", loginRes.body.deviceId);
+    expect(state.status).toBe(200);
+    expect(state.body.status).toBe("ACTIVE");
+    const saved = (state.body.savedGrids as { questionId: string; grid: (number | null)[] }[]).find(
+      (s) => s.questionId === question.id,
+    );
+    expect(saved?.grid).toEqual(grid);
+  }, 20000);
+
+  it("auto-submits a participant who never submits, once the round's timer expires", async () => {
+    const ctx = await makePublishedCompetition(`NoSeedTimeout ${suffix}`, {
+      seedParticipation: false,
+      preparationSeconds: 1,
+      durationSeconds: 2,
+    });
+    const username = `it7-player-timeout-${suffix}`;
+    await createAccount(username, "PLAYER", ctx.participantId);
+    const loginRes = await login("player", username);
+
+    await authedController(request(app).post("/api/rounds/dev/start-stage1-round1")).send({
+      competitionId: ctx.competitionId,
+    });
+    await waitFor("an ACTIVE participation row", () =>
+      prisma.roundParticipation.findUnique({
+        where: { roundId_participantId: { roundId: ctx.roundId, participantId: ctx.participantId } },
+      }),
+    );
+
+    // Save a partial grid, then submit nothing at all.
+    const question = await prisma.question.findFirstOrThrow({
+      where: { roundId: ctx.roundId },
+      orderBy: { sequence: "asc" },
+    });
+    await request(app)
+      .post(`/api/gameplay/${ctx.roundId}/autosave`)
+      .set("x-session-token", loginRes.body.token)
+      .set("x-device-id", loginRes.body.deviceId)
+      .send({
+        questionId: question.id,
+        grid: [1, 2, 3, 4, null, null, null, null, null, null, null, null, 4, 3, 2, 1],
+      });
+
+    // Unit 08's round-ended sweep looks only for `state: "ACTIVE"` rows — the
+    // exact half of the bug that would have stayed silent even with creation
+    // fixed. It must find this participant and close them as AUTO_SUBMITTED.
+    const closed = await waitFor("the timeout auto-submit", async () => {
+      const row = await prisma.roundParticipation.findUnique({
+        where: {
+          roundId_participantId: { roundId: ctx.roundId, participantId: ctx.participantId },
+        },
+      });
+      return row && row.state === "AUTO_SUBMITTED" ? row : null;
+    });
+
+    const attempt = await prisma.attempt.findFirstOrThrow({
+      where: { roundParticipationId: closed.id, isArchived: false },
+    });
+    expect(attempt.submissionType).toBe("TIMEOUT");
+
+    const result = await prisma.individualRoundResult.findFirstOrThrow({
+      where: { roundId: ctx.roundId, participantId: ctx.participantId },
+    });
+    expect(result.attemptId).toBe(attempt.id);
+
+    const round = await prisma.round.findUniqueOrThrow({ where: { id: ctx.roundId } });
+    expect(round.status).toBe("FINISHED");
+  }, 25000);
 });
