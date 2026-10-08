@@ -17,8 +17,9 @@ import { bigScreenService } from "../src/modules/big-screen";
  *   2. Once every participant in a category has finished both Individual rounds,
  *      the category's final ranking is computed and stored
  *      (`RankingSnapshot`, `isFinal = true`).
- *   3. Two participants with an equal cumulative score after both rounds receive
- *      shared rank; no unconfirmed tie-break logic is applied (U-22 stays open).
+ *   3. Two participants with an equal cumulative score are ordered by SCR-020's
+ *      tie-break (the lower summed submission time ranks ahead); an equal score with
+ *      an equal summed time is a genuine tie and shares a rank.
  *   5. Categories are never mixed in a single ranking or leaderboard.
  *   7. A big-screen connection with an invalid or stale link token is rejected.
  *   Controller-only read (ROL-002): a player session gets 403 on the ranking
@@ -172,22 +173,28 @@ async function seedCompetition(name: string): Promise<SeededCompetition> {
 
   let questionId = "";
   let question2Id = "";
+  // Publish readiness requires a complete selection of 6 assigned questions per
+  // Individual round (BLD-040); `questionId`/`question2Id` point at sequence 1 of
+  // each round, which is the one the gameplay calls below use.
   for (const round of [round1, round2]) {
-    const q = await prisma.question.create({
-      data: {
-        questionSetId: questionSet.id,
-        roundId: round.id,
-        sequence: 1,
-        points: 10,
-        gridRows: GRID_SIZE,
-        gridColumns: GRID_SIZE,
-        regions: [[0, 1, 4, 5]],
-        startingGrid: STARTING_GRID,
-        solution: SOLUTION,
-      },
-    });
-    if (round.id === round1.id) questionId = q.id;
-    if (round.id === round2.id) question2Id = q.id;
+    for (let sequence = 1; sequence <= 6; sequence += 1) {
+      const q = await prisma.question.create({
+        data: {
+          questionSetId: questionSet.id,
+          roundId: round.id,
+          sequence,
+          points: 10,
+          gridRows: GRID_SIZE,
+          gridColumns: GRID_SIZE,
+          regions: [[0, 1, 4, 5]],
+          startingGrid: STARTING_GRID,
+          solution: SOLUTION,
+        },
+      });
+      if (sequence !== 1) continue;
+      if (round.id === round1.id) questionId = q.id;
+      if (round.id === round2.id) question2Id = q.id;
+    }
   }
 
   const judge = await prisma.judge.create({ data: { name: `Judge ${suffix}` } });
@@ -298,23 +305,28 @@ afterAll(async () => {
 });
 
 describe("pure ranking rules (no I/O)", () => {
-  it("breakTie reports a tie (0): equal cumulative scores share a rank (SCR-017, U-22 open)", () => {
-    const a = {
+  it("breakTie ranks the lower summed submission time ahead (SCR-020)", () => {
+    const slower = {
       rank: 0,
       participantId: "p-a",
       participantName: "A",
       score: 42,
       completionTimeSeconds: 600,
     };
-    const b = {
+    const faster = {
       rank: 0,
       participantId: "p-b",
       participantName: "B",
       score: 42,
       completionTimeSeconds: 500,
     };
-    // The unconfirmed submission-time extension (U-22) is NOT implemented: even
-    // though b finished sooner, the tie is genuine and both share the rank.
+    expect(rankingService.breakTie(faster, slower)).toBeLessThan(0);
+    expect(rankingService.breakTie(slower, faster)).toBeGreaterThan(0);
+  });
+
+  it("breakTie reports a genuine tie (0) when the summed times are equal too", () => {
+    const a = { rank: 0, participantId: "p-a", participantName: "A", score: 42, completionTimeSeconds: 600 };
+    const b = { rank: 0, participantId: "p-b", participantName: "B", score: 42, completionTimeSeconds: 600 };
     expect(rankingService.breakTie(a, b)).toBe(0);
     expect(rankingService.breakTie(b, a)).toBe(0);
   });
@@ -437,8 +449,8 @@ describe("final ranking on category completion (acceptance criterion 2)", () => 
   }, 15000);
 });
 
-describe("shared rank on a genuine tie (acceptance criterion 3)", () => {
-  it("two participants with an equal cumulative score share rank 1 ('1224' style)", async () => {
+describe("tie handling (acceptance criterion 3, SCR-020)", () => {
+  it("equal score + equal summed time shares a rank; a lower summed time ranks strictly ahead", async () => {
     const competition = await competitionService.createCompetition({
       name: `Tie ${suffix}`,
       categories: [{ code: "U8", name: "Under 8" }],
@@ -457,32 +469,36 @@ describe("shared rank on a genuine tie (acceptance criterion 3)", () => {
     const school = await prisma.school.create({
       data: { competitionId: competition.id, name: `School ${suffix}`, sequence: 1 },
     });
-    const p1 = await prisma.participant.create({
-      data: {
-        competitionId: competition.id,
-        categoryId: category.id,
-        schoolId: school.id,
-        name: `TieOne ${suffix}`,
-        participantNumber: 1,
-        sequence: 1,
-      },
-    });
-    const p2 = await prisma.participant.create({
-      data: {
-        competitionId: competition.id,
-        categoryId: category.id,
-        schoolId: school.id,
-        name: `TieTwo ${suffix}`,
-        participantNumber: 2,
-        sequence: 2,
-      },
-    });
+
+    // p1 and p2 finish in 600s per round (genuine tie); p3 finishes in 300s per
+    // round — same score, lower summed submission time, so it must rank ahead.
+    const specs = [
+      { name: `TieOne ${suffix}`, number: 1, completionTimeSeconds: 600 },
+      { name: `TieTwo ${suffix}`, number: 2, completionTimeSeconds: 600 },
+      { name: `TieFast ${suffix}`, number: 3, completionTimeSeconds: 300 },
+    ];
+    const participants = [];
+    for (const spec of specs) {
+      participants.push(
+        await prisma.participant.create({
+          data: {
+            competitionId: competition.id,
+            categoryId: category.id,
+            schoolId: school.id,
+            name: spec.name,
+            participantNumber: spec.number,
+            sequence: spec.number,
+          },
+        }),
+      );
+    }
 
     // Fabricate equal finalized results directly (an attempt's early bonus is
-    // time-dependent, so driving two participants to an exactly equal score
-    // through the submit path would be flaky). The ranking computation reads
-    // IndividualRoundResult rows; equal rows are all it needs.
-    for (const participant of [p1, p2]) {
+    // time-dependent, so driving participants to an exactly equal score through the
+    // submit path would be flaky). The ranking computation reads IndividualRoundResult
+    // rows; equal scores with the chosen submission times are all it needs.
+    for (const [index, participant] of participants.entries()) {
+      const time = specs[index]!.completionTimeSeconds;
       for (const round of [round1, round2]) {
         const participation = await prisma.roundParticipation.create({
           data: {
@@ -501,7 +517,7 @@ describe("shared rank on a genuine tie (acceptance criterion 3)", () => {
             score: 10,
             bonus: 0,
             totalScore: 10,
-            completionTimeSeconds: 600,
+            completionTimeSeconds: time,
           },
         });
         await prisma.roundParticipation.update({
@@ -519,7 +535,7 @@ describe("shared rank on a genuine tie (acceptance criterion 3)", () => {
             totalScore: 10,
             submissionType: "MANUAL",
             submittedAt: new Date(),
-            completionTimeSeconds: 600,
+            completionTimeSeconds: time,
           },
         });
       }
@@ -527,20 +543,31 @@ describe("shared rank on a genuine tie (acceptance criterion 3)", () => {
 
     const ranking = await rankingService.getCategoryRanking(competition.id, category.id);
     expect(ranking).not.toBeNull();
-    expect(ranking!.isFinal).toBe(true); // both participants finished both rounds
-    expect(ranking!.rows).toHaveLength(2);
-    // Genuine tie → shared rank 1 for both; no tie-break is guessed (U-22).
+    expect(ranking!.isFinal).toBe(true); // everyone finished both rounds
+    expect(ranking!.rows).toHaveLength(3);
+    for (const row of ranking!.rows) {
+      expect(row.score).toBe(20);
+    }
+
+    // The faster participant is alone at rank 1 (summed 600s < 1200s).
+    expect(ranking!.rows[0]!.participantId).toBe(participants[2]!.id);
     expect(ranking!.rows[0]!.rank).toBe(1);
-    expect(ranking!.rows[1]!.rank).toBe(1);
-    expect(ranking!.rows[0]!.score).toBe(20);
-    expect(ranking!.rows[1]!.score).toBe(20);
+    expect(ranking!.rows[0]!.completionTimeSeconds).toBe(600);
+
+    // The two equal-time participants share rank 2 — a genuine tie ("1224").
+    const tied = ranking!.rows.slice(1);
+    expect(tied.map((row) => row.rank)).toEqual([2, 2]);
+    expect(tied.every((row) => row.completionTimeSeconds === 1200)).toBe(true);
+    expect(new Set(tied.map((row) => row.participantId))).toEqual(
+      new Set([participants[0]!.id, participants[1]!.id]),
+    );
 
     const snapshot = await prisma.rankingSnapshot.findFirst({
       where: { competitionId: competition.id, categoryId: category.id, scope: "INDIVIDUAL" },
     });
     expect(snapshot).not.toBeNull();
     expect(snapshot!.isFinal).toBe(true);
-  }, 15000);
+  }, 20000);
 });
 
 describe("categories are never mixed (acceptance criterion 5)", () => {

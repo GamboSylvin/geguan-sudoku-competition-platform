@@ -40,6 +40,12 @@ import {
 
 const STAGE_ROUND_COUNT = 2;
 
+/**
+ * An Individual round uses exactly 6 selected questions (competition-rules.md §2;
+ * BLD-040). The publish readiness check requires all 6 assigned per Individual round.
+ */
+const INDIVIDUAL_ROUND_QUESTION_COUNT = 6;
+
 const ROUND_NAME: Record<string, string> = {
   "INDIVIDUAL:1": "Individual round 1",
   "INDIVIDUAL:2": "Individual round 2",
@@ -302,19 +308,28 @@ export async function checkPublishReadiness(
     unmet.push(condition("competition.readiness.participantsRequired"));
   }
 
-  // 3. Every category has a question set assigned to both Individual rounds.
+  // 3. Every category has a complete question set assigned to both Individual rounds.
+  // Since BLD-040 made `Question.roundId` nullable, an imported question sits in the
+  // pool unassigned until the controller's manual round-selection step (Unit 05) picks
+  // exactly 6 per Individual round. So "covered" now means the full 6 are assigned to
+  // that round (roundId set), not merely that some question references it — an empty or
+  // partial selection is not publish-ready.
   const individualStage = competition.stages.find((stage) => stage.type === "INDIVIDUAL");
   const individualRoundIds = (individualStage?.rounds ?? []).map((round) => round.id);
   if (individualRoundIds.length < STAGE_ROUND_COUNT) {
     unmet.push(condition("competition.readiness.questionsRequired"));
   } else {
     for (const category of competition.categories) {
-      const covered = new Set(
-        (await repository.listCategoryQuestionRoundIds(category.id)).map(
-          (row) => row.roundId,
-        ),
+      const countByRound = new Map(
+        (await repository.countCategoryQuestionsPerRound(category.id)).map((row) => [
+          row.roundId,
+          row.count,
+        ]),
       );
-      if (!individualRoundIds.every((roundId) => covered.has(roundId))) {
+      const complete = individualRoundIds.every(
+        (roundId) => (countByRound.get(roundId) ?? 0) === INDIVIDUAL_ROUND_QUESTION_COUNT,
+      );
+      if (!complete) {
         unmet.push(condition("competition.readiness.questionsRequired"));
         break;
       }

@@ -113,20 +113,24 @@ async function makePublishedCompetition(name: string) {
     null, null, null, null,
     4, null, null, 1,
   ];
+  // Publish readiness requires a complete selection of 6 assigned questions per
+  // Individual round (BLD-040), so seed the full 6 for each round.
   for (const round of [round1, round2]) {
-    await prisma.question.create({
-      data: {
-        questionSetId: questionSet.id,
-        roundId: round.id,
-        sequence: 1,
-        points: 10,
-        gridRows: 4,
-        gridColumns: 4,
-        regions: [[0, 1, 4, 5]],
-        startingGrid,
-        solution: startingGrid.map((v) => v ?? 1),
-      },
-    });
+    for (let sequence = 1; sequence <= 6; sequence += 1) {
+      await prisma.question.create({
+        data: {
+          questionSetId: questionSet.id,
+          roundId: round.id,
+          sequence,
+          points: 10,
+          gridRows: 4,
+          gridColumns: 4,
+          regions: [[0, 1, 4, 5]],
+          startingGrid,
+          solution: startingGrid.map((v) => v ?? 1),
+        },
+      });
+    }
   }
 
   const judge = await prisma.judge.create({ data: { name: `Judge ${suffix}` } });
@@ -316,7 +320,10 @@ describe("reconnect state read (spec Implementation Detail 5)", () => {
       competitionId: ctx.competitionId,
     });
     await prisma.round.update({ where: { id: ctx.roundId }, data: { status: "ACTIVE" } });
-    const question = await prisma.question.findFirstOrThrow({ where: { roundId: ctx.roundId } });
+    const question = await prisma.question.findFirstOrThrow({
+      where: { roundId: ctx.roundId },
+      orderBy: { sequence: "asc" },
+    });
     const grid: (number | null)[] = [1, 2, 3, 4, null, null, null, null, null, null, null, null, 4, 3, 2, 1];
     await request(app)
       .post(`/api/gameplay/${ctx.roundId}/autosave`)
@@ -331,7 +338,9 @@ describe("reconnect state read (spec Implementation Detail 5)", () => {
     expect(state.status).toBe(200);
     expect(state.body.roundId).toBe(ctx.roundId);
     expect(state.body.status).toBe("ACTIVE");
-    expect(state.body.questions).toHaveLength(1);
+    // A complete Individual round carries its full selection of 6 questions (BLD-040),
+    // ordered by sequence, so the autosaved one is first.
+    expect(state.body.questions).toHaveLength(6);
     expect(state.body.questions[0].id).toBe(question.id);
     expect(state.body.questions[0].solution).toBeUndefined(); // never sent (BLD-010)
     const saved = (state.body.savedGrids as { questionId: string; grid: (number | null)[] }[]).find(

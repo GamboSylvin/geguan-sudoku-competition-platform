@@ -98,20 +98,24 @@ async function seedReadinessData(
     const questionSet = await prisma.questionSet.create({
       data: { competitionId, categoryId: category.id, name: `Set ${category.code} ${suffix}` },
     });
-    for (const [index, roundId] of individualRoundIds.entries()) {
-      await prisma.question.create({
-        data: {
-          questionSetId: questionSet.id,
-          roundId,
-          sequence: index + 1,
-          points: 10,
-          gridRows: 4,
-          gridColumns: 4,
-          regions: [[0, 1, 4, 5]],
-          startingGrid: [[0]],
-          solution: [[1]],
-        },
-      });
+    // The readiness check requires a complete selection of 6 assigned questions per
+    // Individual round (BLD-040 / Unit 05's round-selection step).
+    for (const [roundIndex, roundId] of individualRoundIds.entries()) {
+      for (let questionIndex = 0; questionIndex < 6; questionIndex += 1) {
+        await prisma.question.create({
+          data: {
+            questionSetId: questionSet.id,
+            roundId,
+            sequence: roundIndex * 6 + questionIndex + 1,
+            points: 10,
+            gridRows: 4,
+            gridColumns: 4,
+            regions: [[0, 1, 4, 5]],
+            startingGrid: [[0]],
+            solution: [[1]],
+          },
+        });
+      }
     }
   }
 
@@ -277,6 +281,56 @@ describe("publish readiness (AC 3, AC 4)", () => {
     });
     expect(after.status).toBe("WAITING");
     expect(after.publishedAt).not.toBeNull();
+  });
+
+  it("treats a partial question selection as not ready (nullable roundId, BLD-040)", async () => {
+    // Since `Question.roundId` became nullable, an imported-but-unassigned question
+    // (`roundId = null`) must NOT count as coverage, and a round with fewer than the
+    // full 6 assigned questions must fail readiness. Seed full data, then remove one
+    // assigned question from each Individual round and add unassigned pool questions.
+    const competition = await makeCompetition(`PartialQuestions ${suffix}`);
+    await seedReadinessData(competition.id);
+
+    const competitionFull = await prisma.competition.findUniqueOrThrow({
+      where: { id: competition.id },
+      include: { categories: true, stages: { include: { rounds: true } } },
+    });
+    const individualRoundIds = (
+      competitionFull.stages.find((s) => s.type === "INDIVIDUAL")?.rounds ?? []
+    ).map((r) => r.id);
+
+    for (const roundId of individualRoundIds) {
+      // Drop to 5 assigned questions on this round.
+      const assigned = await prisma.question.findMany({ where: { roundId }, select: { id: true } });
+      await prisma.question.delete({ where: { id: assigned[0]!.id } });
+      // Add 3 unassigned pool questions (roundId = null) — these must not count.
+      const category = competitionFull.categories[0]!;
+      const set = await prisma.questionSet.findFirstOrThrow({
+        where: { categoryId: category.id },
+        select: { id: true },
+      });
+      for (let i = 0; i < 3; i += 1) {
+        await prisma.question.create({
+          data: {
+            questionSetId: set.id,
+            roundId: null,
+            sequence: 100 + i,
+            points: 10,
+            gridRows: 4,
+            gridColumns: 4,
+            regions: [[0, 1, 4, 5]],
+            startingGrid: [[0]],
+            solution: [[1]],
+          },
+        });
+      }
+    }
+
+    const readiness = await competitionService.checkPublishReadiness(competition.id);
+    expect(readiness.ready).toBe(false);
+    expect(readiness.unmet.map((c) => c.key)).toContain(
+      "competition.readiness.questionsRequired",
+    );
   });
 });
 

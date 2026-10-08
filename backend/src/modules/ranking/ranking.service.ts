@@ -29,33 +29,30 @@ import type {
 } from "./ranking.types";
 
 // ---------------------------------------------------------------------------
-// Tie-break (SCR-017, narrows U-22)
+// Tie-break (SCR-020, resolves U-22)
 // ---------------------------------------------------------------------------
 
 /**
  * Decide the relative order of two participants with an equal cumulative score.
  *
- * Today a genuine tie receives **shared rank** — this function reports "tie" (0) for
- * equal scores, so the two share a rank. The stakeholder confirmed that earlier
- * submission time wins a tie (superseding the client document's "round 1 score"
- * rule), but *how* submission time combines across an individual's two rounds is the
- * team's proposed extension, explicitly **not yet confirmed** (U-22, still open in
- * `unmade-decisions.md`). This unit does not guess that aggregation.
+ * SCR-020 (confirmed 2026-10-07, resolves U-22): a tie on cumulative score is broken
+ * by the **sum of both Individual rounds' submission times — the lower sum ranks
+ * ahead**. Each round's submission time is the `completionTimeSeconds` Unit 08 stores
+ * when it finalizes the result (submission moment minus round start), and `buildRows`
+ * already accumulates it per participant, so this compares the two sums directly.
  *
- * Kept as a single named seam so that once U-22's extension is confirmed, only this
- * function changes — not the surrounding ranking computation (spec Implementation
- * Notes). Each round's `submittedAt` is already stored by Unit 08, so the upgrade
- * needs no rebuild.
+ * Two participants with an equal score *and* an equal summed time are still a genuine
+ * tie and share a rank ("1224"); a participant's identity never decides rank.
+ *
+ * This is the individual-level tie-break only. The school-level version (Unit 15) sums
+ * across all the school's counted players — a different aggregate, so it is a separate
+ * function there, not a shared one (spec 15, Implementation Notes).
  *
  * Returns a negative number if `a` ranks ahead of `b`, positive if behind, 0 for a
  * shared rank.
  */
 export function breakTie(a: RankingRow, b: RankingRow): number {
-  // Shared rank today: an equal cumulative score is a genuine tie (no guessed
-  // tie-break). The participants' identity never decides rank.
-  void a;
-  void b;
-  return 0;
+  return a.completionTimeSeconds - b.completionTimeSeconds;
 }
 
 // ---------------------------------------------------------------------------
@@ -81,8 +78,9 @@ export function installRankingUpdateHook(hook: RankingUpdateHook): void {
 /**
  * Build the ordered rows for one category from its finalized results. Sums each
  * participant's totalScore and completionTimeSeconds across the rounds they have
- * finalized, sorts descending by score, and assigns ranks with shared rank on a
- * genuine tie (via `breakTie`).
+ * finalized, sorts descending by score (equal scores ordered by `breakTie`), and
+ * assigns ranks, sharing a rank only on a genuine tie (equal score *and* equal summed
+ * submission time).
  *
  * Participants with no finalized result yet are included at the bottom (score 0),
  * so a provisional ranking reflects the whole category, not only those who have
@@ -116,23 +114,27 @@ function buildRows(
     })
     .sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score; // descending cumulative score
-      return breakTie(a, b); // genuine tie → 0 → shared rank, stable order preserved
+      return breakTie(a, b); // equal score → SCR-020's lower summed submission time first
     });
 
-  // Assign ranks with shared rank on a tie: equal score → equal rank, and the next
-  // distinct score skips ahead by the number of participants that shared the rank
-  // above (standard competition ranking, "1224").
-  let previousScore: number | null = null;
-  let previousRank = 0;
+  // Assign ranks, sharing a rank only on a genuine tie: both the score and the
+  // tie-break must be equal (SCR-020 means an equal score with a lower summed
+  // submission time now ranks strictly ahead, not jointly). The next distinct
+  // ordering skips ahead by the number of participants that shared the rank above
+  // (standard competition ranking, "1224").
+  let previousRow: RankingRow | null = null;
   for (let i = 0; i < sorted.length; i += 1) {
     const row = sorted[i]!;
-    if (previousScore !== null && row.score === previousScore) {
-      row.rank = previousRank;
+    if (
+      previousRow !== null &&
+      row.score === previousRow.score &&
+      breakTie(row, previousRow) === 0
+    ) {
+      row.rank = previousRow.rank;
     } else {
       row.rank = i + 1;
-      previousRank = row.rank;
-      previousScore = row.score;
     }
+    previousRow = row;
   }
   return sorted;
 }

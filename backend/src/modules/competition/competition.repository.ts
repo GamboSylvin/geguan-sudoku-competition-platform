@@ -181,14 +181,30 @@ export function listActiveParticipantCategoryIds(
   });
 }
 
-export function listCategoryQuestionRoundIds(
+/**
+ * Count the questions a category has *assigned* to each round, for the publish
+ * readiness check. Since `Question.roundId` became nullable (BLD-040 — an imported
+ * question sits in the category's pool with `roundId = null` until the controller's
+ * manual round-selection step, Unit 05), an unassigned question no longer implies any
+ * round is covered. This counts only rows with `roundId` set, grouped per round, so the
+ * service can require a complete selection per Individual round rather than a mere
+ * non-empty join.
+ */
+export function countCategoryQuestionsPerRound(
   categoryId: string,
-): Promise<{ roundId: string }[]> {
-  return prisma.question.findMany({
-    where: { questionSet: { categoryId } },
-    select: { roundId: true },
-    distinct: ["roundId"],
-  });
+): Promise<{ roundId: string; count: number }[]> {
+  return prisma.question.groupBy({
+    by: ["roundId"],
+    where: { questionSet: { categoryId }, roundId: { not: null } },
+    _count: { _all: true },
+  }).then((rows) =>
+    // groupBy returns `roundId: string | null`; the `not: null` filter guarantees a
+    // value, so the cast is safe and keeps the return type honest for the service.
+    rows.map((row) => ({
+      roundId: row.roundId as string,
+      count: row._count._all,
+    })),
+  );
 }
 
 export function listActiveParticipantNumbers(

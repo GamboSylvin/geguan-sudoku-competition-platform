@@ -135,21 +135,25 @@ async function seedCompetition(name: string): Promise<SeededCompetition> {
   });
 
   let questionId = "";
+  // Publish readiness requires a complete selection of 6 assigned questions per
+  // Individual round (BLD-040); `questionId` is sequence 1 of round 1.
   for (const round of [round1, round2]) {
-    const q = await prisma.question.create({
-      data: {
-        questionSetId: questionSet.id,
-        roundId: round.id,
-        sequence: 1,
-        points: 10,
-        gridRows: GRID_SIZE,
-        gridColumns: GRID_SIZE,
-        regions: [[0, 1, 4, 5]],
-        startingGrid: STARTING_GRID,
-        solution: SOLUTION,
-      },
-    });
-    if (round.id === round1.id) questionId = q.id;
+    for (let sequence = 1; sequence <= 6; sequence += 1) {
+      const q = await prisma.question.create({
+        data: {
+          questionSetId: questionSet.id,
+          roundId: round.id,
+          sequence,
+          points: 10,
+          gridRows: GRID_SIZE,
+          gridColumns: GRID_SIZE,
+          regions: [[0, 1, 4, 5]],
+          startingGrid: STARTING_GRID,
+          solution: SOLUTION,
+        },
+      });
+      if (sequence === 1 && round.id === round1.id) questionId = q.id;
+    }
   }
 
   const judge = await prisma.judge.create({ data: { name: `Judge ${suffix}` } });
@@ -300,12 +304,20 @@ describe("manual submit (acceptance criteria 1, 2, 5)", () => {
     });
     await roundTimerService.startRoundTimer(ctx.roundId, ctx.competitionId, ctx.stageId, 1200);
 
-    // Autosave the correct solution, then submit.
-    await request(app)
-      .post(`/api/gameplay/${ctx.roundId}/autosave`)
-      .set("x-session-token", playerLogin.body.token)
-      .set("x-device-id", playerLogin.body.deviceId)
-      .send({ questionId: ctx.questionId, grid: SOLUTION });
+    // The round carries a complete selection of 6 questions (BLD-040), and the
+    // early-finish bonus is earned only when *every* puzzle is correct
+    // (SCR-008–SCR-011), so autosave the solution for all of them.
+    const questions = await prisma.question.findMany({
+      where: { roundId: ctx.roundId },
+      orderBy: { sequence: "asc" },
+    });
+    for (const question of questions) {
+      await request(app)
+        .post(`/api/gameplay/${ctx.roundId}/autosave`)
+        .set("x-session-token", playerLogin.body.token)
+        .set("x-device-id", playerLogin.body.deviceId)
+        .send({ questionId: question.id, grid: SOLUTION });
+    }
 
     const submitRes = await request(app)
       .post(`/api/gameplay/${ctx.roundId}/submit`)
@@ -326,11 +338,11 @@ describe("manual submit (acceptance criteria 1, 2, 5)", () => {
       include: { answers: true },
     });
     expect(attempt.submissionType).toBe("MANUAL");
-    expect(attempt.score).toBe(10); // one puzzle × 10 points
-    expect(attempt.bonus).toBeGreaterThan(0); // ~20 minutes early × 3/min
+    expect(attempt.score).toBe(60); // the round's full selection: 6 puzzles × 10 points
+    expect(attempt.bonus).toBeGreaterThan(0); // ~20 minutes early × the configured rate
     expect(attempt.totalScore).toBe(attempt.score + attempt.bonus);
-    expect(attempt.answers).toHaveLength(1);
-    expect(attempt.answers[0]!.correct).toBe(true);
+    expect(attempt.answers).toHaveLength(6);
+    expect(attempt.answers.every((a) => a.correct)).toBe(true);
     expect(attempt.answers[0]!.pointsAwarded).toBe(10);
 
     const result = await prisma.individualRoundResult.findFirstOrThrow({
@@ -405,8 +417,9 @@ describe("manual submit (acceptance criteria 1, 2, 5)", () => {
     });
     expect(attempt.score).toBe(0);
     expect(attempt.bonus).toBe(0);
-    expect(attempt.answers).toHaveLength(1);
-    expect(attempt.answers[0]!.correct).toBe(false);
+    // Every question in the round's selection gets an Answer row, blank ones included.
+    expect(attempt.answers).toHaveLength(6);
+    expect(attempt.answers.every((a) => a.correct === false)).toBe(true);
   }, 15000);
 
   it("a repeated submit is a no-op (PL-009): the result never changes", async () => {

@@ -122,20 +122,24 @@ async function makeCompetitionWithTwoParticipants(name: string, judgeRange: { fr
     null, null, null, null,
     4, null, null, 1,
   ];
+  // Publish readiness requires a complete selection of 6 assigned questions per
+  // Individual round (BLD-040), so seed the full 6 for each round.
   for (const round of [round1, round2]) {
-    await prisma.question.create({
-      data: {
-        questionSetId: questionSet.id,
-        roundId: round.id,
-        sequence: 1,
-        points: 10,
-        gridRows: 4,
-        gridColumns: 4,
-        regions: [[0, 1, 4, 5]],
-        startingGrid,
-        solution: startingGrid.map((v) => v ?? 1),
-      },
-    });
+    for (let sequence = 1; sequence <= 6; sequence += 1) {
+      await prisma.question.create({
+        data: {
+          questionSetId: questionSet.id,
+          roundId: round.id,
+          sequence,
+          points: 10,
+          gridRows: 4,
+          gridColumns: 4,
+          regions: [[0, 1, 4, 5]],
+          startingGrid,
+          solution: startingGrid.map((v) => v ?? 1),
+        },
+      });
+    }
   }
 
   // The judge under test is assigned [judgeRange.from, judgeRange.to] — does not

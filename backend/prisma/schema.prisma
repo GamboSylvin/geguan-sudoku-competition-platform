@@ -101,14 +101,17 @@ enum RankingScope {
 
 enum StoredFileKind {
   PARTICIPANT_EXCEL
-  QUESTION_PDF
+  // Renamed from QUESTION_PDF: the question import format was corrected to Excel
+  // (BLD-024, resolves U-93; data-model.md, "Amendment").
+  QUESTION_EXCEL
   CREDENTIAL_SLIPS
   EXPORT
 }
 
 enum ImportBatchKind {
   PARTICIPANT_EXCEL
-  QUESTION_PDF
+  // Renamed from QUESTION_PDF (BLD-024, resolves U-93).
+  QUESTION_EXCEL
 }
 
 enum ImportBatchStatus {
@@ -265,8 +268,9 @@ model RoundSettings {
 model QuestionSet {
   id            String  @id @default(uuid())
   competitionId String
-  // required, not nullable: one file per category, not a shared pool
-  // (BLD-028, resolves U-32)
+  // Required, not nullable (BLD-028, resolves U-32): a question set always belongs to
+  // exactly one category and is never shared across categories. A category may hold
+  // several sets — one per imported file (BLD-044).
   categoryId    String
   name          String
   sourceFileId  String?
@@ -282,7 +286,12 @@ model QuestionSet {
 model Question {
   id            String       @id @default(uuid())
   questionSetId String
-  roundId       String
+  // Nullable since BLD-040 (data-model.md): an imported question sits in its
+  // category's pool with `roundId = null` until the controller's manual
+  // round-selection step (Unit 05) assigns it to an Individual round. Team rounds
+  // never set it — the rotation round draws from the pool at random (SCR-015) and
+  // the partition round addresses puzzles by index.
+  roundId       String?
   sequence      Int
   // Sub-types are OPEN; only the generic kinds are modelled.
   type          QuestionType @default(STANDARD)
@@ -301,7 +310,7 @@ model Question {
   points Int
 
   questionSet QuestionSet @relation(fields: [questionSetId], references: [id], onDelete: Cascade)
-  round       Round       @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  round       Round?      @relation(fields: [roundId], references: [id], onDelete: Cascade)
   answers     Answer[]
 
   @@index([questionSetId])

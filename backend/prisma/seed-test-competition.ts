@@ -105,8 +105,9 @@ async function main(): Promise<void> {
       });
     }
 
-    // One question set per category (one file per category, BLD-028), with a
-    // question on each of the two Individual rounds.
+    // One question set per category (BLD-028), with a complete selection of 6
+    // questions assigned to each Individual round — the readiness check requires all 6
+    // per round now that `roundId` is nullable (BLD-040).
     const questionSet = await prisma.questionSet.create({
       data: {
         competitionId: competition.id,
@@ -114,16 +115,18 @@ async function main(): Promise<void> {
         name: `${category.code} question set`,
       },
     });
-    for (const [index, roundId] of individualRoundIds.entries()) {
-      await prisma.question.create({
-        data: {
-          questionSetId: questionSet.id,
-          roundId,
-          sequence: index + 1,
-          points: 10,
-          ...placeholderGrid(),
-        },
-      });
+    for (const [roundIndex, roundId] of individualRoundIds.entries()) {
+      for (let questionIndex = 0; questionIndex < 6; questionIndex += 1) {
+        await prisma.question.create({
+          data: {
+            questionSetId: questionSet.id,
+            roundId,
+            sequence: roundIndex * 6 + questionIndex + 1,
+            points: 10,
+            ...placeholderGrid(),
+          },
+        });
+      }
     }
   }
 

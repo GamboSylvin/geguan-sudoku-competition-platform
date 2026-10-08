@@ -98,6 +98,41 @@ export const en = {
     forbidden: "Only a judge can use this endpoint.",
     outOfRange: "This participant is outside your assigned range.",
   },
+  question: {
+    // Unit 05. Every endpoint is controller-only (ROL-002). The `import.*` keys are
+    // the row-level rejection reasons a 422 lists, so each names the problem plainly;
+    // the client shows it beside the row number the API returns.
+    forbidden: "Only a controller can manage questions.",
+    notFound: "Question set not found.",
+    import: {
+      noFile: "Choose an Excel file to upload.",
+      notAnExcelFile: "This is not a readable .xlsx file.",
+      emptyFile: "The file has no question rows.",
+      missingRequiredColumn: "The file is missing a required column.",
+      variantRequired: "The variant (*类目) is empty.",
+      irregularVariantUnsupported:
+        "Irregular (不规则) variant files cannot be imported yet.",
+      unknownVariant: "This variant is not recognized.",
+      invalidPoints: "Points must be a whole number of 1 or more.",
+      invalidGridWidth: "Grid width must be a positive whole number.",
+      invalidGridHeight: "Grid height must be a positive whole number.",
+      unsupportedGridShape: "These grid dimensions cannot form a box partition.",
+      givenColumnMissing: "The given-cells column is missing.",
+      invalidGivenGrid: "The given-cells grid is not a well-formed array.",
+      invalidAnswerGrid: "The answer grid is not a well-formed array.",
+      gridsNotComplementary:
+        "The given cells and the answers do not cover the grid exactly once.",
+      mixedVariants: "One file may only hold a single variant; this file mixes several.",
+    },
+    selection: {
+      notIndividualRound: "Only an Individual round holds a question selection.",
+      locked:
+        "This round's preparation has begun; its question selection can no longer change.",
+      invalidCount: "Select exactly 6 questions.",
+      duplicateIds: "The same question cannot be selected twice.",
+      notInPool: "One of the selected questions is not in this category's pool.",
+    },
+  },
 } as const;
 
 /** Recursively widens the literal `en` catalogue to `string` leaves, keeping its shape. */

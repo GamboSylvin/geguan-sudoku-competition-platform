@@ -31,7 +31,10 @@ apiRouter.use("/judges", judgeRouter);
 // Unit 10: the judge's own supervision endpoints live under the singular /judge
 // (the management endpoints under /judges are controller-only).
 apiRouter.use("/judge", judgeSupervisionRouter);
-apiRouter.use("/questions", questionRouter);
+// Unit 05: question import, the pool listing and the round-selection step all live on
+// the competition+category path of the spec's API contract, so the router is mounted
+// with `mergeParams` reading `:id`/`:categoryId` (the same pattern Unit 09 uses).
+apiRouter.use("/competitions/:id/categories", questionRouter);
 apiRouter.use("/rounds", roundRouter);
 apiRouter.use("/gameplay", gameplayRouter);
 apiRouter.use("/orchestrator", orchestratorRouter);
