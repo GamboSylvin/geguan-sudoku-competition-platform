@@ -10,6 +10,12 @@
  * leaderboard; this page simply swaps to whatever category the latest push names.
  * A category leaderboard that does not fit one screen is paginated locally — pure
  * display of the server-supplied rows, not computation.
+ *
+ * Unit 11 adds the display mode (BSC-002). The controller picks it and the server
+ * pushes `bigScreen:mode`; this page renders the mode it is told and never decides
+ * one itself. Only `RANKING`, `PAUSED` and `FINAL` have a screen — the schema's
+ * `PLAYER_CLOSEUP` and `TEAM_SPLIT` have no data behind them yet and fall through to
+ * the ranking view so a mode the controller can set is never a blank screen.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -37,6 +43,14 @@ interface BigScreenRankingPayload {
   rows: RankingRowPayload[];
 }
 
+/**
+ * The display mode pushed on `bigScreen:mode`. `RANKING` shows the leaderboard;
+ * `PAUSED` and `FINAL` show a full-screen label. `PLAYER_CLOSEUP` and `TEAM_SPLIT`
+ * exist in the schema's enum but have no screen yet — treated as RANKING so a mode
+ * the server can send never blanks the display.
+ */
+type BigScreenMode = "RANKING" | "PAUSED" | "FINAL" | "PLAYER_CLOSEUP" | "TEAM_SPLIT";
+
 /** How many leaderboard rows fit one screen before the display paginates. */
 const ROWS_PER_PAGE = 12;
 /** How long one leaderboard page stays before the next page of the same category. */
@@ -54,6 +68,7 @@ export function BigScreenPage() {
   const [ranking, setRanking] = useState<BigScreenRankingPayload | null>(null);
   const [status, setStatus] = useState<"connecting" | "live" | "invalid">("connecting");
   const [page, setPage] = useState(0);
+  const [mode, setMode] = useState<BigScreenMode>("RANKING");
 
   useEffect(() => {
     if (!token) {
@@ -71,6 +86,12 @@ export function BigScreenPage() {
       // A fresh category push restarts local pagination from its first page.
       setPage(0);
     });
+    socket.on(
+      "bigScreen:mode",
+      (payload: { mode: BigScreenMode; targetId: string | null; rotationEnabled: boolean }) => {
+        setMode(payload.mode);
+      },
+    );
     socket.on("connect_error", () => setStatus("invalid"));
     socket.on("disconnect", () => setStatus((s) => (s === "invalid" ? s : "connecting")));
 
@@ -108,6 +129,16 @@ export function BigScreenPage() {
     );
   }
 
+  // The controller's mode wins over "nothing pushed yet": a paused or final screen
+  // is a deliberate full-screen state, not a waiting message (BSC-002).
+  if (mode === "PAUSED") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-950 text-white">
+        <p className="text-7xl font-bold">{t("bigScreen.pausedScreen")}</p>
+      </div>
+    );
+  }
+
   if (status === "connecting" || !ranking) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-950 text-white">
@@ -125,7 +156,11 @@ export function BigScreenPage() {
           {t("bigScreen.title")} · {ranking.categoryName}
         </h1>
         <div className="flex items-baseline gap-4 text-xl text-gray-300">
-          <span>{ranking.isFinal ? t("bigScreen.final") : t("bigScreen.provisional")}</span>
+          <span>
+            {ranking.isFinal || mode === "FINAL"
+              ? t("bigScreen.final")
+              : t("bigScreen.provisional")}
+          </span>
           {ranking.pageCount > 1 && (
             <span>
               {ranking.pageIndex + 1} {t("bigScreen.pageOf")} {ranking.pageCount}

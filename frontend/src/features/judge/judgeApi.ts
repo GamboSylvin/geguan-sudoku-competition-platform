@@ -155,8 +155,20 @@ export interface RestartStudentResultView {
   totalSeconds: number;
 }
 
-export function fetchJudgeStudents(): Promise<{ students: JudgeStudentView[] }> {
-  return request<{ students: JudgeStudentView[] }>("/api/judge/students", {
+/**
+ * List the students to supervise. A judge session omits `competitionId` and the
+ * server scopes the list to that judge's own assigned range(s) (Unit 10). A
+ * controller session must name the competition — its role already authorizes the
+ * whole event, so it sees every participant of it with the identical row shape
+ * (Unit 11 spec Detail 6: judge-equivalent student-status access).
+ */
+export function fetchJudgeStudents(
+  competitionId?: string,
+): Promise<{ students: JudgeStudentView[] }> {
+  const query = competitionId
+    ? `?competitionId=${encodeURIComponent(competitionId)}`
+    : "";
+  return request<{ students: JudgeStudentView[] }>(`/api/judge/students${query}`, {
     method: "GET",
   });
 }

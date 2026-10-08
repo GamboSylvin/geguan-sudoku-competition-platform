@@ -1,8 +1,9 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { LocaleProvider } from "./i18n/locale-context";
-import { LoginPage, RoleHomePage } from "./features/auth";
+import { LoginPage } from "./features/auth";
 import { BigScreenPage } from "./features/big-screen";
 import { CompetitionSetupPage } from "./features/competition";
+import { ControllerLivePage, ControllerPickerPage } from "./features/controller";
 import { JudgeDashboardPage, JudgeLandingPage, JudgeManagementPage } from "./features/judge";
 import { PlayerPage } from "./features/player";
 
@@ -10,7 +11,8 @@ import { PlayerPage } from "./features/player";
  * The app entry (Unit 02): the i18n provider, the router, the login page and the
  * per-role placeholder landing routes. Real feature screens are filled in by later
  * units. There is no global competition-selection screen — the competition link
- * identifies the competition (ARCH-030).
+ * identifies the competition (ARCH-030). The controller's own picker is not that
+ * screen: it is the entry to the live dashboard, which one operator drives.
  *
  * Unit 03 adds the controller's competition-creation and publish screen.
  * Unit 06 adds the controller's judge-management screen, the judge range assignment
@@ -18,6 +20,8 @@ import { PlayerPage } from "./features/player";
  * Unit 07 replaces the player's placeholder landing with the round-runtime page
  * (competition room, preparation, active round, paused/resuming).
  * Unit 10 adds the judge's supervision dashboard at /judge/dashboard.
+ * Unit 11 replaces the controller's placeholder landing with the competition picker
+ * and adds the live-command dashboard at /controller/competitions/:id/live.
  */
 export function App() {
   return (
@@ -28,7 +32,12 @@ export function App() {
           <Route path="/player" element={<PlayerPage />} />
           <Route path="/judge" element={<JudgeLandingPage />} />
           <Route path="/judge/dashboard" element={<JudgeDashboardPage />} />
-          <Route path="/controller" element={<RoleHomePage role="CONTROLLER" />} />
+          <Route path="/controller" element={<ControllerPickerPage />} />
+          <Route path="/controller/competitions" element={<ControllerPickerPage />} />
+          <Route
+            path="/controller/competitions/:id/live"
+            element={<ControllerLivePage />}
+          />
           <Route path="/controller/competition/new" element={<CompetitionSetupPage />} />
           <Route path="/controller/judges" element={<JudgeManagementPage />} />
           <Route path="/big-screen/:token" element={<BigScreenPage />} />
