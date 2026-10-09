@@ -1,8 +1,10 @@
 /**
- * The gameplay feature (Unit 07, extended by Unit 13). Owns the two round screens:
- * the Individual stage's `ActiveRoundScreen` (six of the player's own puzzles,
- * autosave, no correctness feedback) and the Team stage's `RotationRoundScreen`
- * (one borrowed question that rotates in, immediate checking, no autosave).
+ * The gameplay feature (Unit 07, extended by Units 13 and 14). Owns the three round
+ * screens: the Individual stage's `ActiveRoundScreen` (six of the player's own
+ * puzzles, autosave, no correctness feedback), the Team stage's
+ * `RotationRoundScreen` (one borrowed question that rotates in, immediate checking,
+ * no autosave) and the Team stage's `PartitionRoundScreen` (one shared puzzle, one
+ * editable row-band, autosave, no submit at all).
  *
  * Hard rules these screens enforce:
  *   - **Landscape only** (UI-001/PAR-006): a "please rotate your device" gate
@@ -22,8 +24,14 @@
  */
 export { ActiveRoundScreen } from "./ActiveRoundScreen";
 export { RotationRoundScreen } from "./RotationRoundScreen";
+export { PartitionRoundScreen } from "./PartitionRoundScreen";
 export type {
   RotationViewState,
   RotationHold,
   RotationEndedResult,
 } from "./RotationRoundScreen";
+export type {
+  PartitionViewState,
+  PartitionBand,
+  PartitionEndedResult,
+} from "./PartitionRoundScreen";

@@ -16,8 +16,8 @@ import { io, type Socket } from "socket.io-client";
 import { API_BASE_URL } from "@/config/env";
 import { useLocale } from "@/i18n/locale-context";
 import { loadSession, landingPath } from "@/features/auth/session";
-import { ActiveRoundScreen, RotationRoundScreen } from "@/features/gameplay";
-import type { RotationViewState } from "@/features/gameplay";
+import { ActiveRoundScreen, PartitionRoundScreen, RotationRoundScreen } from "@/features/gameplay";
+import type { PartitionViewState, RotationViewState } from "@/features/gameplay";
 
 /** Mirrors the backend's round payload shapes; the wire contract is the backend's. */
 interface RoundQuestionPayload {
@@ -128,6 +128,75 @@ function toRotationViewState(
   };
 }
 
+/**
+ * Unit 14: the two partition pushes, also addressed to this one tablet's room.
+ * `deal` and `puzzle-solved` share a shape — one client handler covers the initial
+ * deal, the advance to the next puzzle and the reconnect refresh.
+ */
+interface PartitionPushPayload {
+  roundId: string;
+  competitionId: string;
+  stageId: string;
+  teamId: string;
+  participantId: string;
+  puzzle: RoundQuestionPayload | null;
+  band: { participantId: string; startRow: number; endRow: number } | null;
+  grid: (number | null)[];
+  puzzleIndex: number;
+  puzzleCount: number;
+  solvedCount: number;
+  teamScore: number;
+  totalTimeDeadlineMs: number;
+  reason?: "DEAL" | "PUZZLE_SOLVED" | "RECONNECT";
+}
+
+interface PartitionEndedPushPayload {
+  roundId: string;
+  competitionId: string;
+  stageId: string;
+  teamId: string;
+  reason: "ALL_SOLVED" | "TIME_LIMIT";
+  solvedCount: number;
+  score: number;
+  completionTimeSeconds: number | null;
+}
+
+/** What `GET /api/gameplay/partition/:roundId/state` returns for this tablet. */
+interface PartitionTabletStatePayload extends Omit<PartitionPushPayload, "reason"> {
+  status: "ACTIVE" | "FINISHED";
+  result: PartitionEndedPushPayload | null;
+}
+
+/** Map any of the three partition sources onto the screen's one view state. */
+function toPartitionViewState(
+  payload: PartitionPushPayload | PartitionTabletStatePayload,
+  ended: PartitionEndedPushPayload | null,
+  reason?: PartitionPushPayload["reason"],
+): PartitionViewState {
+  return {
+    roundId: payload.roundId,
+    teamId: payload.teamId,
+    participantId: payload.participantId,
+    puzzle: payload.puzzle,
+    band: payload.band,
+    grid: payload.grid,
+    puzzleIndex: payload.puzzleIndex,
+    puzzleCount: payload.puzzleCount,
+    solvedCount: payload.solvedCount,
+    teamScore: payload.teamScore,
+    totalTimeDeadlineMs: payload.totalTimeDeadlineMs,
+    ended: ended
+      ? {
+          reason: ended.reason,
+          solvedCount: ended.solvedCount,
+          score: ended.score,
+          completionTimeSeconds: ended.completionTimeSeconds,
+        }
+      : null,
+    solvedReason: reason,
+  };
+}
+
 interface GameplayStatePayload {
   roundId: string;
   competitionId: string;
@@ -157,6 +226,11 @@ type ScreenState =
    * the server replaces wholesale on every push — there is nothing to merge here.
    */
   | { kind: "rotation"; state: RotationViewState }
+  /**
+   * The Team stage's partition round (Unit 14). One shared puzzle with only this
+   * member's row-band editable; the server replaces the whole view on every push.
+   */
+  | { kind: "partition"; state: PartitionViewState }
   | { kind: "paused"; pausedRemainingSeconds: number }
   | {
       kind: "resuming";
@@ -171,8 +245,10 @@ type ScreenState =
         savedGrids: GameplayStatePayload["savedGrids"];
         participationState: GameplayStatePayload["participationState"];
       } | null;
-      /** Unit 13: the rotation screen to return to, when this is a team round. */
+      /** Unit 13: the rotation screen to return to, when this is a team round 1. */
       rotationSnapshot: RotationViewState | null;
+      /** Unit 14: the partition screen to return to, when this is a team round 2. */
+      partitionSnapshot: PartitionViewState | null;
     };
 
 export function PlayerPage() {
@@ -189,6 +265,12 @@ export function PlayerPage() {
    * while paused, and the rotation tick re-arms rather than firing.
    */
   const rotationSnapshotRef = useRef<RotationViewState | null>(null);
+  /**
+   * The partition round's equivalent (Unit 14). A pause must return the tablet to
+   * the same shared puzzle and the same band — and the band grid is local-only
+   * until the next autosave, so losing it would lose typed digits.
+   */
+  const partitionSnapshotRef = useRef<PartitionViewState | null>(null);
   /**
    * A mirror of `screen` readable from the socket callbacks. The reconnect handler
    * needs the current round to re-read, but a state updater must stay pure — it
@@ -283,6 +365,38 @@ export function PlayerPage() {
     [session, t],
   );
 
+  /**
+   * The partition round's own reconnect read (Unit 14), for the same reason: this
+   * round's puzzles come from the category pool and carry no `roundId` (BLD-040).
+   * Returns the combined grid, this member's band and the settled result if the
+   * round already ended while the tablet was away.
+   */
+  const refreshPartitionState = useCallback(
+    async (roundId: string) => {
+      if (!session) return;
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/gameplay/partition/${roundId}/state`,
+          {
+            headers: {
+              "x-session-token": session.token,
+              "x-device-id": session.deviceId,
+            },
+          },
+        );
+        if (!response.ok) return;
+        const state = (await response.json()) as PartitionTabletStatePayload;
+        setScreen({
+          kind: "partition",
+          state: toPartitionViewState(state, state.result, "RECONNECT"),
+        });
+      } catch {
+        setError(t("player.genericError"));
+      }
+    },
+    [session, t],
+  );
+
   useEffect(() => {
     if (!session || session.role !== "PLAYER") return;
 
@@ -332,6 +446,13 @@ export function PlayerPage() {
         activeSnapshotRef.current = current;
       } else if (current.kind === "rotation") {
         rotationSnapshotRef.current = current.state;
+        // Only one team round is ever on screen at a time, and the Team stage has
+        // two of them in sequence. Clearing the sibling keeps a resume from
+        // restoring round 1's held question while round 2 is running.
+        partitionSnapshotRef.current = null;
+      } else if (current.kind === "partition") {
+        partitionSnapshotRef.current = current.state;
+        rotationSnapshotRef.current = null;
       }
       setScreen({ kind: "paused", pausedRemainingSeconds: payload.pausedRemainingSeconds });
     });
@@ -344,6 +465,8 @@ export function PlayerPage() {
           : (activeSnapshotRef.current as Extract<ScreenState, { kind: "active" }> | null);
       const rotationSnapshot =
         current.kind === "rotation" ? current.state : rotationSnapshotRef.current;
+      const partitionSnapshot =
+        current.kind === "partition" ? current.state : partitionSnapshotRef.current;
       setScreen({
         kind: "resuming",
         resumesAtMs: payload.resumesAtMs,
@@ -360,6 +483,7 @@ export function PlayerPage() {
             }
           : null,
         rotationSnapshot,
+        partitionSnapshot,
       });
     });
 
@@ -404,6 +528,43 @@ export function PlayerPage() {
       });
     });
 
+    /**
+     * Unit 14's three partition pushes, also addressed to this tablet's room.
+     * `deal` and `puzzle-solved` share one payload shape, so both land on the same
+     * screen state — the difference is only the transient banner, carried by
+     * `solvedReason`.
+     */
+    socket.on("partition:deal", (payload: PartitionPushPayload) => {
+      setScreen({ kind: "partition", state: toPartitionViewState(payload, null) });
+    });
+
+    socket.on("partition:puzzle-solved", (payload: PartitionPushPayload) => {
+      setScreen({
+        kind: "partition",
+        state: toPartitionViewState(payload, null, payload.reason),
+      });
+    });
+
+    socket.on("partition:round-ended", (payload: PartitionEndedPushPayload) => {
+      setScreen((current) => {
+        // Keep the last-known view and overlay the settled result, so the tablet
+        // does not blank out.
+        if (current.kind !== "partition") return current;
+        return {
+          kind: "partition",
+          state: {
+            ...current.state,
+            ended: {
+              reason: payload.reason,
+              solvedCount: payload.solvedCount,
+              score: payload.score,
+              completionTimeSeconds: payload.completionTimeSeconds,
+            },
+          },
+        };
+      });
+    });
+
     socket.on("disconnect", () => {
       // On reconnect, refetch the current state. Socket.io handles the actual
       // reconnection; we only need to refresh our mirror of the round.
@@ -419,11 +580,26 @@ export function PlayerPage() {
         void refreshRotationState(current.state.roundId);
         return;
       }
+      if (current.kind === "partition") {
+        void refreshPartitionState(current.state.roundId);
+        return;
+      }
+      // A paused Team round: only one of the two snapshots is non-null, because
+      // `round:paused` clears the sibling. The Individual `GET /:roundId/state`
+      // finds nothing for a team round (BLD-040), so route to the right reader.
+      if (rotationSnapshotRef.current) {
+        void refreshRotationState(rotationSnapshotRef.current.roundId);
+        return;
+      }
+      if (partitionSnapshotRef.current) {
+        void refreshPartitionState(partitionSnapshotRef.current.roundId);
+        return;
+      }
       const roundId =
         current.kind === "active"
           ? current.roundId
           : current.kind === "resuming"
-            ? (current.activeSnapshot?.roundId ?? rotationSnapshotRef.current?.roundId)
+            ? current.activeSnapshot?.roundId
             : undefined;
       if (roundId) {
         void refreshState(roundId);
@@ -434,7 +610,7 @@ export function PlayerPage() {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [session, refreshState, refreshRotationState]);
+  }, [session, refreshState, refreshRotationState, refreshPartitionState]);
 
   // After a resume's 3-2-1 has played out, return to the active screen. The
   // countdown is cosmetic; the server's timer is the authority (RND-001).
@@ -445,7 +621,20 @@ export function PlayerPage() {
     // effect, and a state updater must stay pure (React re-runs them under
     // StrictMode).
     const rotationSnapshot = screen.rotationSnapshot;
+    const partitionSnapshot = screen.partitionSnapshot;
     const handle = window.setTimeout(() => {
+      if (partitionSnapshot) {
+        // The partition round: restore the band grid immediately (typed digits are
+        // local-only until the next autosave), then re-read the server's copy, whose
+        // total-time deadline was pushed out by the pause (invariant 3).
+        setScreen((current) =>
+          current.kind === "resuming"
+            ? { kind: "partition", state: partitionSnapshot }
+            : current,
+        );
+        void refreshPartitionState(partitionSnapshot.roundId);
+        return;
+      }
       if (rotationSnapshot) {
         // A team round: restore the held question immediately so the grid is not
         // blank, then re-read the server's copy — its rotation deadline was
@@ -476,7 +665,7 @@ export function PlayerPage() {
       });
     }, delay);
     return () => window.clearTimeout(handle);
-  }, [screen, refreshRotationState]);
+  }, [screen, refreshRotationState, refreshPartitionState]);
 
   if (!session || session.role !== "PLAYER") {
     return null;
@@ -529,6 +718,17 @@ export function PlayerPage() {
   if (screen.kind === "rotation") {
     return (
       <RotationRoundScreen
+        state={screen.state}
+        sessionToken={session.token}
+        deviceId={session.deviceId}
+      />
+    );
+  }
+
+  // partition (Unit 14)
+  if (screen.kind === "partition") {
+    return (
+      <PartitionRoundScreen
         state={screen.state}
         sessionToken={session.token}
         deviceId={session.deviceId}
