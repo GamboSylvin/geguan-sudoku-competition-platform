@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useLocale } from "../../i18n/locale-context";
 import { clearSession } from "../auth/session";
+import { CompetitionApiError, copyCompetition } from "../competition/competitionApi";
 import {
   ControllerApiError,
   listCompetitions,
@@ -14,6 +15,12 @@ import {
  * competition — but the controller has to choose which event to drive, because one
  * installation runs several competitions across a day. This is that choice: a plain
  * list, newest first, each row opening the live dashboard.
+ *
+ * Unit 15 adds two row actions: the school leaderboard, and "copy this competition".
+ * The copy is server-side deep (categories, round settings, scoring configuration,
+ * question sets/questions, judge assignments — and nothing else), so the row lands
+ * on the new competition's setup screen, where it still has to be published again
+ * after a fresh participant import.
  */
 const POLL_INTERVAL_MS = 3000;
 
@@ -23,6 +30,8 @@ export function ControllerPickerPage() {
 
   const [competitions, setCompetitions] = useState<CompetitionSummaryView[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** The competition being copied, so its button can disable and show progress. */
+  const [copyingId, setCopyingId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -49,6 +58,31 @@ export function ControllerPickerPage() {
   async function onLogout(): Promise<void> {
     clearSession();
     navigate("/login", { replace: true });
+  }
+
+  /**
+   * Copy a competition and open the copy's setup screen. The copy is unpublished
+   * (`CREATED`) by design, so the setup screen is where it has to go next.
+   */
+  async function onCopy(competitionId: string): Promise<void> {
+    if (copyingId) return;
+    setCopyingId(competitionId);
+    setError(null);
+    try {
+      const copy = await copyCompetition(competitionId);
+      navigate(`/controller/competitions/${encodeURIComponent(copy.id)}/setup`);
+    } catch (e) {
+      setError(t("controller.copyFailed"));
+      const expired =
+        (e instanceof CompetitionApiError || e instanceof ControllerApiError) &&
+        e.status === 401;
+      if (expired) {
+        clearSession();
+        navigate("/login", { replace: true });
+      }
+    } finally {
+      setCopyingId(null);
+    }
   }
 
   return (
@@ -116,6 +150,26 @@ export function ControllerPickerPage() {
                 </p>
               </div>
               <div className="flex gap-2">
+                <Link
+                  to={`/controller/competitions/${encodeURIComponent(c.id)}/setup`}
+                  className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100"
+                >
+                  {t("controller.pickSetup")}
+                </Link>
+                <Link
+                  to={`/controller/competitions/${encodeURIComponent(c.id)}/school-ranking`}
+                  className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100"
+                >
+                  {t("controller.pickSchoolRanking")}
+                </Link>
+                <button
+                  type="button"
+                  className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 disabled:opacity-50"
+                  disabled={copyingId !== null}
+                  onClick={() => void onCopy(c.id)}
+                >
+                  {copyingId === c.id ? t("controller.copying") : t("controller.pickCopy")}
+                </button>
                 <Link
                   to={`/controller/competitions/${encodeURIComponent(c.id)}/results`}
                   className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100"

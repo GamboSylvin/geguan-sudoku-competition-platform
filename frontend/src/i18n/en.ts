@@ -59,6 +59,7 @@ export const en = {
     entryLink: "Entry link",
     bigScreenLink: "Big-screen link",
     notReady: "Not ready to publish. Still missing:",
+    backToList: "Back to the competition list",
     genericError: "Something went wrong. Please try again.",
     duration: {
       INDIVIDUAL1: "Individual round 1",
@@ -138,6 +139,11 @@ export const en = {
     pickEmpty: "No competition yet.",
     pickOpen: "Open control panel",
     pickResults: "Open results",
+    pickSetup: "Open setup",
+    pickSchoolRanking: "School ranking",
+    pickCopy: "Copy this competition",
+    copying: "Copying…",
+    copyFailed: "The competition could not be copied. Please try again.",
     results: "Results",
     pickCreate: "Create a competition",
     pickManageJudges: "Manage judges",
@@ -424,6 +430,36 @@ export const en = {
     colTime: "Time",
     empty: "No results yet.",
     pageOf: "of",
+  },
+  schoolRanking: {
+    title: "School ranking",
+    subtitle: "One leaderboard per category. Schools are never mixed across categories.",
+    backToResults: "Back to results",
+    refresh: "Refresh",
+    final: "Final",
+    provisional: "Provisional — some schools are still missing results",
+    coefficient: "School coefficient",
+    empty: "No school ranking to show yet.",
+    incompleteRow: "incomplete",
+    tieNote: "equal total — ranked on the summed submission time",
+    tieShared: "equal total and equal submission time — rank shared",
+    colRank: "Rank",
+    colSchool: "School",
+    colTotal: "School total",
+    colIndividual: "Individual sum",
+    colTeam1: "Team round 1",
+    colTeam2: "Team round 2",
+    colTime: "Summed time",
+    colPlayers: "Players",
+    genericError: "Something went wrong. Please try again.",
+    // Every rejection this screen can receive, keyed by its backend code with dots
+    // turned into underscores. Unit 15 adds no new code: it reuses the ranking and
+    // competition ones.
+    errors: {
+      ranking_forbidden: "Only a controller can read a ranking.",
+      ranking_notFound: "No ranking for this category.",
+      auth_sessionExpired: "Your session has ended. Please log in again.",
+    },
   },
 } as const;
 

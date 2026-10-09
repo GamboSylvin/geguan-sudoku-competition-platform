@@ -1,9 +1,13 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useLocale } from "../../i18n/locale-context";
+import { clearSession } from "../auth/session";
 import { JudgeRangeAssignmentPanel } from "../judge/JudgeRangeAssignmentPanel";
 import { QuestionPanel } from "../question/QuestionPanel";
 import {
   createCompetition,
+  CompetitionApiError,
+  fetchCompetition,
   publishCompetition,
   unmetConditionsFrom,
   updateCompetition,
@@ -21,6 +25,12 @@ import {
  * (U-66). It shows the venue Wi-Fi advisory note (U-56, UI copy only), the
  * auto-generated structure with its editable round durations, and the publish action
  * with its readiness-failure / success display.
+ *
+ * Unit 15 gives it a second mode: `/controller/competitions/:id/setup` opens an
+ * **existing** competition instead of the create form. That is where a copy lands,
+ * because the copy is a fresh `CREATED` competition that still has to go through
+ * this screen's publish flow — including a participant import, which Unit 04 owes it
+ * and which is why publishing a brand-new copy fails its readiness check until then.
  */
 
 function stageRoundLabel(
@@ -33,6 +43,8 @@ function stageRoundLabel(
 
 export function CompetitionSetupPage() {
   const { t } = useLocale();
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -48,6 +60,36 @@ export function CompetitionSetupPage() {
 
   const [durationEdits, setDurationEdits] = useState<Record<string, number>>({});
   const [savedRound, setSavedRound] = useState<string | null>(null);
+
+  /**
+   * Reopen an existing competition (Unit 15). Only runs on the `:id` route; the
+   * create route keeps its blank form. A 401 sends the controller back to login the
+   * way every other controller screen does.
+   */
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const loaded = await fetchCompetition(id);
+        if (!cancelled) {
+          setCompetition(loaded);
+          setError(null);
+        }
+      } catch (e) {
+        if (cancelled) return;
+        if (e instanceof CompetitionApiError && e.status === 401) {
+          clearSession();
+          navigate("/login", { replace: true });
+          return;
+        }
+        setError(t("competition.genericError"));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, navigate, t]);
 
   function updateCategory(index: number, patch: Partial<CategoryInput>): void {
     setCategories((current) =>
@@ -119,7 +161,17 @@ export function CompetitionSetupPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 bg-slate-50 p-6 text-slate-800">
-      <h1 className="text-2xl font-semibold">{t("competition.title")}</h1>
+      <div className="flex items-start justify-between gap-4">
+        <h1 className="text-2xl font-semibold">{t("competition.title")}</h1>
+        {id && (
+          <Link
+            to="/controller"
+            className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100"
+          >
+            {t("competition.backToList")}
+          </Link>
+        )}
+      </div>
 
       <p
         role="note"
@@ -128,7 +180,18 @@ export function CompetitionSetupPage() {
         {t("competition.wifiNote")}
       </p>
 
-      {!competition && (
+      {/* While an existing competition is still loading, show neither the blank
+          create form nor the structure — just the loading line. */}
+      {id && !competition && !error && (
+        <p className="text-sm text-slate-600">{t("common.loading")}</p>
+      )}
+      {error && !competition && (
+        <p role="alert" className="text-sm text-red-600">
+          {error}
+        </p>
+      )}
+
+      {!competition && !id && (
         <form className="flex flex-col gap-4" onSubmit={onCreate}>
           <label className="flex flex-col gap-1 text-sm">
             {t("competition.name")}
