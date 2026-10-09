@@ -11,6 +11,8 @@ coverage/
 .env
 .env.*
 !.env.example
+# The production template is a template (no secrets), so it is tracked too (BLD-048).
+!.env.production.example
 
 # local file storage (BLD-001: files live on the server's disk, in a mounted folder)
 storage/
@@ -28,3 +30,6 @@ Thumbs.db
 
 # Microsoft Office lock files (created while a file is open on someone's machine)
 ~$*
+
+# AI agent hand-off notes (continuity files for switching AI platforms) — local only, never committed
+AI-HANDOFF*.md

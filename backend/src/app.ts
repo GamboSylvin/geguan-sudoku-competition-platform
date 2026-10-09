@@ -1,6 +1,8 @@
 import express, { type Express } from "express";
 import { apiRouter } from "./routes";
 import { cors, errorHandler, requestLogger } from "./shared/middleware";
+import { env } from "./config/env";
+import { hasBuiltFrontend, serveFrontend } from "./static-frontend";
 import { gameplayService, installCompetitionFinishedHook, installIndividualResultFinalizedHook } from "./modules/gameplay";
 import { roundTimerService } from "./modules/round";
 import { rankingService } from "./modules/ranking";
@@ -66,6 +68,15 @@ export function createApp(): Express {
   app.use(requestLogger);
 
   app.use("/api", apiRouter);
+
+  // BLD-048: in the production image the frontend's built bundle is served from this
+  // same app, so the browser and the API share one origin and one open port. Gated on
+  // `FRONTEND_DIST`, which is unset in development (there the Vite dev server serves
+  // the frontend), and mounted only AFTER `/api`, so no existing route changes
+  // behaviour. See `static-frontend.ts`.
+  if (hasBuiltFrontend(env.FRONTEND_DIST)) {
+    serveFrontend(app, env.FRONTEND_DIST);
+  }
 
   // Central error handler last: never swallow an error silently.
   app.use(errorHandler);

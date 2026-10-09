@@ -1,0 +1,89 @@
+# Sudoku Arena — production backend image (BLD-048: Alibaba Cloud ECS hosting).
+#
+# A NEW file, deliberately separate from `backend/Dockerfile` (the live development
+# image the second contributor builds Units 13/14 against). The dev Dockerfile is
+# untouched by design.
+#
+# Build context is the REPOSITORY ROOT, not `backend/`, because this one image also
+# builds the frontend's static bundle so the backend can serve it (see
+# `docker-compose.prod.yml` and `DEPLOY.md`, step "how the frontend is served"):
+#
+#   docker compose -f docker-compose.prod.yml build
+#
+# What this image does that the dev one does not:
+#   1. builds the frontend to static files with VITE_API_BASE_URL empty, so every
+#      API and Socket.io call is same-origin relative and never has to know the
+#      server's IP address;
+#   2. compiles the backend TypeScript with the existing `npm run build`
+#      (`tsc -p tsconfig.build.json`) instead of running it through `tsx watch`;
+#   3. starts with `npm start` (`node dist/index.js`), not the dev watcher.
+#
+# Single stage, full `npm install` (devDependencies included) — see the note by the
+# install step for why trimming them would break the documented runbook.
+
+# ---------------------------------------------------------------------------
+# Stage 1: the frontend's static bundle.
+# ---------------------------------------------------------------------------
+FROM node:22-bookworm-slim AS frontend-builder
+
+WORKDIR /app/frontend
+
+# Dependencies first so this layer is cached when only source changes.
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm install
+
+COPY frontend/ ./
+
+# Empty means "same origin as the page that served me". Baked at BUILD time, which
+# is exactly why it must not be an IP address: the image then works on any host, and
+# a changed IP needs no rebuild.
+ARG VITE_API_BASE_URL=""
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+
+RUN npm run build
+
+# ---------------------------------------------------------------------------
+# Stage 2: the backend, serving that bundle.
+# ---------------------------------------------------------------------------
+FROM node:22-bookworm-slim
+
+# Prisma needs OpenSSL in the runtime image (same as the dev Dockerfile).
+RUN apt-get update -y \
+  && apt-get install -y --no-install-recommends openssl \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# NOTE on keeping devDependencies: `npm ci --omit=dev` would make the image smaller,
+# but it would also remove the `prisma` CLI (needed by `prisma migrate deploy`, the
+# command Compose runs on every start) and `tsx` (needed by the seed scripts the
+# runbook documents, `prisma/seed.ts` and its siblings). So the production image
+# installs everything, exactly like the dev image. Trimming this into a real
+# multi-stage runtime — build in one stage, copy only `node_modules` production
+# dependencies plus `dist/` into a slim final stage, and run migrations as a separate
+# one-shot Compose service — is a worthwhile LATER optimization, not a blocker: it
+# costs real complexity for image size on a server that has the disk anyway.
+COPY backend/package.json backend/package-lock.json* ./
+RUN npm install
+
+# Prisma schema + migrations (the schema is the single source of truth, I-31).
+COPY backend/prisma ./prisma
+RUN npx prisma generate
+
+COPY backend/ ./
+
+# The compiled backend (`npm start` runs `node dist/index.js`).
+RUN npm run build
+
+# The frontend bundle the backend serves at `/`. It lives inside the image, not in a
+# bind mount: a mount would be a dev-only convenience and would not exist on a fresh
+# server. `FRONTEND_DIST` in `backend/src/config/env.ts` points here.
+COPY --from=frontend-builder /app/frontend/dist ./frontend-dist
+
+# The container-side port. Compose maps the host's port 80 onto it, so nothing in the
+# image needs to bind a privileged port.
+EXPOSE 3000
+
+# Compose overrides this to apply migrations first (`prisma migrate deploy`), the same
+# pattern the dev compose file uses. This plain form works on its own too.
+CMD ["npm", "start"]
