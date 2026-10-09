@@ -77,11 +77,27 @@ export interface TeamRoundStartInput {
   roundId: string;
   competitionId: string;
   stageId: string;
+  /**
+   * Which team round this is: `1` = the rotation relay (Unit 13), `2` = partition
+   * collaboration (Unit 14). The gameplay module dispatches on it, so the Round
+   * module stays free of any import from gameplay (invariant 4).
+   */
+  roundSequence: number;
   settings: {
     teamPointsPerQuestion: number;
     rotationPeriodSeconds: number;
     teamQuestionCount: number;
     teamTotalTimeSeconds: number | null;
+  };
+  /**
+   * The partition round's own numeric settings (TEM-006 to TEM-008). Present only
+   * for round 2; kept separate from `settings` so the two team rounds' numbers
+   * never collide, matching how `RoundSettings` names them (`partition*` vs `team*`).
+   */
+  partition?: {
+    puzzleCount: number;
+    totalTimeSeconds: number;
+    pointsPerPuzzle: number;
   };
 }
 
@@ -265,22 +281,35 @@ async function startActivePhaseFromTimer(state: TimerState): Promise<void> {
 
     await startRoundTimer(state.roundId, state.competitionId, state.stageId, durationSeconds);
 
-    // The Team stage's rotation relay (Unit 13) deals its own questions, one per
-    // team member, from the category pool — `listRoundQuestions` finds nothing for
-    // it because a team round never sets `Question.roundId` (BLD-040). The round's
-    // own clock above stays the authority for pause/resume and for the
-    // controller's end-early command (invariant 3).
-    if (round.stage.type === "TEAM" && round.sequence === 1) {
+    // The Team stage's two rounds each deal their own questions from the category
+    // pool — `listRoundQuestions` finds nothing for either, because a team round
+    // never sets `Question.roundId` (BLD-040). The round's own clock above stays
+    // the authority for pause/resume and for the controller's end-early command
+    // (invariant 3). Round 1 is the rotation relay (Unit 13), round 2 the
+    // partition collaboration (Unit 14); the gameplay module picks which from
+    // `roundSequence`, so no branch-specific service call is needed here.
+    if (round.stage.type === "TEAM" && (round.sequence === 1 || round.sequence === 2)) {
       await teamRoundStartHook?.({
         roundId: state.roundId,
         competitionId: state.competitionId,
         stageId: state.stageId,
+        roundSequence: round.sequence,
         settings: {
           teamPointsPerQuestion: round.settings?.teamPointsPerQuestion ?? 10,
           rotationPeriodSeconds: round.settings?.rotationPeriodSeconds ?? 60,
           teamQuestionCount: round.settings?.teamQuestionCount ?? 10,
           teamTotalTimeSeconds: round.settings?.teamTotalTimeSeconds ?? null,
         },
+        partition:
+          round.sequence === 2
+            ? {
+                // TEM-06 to TEM-008. The schema's own defaults are 3 / 1800 / 20;
+                // the `??` only covers a round whose settings row is missing.
+                puzzleCount: round.settings?.partitionPuzzleCount ?? 3,
+                totalTimeSeconds: round.settings?.partitionTotalTimeSeconds ?? 1800,
+                pointsPerPuzzle: round.settings?.partitionPointsPerPuzzle ?? 20,
+              }
+            : undefined,
       });
       return;
     }

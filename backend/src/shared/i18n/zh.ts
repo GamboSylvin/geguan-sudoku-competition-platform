@@ -63,6 +63,16 @@ export const zh: MessageCatalogue = {
     staleHold: "该题目已经轮转给其他队员。",
     notARotationRound: "该轮次不是团队轮转轮次。",
   },
+  partition: {
+    notATeamMember: "你不是本轮次任何队伍的在场队员。",
+    partitionNotStarted: "该团队轮次尚未发题。",
+    roundEnded: "该团队轮次已经结束。",
+    notAPartitionRound: "该轮次不是团队齐心协力轮次。",
+    stalePuzzle: "你的队伍已经进入下一道题目。",
+    outsideBand: "你只能编辑分配给你的行。",
+    invalidGrid: "提交的棋盘与该题目不匹配。",
+    noBand: "本轮次没有分配给你的行。",
+  },
   scoring: {
     noQuestions: "该轮次没有可评分的题目。",
   },

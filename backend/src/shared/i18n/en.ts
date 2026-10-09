@@ -79,6 +79,18 @@ export const en = {
     staleHold: "That question has already moved to another teammate.",
     notARotationRound: "This round is not a team rotation round.",
   },
+  partition: {
+    // Unit 14. The team partition round (齐心协力): an autosave is scoped to the
+    // member's own row-band, per cell, and only while the round is active.
+    notATeamMember: "You are not an active member of a team in this round.",
+    partitionNotStarted: "This team round has not been dealt yet.",
+    roundEnded: "This team round has already ended.",
+    notAPartitionRound: "This round is not a team partition round.",
+    stalePuzzle: "Your team has already moved on to the next puzzle.",
+    outsideBand: "You can only edit the rows assigned to you.",
+    invalidGrid: "The grid you sent does not match this puzzle.",
+    noBand: "You have no assigned rows in this round.",
+  },
   scoring: {
     // Unit 08. The scoring module is invoked server-side only; these strings are
     // for the few places it surfaces a failure to log.

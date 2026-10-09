@@ -11,8 +11,16 @@
 //     includesParticipantExcel   (U-59, U-62 — the 15-day purge scope)
 // Account.sessionExpiresAt is now present: I-16 was resolved by AUTH-001 (the
 // session lasts 24 hours from login) and Unit 02 added the column by migration.
-// The second team round (齐心协力 / partition collaboration) is NOT modelled as
-// gameplay (U-05, U-21); only the TeamRotationState state container exists.
+// The second team round (齐心协力 / partition collaboration) IS modelled as gameplay,
+// by Unit 14 (2026-10-09): `TeamPartitionState` holds its row-band split and puzzle
+// progress, mirroring `TeamRotationState` for the first team round. Both are
+// fast-changing state containers whose live copy is Redis (BLD-007); the Postgres row
+// is a best-effort mirror that exists so a judge can read team status (ROL-008). The
+// settled result for either round is durable in `TeamRoundResult`.
+//   NOTE: this contradicts the earlier header claim ("NOT modelled … only
+//   TeamRotationState exists"), which was stale — `context/data-model.md` line 52 has
+//   defined `TeamPartitionState` since its 2026-09-30 approval. The Unit 14 spec's
+//   "this unit adds no new tables" line was a drafting error, corrected the same day.
 
 generator client {
   provider = "prisma-client-js"
@@ -233,6 +241,7 @@ model Round {
   individualResults   IndividualRoundResult[]
   teamResults         TeamRoundResult[]
   rotationStates      TeamRotationState[]
+  partitionStates     TeamPartitionState[]
 
   @@index([stageId])
 }
@@ -367,6 +376,7 @@ model Team {
   participants Participant[]
   roundResults TeamRoundResult[]
   rotationStates TeamRotationState[]
+  partitionStates TeamPartitionState[]
 
   // Exactly one team per school per category (SCR-004).
   @@unique([competitionId, categoryId, schoolId])
@@ -723,4 +733,43 @@ model AuditLog {
   actor       Account?     @relation(fields: [actorAccountId], references: [id], onDelete: SetNull)
 
   @@index([competitionId])
+}
+
+/// The second team round's gameplay state container (Unit 14, 齐心协力 / partition
+/// collaboration, TEM-005). data-model.md line 52 has defined this entity since its
+/// 2026-09-30 approval; Unit 14 creates its concrete form.
+///
+/// Like `TeamRotationState`, the authoritative live copy is Redis
+/// (`gameplay:partition:{roundId}:{teamId}`, BLD-007); this row is a best-effort
+/// mirror, written without ever failing the round, so a judge can read team status
+/// for round 2 (ROL-008). The settled value is `TeamRoundResult`, reused unchanged.
+///
+/// `blockAssignments` is the row-band split: a JSON array of
+/// `{ participantId, startRow, endRow }` (both inclusive), ordered by band, covering
+/// the puzzle's rows exactly once with extra rows going to the first bands
+/// (TEM-005 — a 9-row grid split 4 ways is `[3,2,2,2]`). It is computed once per team
+/// at round start and reused for every puzzle in the round (a flagged Unit 14
+/// assumption, isolated in `team-partition.service.ts`'s `reuseSplitAcrossPuzzles()`).
+model TeamPartitionState {
+  id      String @id @default(uuid())
+  roundId String
+  teamId  String
+
+  /// See the model comment: `[{ participantId, startRow, endRow }]`, band-ordered.
+  blockAssignments Json?
+  /// Zero-based index of the puzzle the team is currently working on.
+  puzzleIndex Int  @default(0)
+  /// Puzzles whose combined grid reached a fully correct state (the round's
+  /// `correctCount`, and the multiplier for `TeamRoundResult.score`).
+  solvedCount Int  @default(0)
+  /// Set when this team's round-2 result has been finalized; stops further edits.
+  finished  Boolean   @default(false)
+  startedAt DateTime?
+  endedAt   DateTime?
+
+  round Round @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  team  Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([roundId, teamId])
+  @@index([roundId])
 }

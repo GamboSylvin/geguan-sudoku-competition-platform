@@ -73,13 +73,30 @@ export const ROTATION_EVENTS = {
 } as const;
 
 /**
+ * Team partition collaboration events (Unit 14, 齐心协力, spec API Contract). Like
+ * the rotation round these are **per-tablet**: each member owns a different row-band
+ * of the shared puzzle, so the gateway addresses them by room. The client never sends
+ * these. Payloads are defined in `modules/gameplay/team-partition.types`.
+ *   - `partition:deal` — the initial deal at round start.
+ *   - `partition:puzzle-solved` — the combined grid reached a fully correct state and
+ *     the team moved to the next puzzle with the same band split. Carries `reason:
+ *     "PUZZLE_SOLVED"`; it is the same payload shape as the deal, so one client
+ *     handler covers both.
+ *   - `partition:round-ended` — this team's round is settled.
+ */
+export const PARTITION_EVENTS = {
+  deal: "partition:deal",
+  puzzleSolved: "partition:puzzle-solved",
+  roundEnded: "partition:round-ended",
+} as const;
+
+/**
  * The per-tablet room name. One player socket, one room — the smallest possible
  * audience for a payload that carries that member's own question and grid.
  */
 export function tabletRoom(participantId: string): string {
   return `tablet:${participantId}`;
 }
-
 export interface SystemConnectedPayload {
   /** ISO timestamp from the single server clock (the server owns time). */
   serverTime: string;

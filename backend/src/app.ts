@@ -1,7 +1,7 @@
 import express, { type Express } from "express";
 import { apiRouter } from "./routes";
 import { cors, errorHandler, requestLogger } from "./shared/middleware";
-import { gameplayService, installCompetitionFinishedHook, installIndividualResultFinalizedHook, teamRotationService } from "./modules/gameplay";
+import { gameplayService, installCompetitionFinishedHook, installIndividualResultFinalizedHook, teamPartitionService, teamRotationService } from "./modules/gameplay";
 import { roundService, roundTimerService } from "./modules/round";
 import { rankingService } from "./modules/ranking";
 import { bigScreenService } from "./modules/big-screen";
@@ -39,10 +39,29 @@ function installListeners(): void {
     if (event.finishedEarly) return;
     void bigScreenService.setMode({ competitionId: event.competitionId, mode: "FINAL" });
   });
-  // Unit 13: the Team stage's rotation round deals its own questions at countdown
-  // zero, replacing the Individual stage's "fetch all 6 puzzles" step. The Round
-  // module cannot import Gameplay (invariant 4), so the hookup lives here.
-  roundService.installTeamRoundStartHook((input) => teamRotationService.startRotationRound(input));
+  // Unit 13/14: the Team stage's rounds deal their own questions at countdown zero,
+  // replacing the Individual stage's "fetch all 6 puzzles" step — round 1 is the
+  // rotation relay (Unit 13), round 2 the partition collaboration, 齐心协力 (Unit 14).
+  // The Round module cannot import Gameplay (invariant 4), so the hookup and the
+  // round-1/round-2 dispatch live here. `input.partition` is populated only for
+  // round 2 (see `round.service.ts`'s TEAM branch); the fallback values are the same
+  // ones the `RoundSettings` column defaults carry, so a round-2 start can never be
+  // missing them silently.
+  roundService.installTeamRoundStartHook((input) => {
+    if (input.roundSequence === 2) {
+      return teamPartitionService.startPartitionRound({
+        roundId: input.roundId,
+        competitionId: input.competitionId,
+        stageId: input.stageId,
+        partition: input.partition ?? {
+          puzzleCount: 3,
+          totalTimeSeconds: 1800,
+          pointsPerPuzzle: 20,
+        },
+      });
+    }
+    return teamRotationService.startRotationRound(input);
+  });
   listenersInstalled = true;
 }
 

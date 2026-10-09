@@ -7,7 +7,7 @@ import { identityService } from "../modules/identity";
 import { bigScreenService } from "../modules/big-screen";
 import type { BigScreenModePayload, BigScreenRankingPayload } from "../modules/big-screen";
 import { roundService, roundTimerService } from "../modules/round";
-import { installRotationHooks } from "../modules/gameplay";
+import { installRotationHooks, installPartitionHooks } from "../modules/gameplay";
 import type {
   PreparationTickPayload,
   RoundPausedPayload,
@@ -17,6 +17,7 @@ import type {
 } from "../modules/round";
 import {
   BIG_SCREEN_EVENTS,
+  PARTITION_EVENTS,
   RANKING_EVENTS,
   REALTIME_NAMESPACES,
   ROTATION_EVENTS,
@@ -224,6 +225,26 @@ export function createRealtimeGateway(httpServer: HttpServer): SocketServer {
     },
     onEnded: (target, payload) => {
       playerNamespace.to(tabletRoom(target.participantId)).emit(ROTATION_EVENTS.ended, payload);
+    },
+  });
+
+  // ---------------------------------------------------------------------------
+  // Team partition collaboration pushes (Unit 14, 齐心协力)
+  //
+  // Same split as the rotation round: the service builds the payload, the gateway
+  // only puts it on the wire to that one tablet's room. The round's two deal-shaped
+  // pushes (`partition:deal` and `partition:puzzle-solved`) are one hook, because the
+  // spec gives them one payload type — `reason` is the only difference — so the event
+  // name is chosen from it here rather than the service carrying two hooks.
+  // ---------------------------------------------------------------------------
+  installPartitionHooks({
+    onDeal: (target, payload) => {
+      const room = playerNamespace.to(tabletRoom(target.participantId));
+      if (payload.reason === "PUZZLE_SOLVED") room.emit(PARTITION_EVENTS.puzzleSolved, payload);
+      else room.emit(PARTITION_EVENTS.deal, payload);
+    },
+    onEnded: (target, payload) => {
+      playerNamespace.to(tabletRoom(target.participantId)).emit(PARTITION_EVENTS.roundEnded, payload);
     },
   });
 
