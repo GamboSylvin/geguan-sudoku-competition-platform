@@ -16,7 +16,8 @@ import { io, type Socket } from "socket.io-client";
 import { API_BASE_URL } from "@/config/env";
 import { useLocale } from "@/i18n/locale-context";
 import { loadSession, landingPath } from "@/features/auth/session";
-import { ActiveRoundScreen } from "@/features/gameplay";
+import { ActiveRoundScreen, RotationRoundScreen } from "@/features/gameplay";
+import type { RotationViewState } from "@/features/gameplay";
 
 /** Mirrors the backend's round payload shapes; the wire contract is the backend's. */
 interface RoundQuestionPayload {
@@ -60,6 +61,73 @@ interface RoundResumedPayload {
   pausedRemainingSeconds: number;
 }
 
+/**
+ * Unit 13: the three rotation pushes, all addressed to this one tablet's room.
+ * `deal` and `rotated` share a shape — one client handler covers the initial deal,
+ * the timed rotation, the post-submit refill and the stale-hold refresh.
+ */
+interface RotationPushPayload {
+  roundId: string;
+  competitionId: string;
+  stageId: string;
+  teamId: string;
+  participantId: string;
+  hold: { question: RoundQuestionPayload; grid: (number | null)[] } | null;
+  totalQuestionCount: number;
+  correctCount: number;
+  teamScore: number;
+  nextRotationAtMs: number;
+  rotationPeriodSeconds: number;
+  totalTimeDeadlineMs: number | null;
+  /** Only on `rotation:rotated`. */
+  reason?: "ROTATION" | "REFILL" | "STALE_HOLD" | "RECONNECT";
+}
+
+interface RotationEndedPushPayload {
+  roundId: string;
+  competitionId: string;
+  stageId: string;
+  teamId: string;
+  reason: "ALL_CORRECT" | "TIME_LIMIT";
+  correctCount: number;
+  score: number;
+  completionTimeSeconds: number | null;
+}
+
+/** What `GET /api/gameplay/rotation/:roundId/state` returns for this tablet. */
+interface RotationTabletStatePayload extends Omit<RotationPushPayload, "reason"> {
+  status: "ACTIVE" | "FINISHED";
+  result: RotationEndedPushPayload | null;
+}
+
+/** Map any of the three rotation sources onto the screen's one view state. */
+function toRotationViewState(
+  payload: RotationPushPayload | RotationTabletStatePayload,
+  ended: RotationEndedPushPayload | null,
+  reason?: RotationPushPayload["reason"],
+): RotationViewState {
+  return {
+    roundId: payload.roundId,
+    teamId: payload.teamId,
+    hold: payload.hold,
+    totalQuestionCount: payload.totalQuestionCount,
+    correctCount: payload.correctCount,
+    teamScore: payload.teamScore,
+    nextRotationAtMs: payload.nextRotationAtMs,
+    rotationPeriodSeconds: payload.rotationPeriodSeconds,
+    totalTimeDeadlineMs: payload.totalTimeDeadlineMs,
+    ended: ended
+      ? {
+          reason: ended.reason,
+          correctCount: ended.correctCount,
+          score: ended.score,
+          completionTimeSeconds: ended.completionTimeSeconds,
+        }
+      : null,
+    rotatedReason: reason,
+  };
+}
+
 interface GameplayStatePayload {
   roundId: string;
   competitionId: string;
@@ -84,6 +152,11 @@ type ScreenState =
       savedGrids: GameplayStatePayload["savedGrids"];
       participationState: GameplayStatePayload["participationState"];
     }
+  /**
+   * The Team stage's rotation round (Unit 13). One held question at a time, which
+   * the server replaces wholesale on every push — there is nothing to merge here.
+   */
+  | { kind: "rotation"; state: RotationViewState }
   | { kind: "paused"; pausedRemainingSeconds: number }
   | {
       kind: "resuming";
@@ -98,6 +171,8 @@ type ScreenState =
         savedGrids: GameplayStatePayload["savedGrids"];
         participationState: GameplayStatePayload["participationState"];
       } | null;
+      /** Unit 13: the rotation screen to return to, when this is a team round. */
+      rotationSnapshot: RotationViewState | null;
     };
 
 export function PlayerPage() {
@@ -108,6 +183,21 @@ export function PlayerPage() {
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const activeSnapshotRef = useRef<ScreenState | null>(null);
+  /**
+   * The Team stage's equivalent (Unit 13). A pause is not a round change, so the
+   * tablet must come back to the same held question — the server keeps the hold
+   * while paused, and the rotation tick re-arms rather than firing.
+   */
+  const rotationSnapshotRef = useRef<RotationViewState | null>(null);
+  /**
+   * A mirror of `screen` readable from the socket callbacks. The reconnect handler
+   * needs the current round to re-read, but a state updater must stay pure — it
+   * cannot own a fetch — so it reads this instead.
+   */
+  const screenRef = useRef<ScreenState>({ kind: "waiting" });
+  useEffect(() => {
+    screenRef.current = screen;
+  }, [screen]);
 
   // Gate: a player session only. Other roles go to their own landing.
   useEffect(() => {
@@ -160,6 +250,39 @@ export function PlayerPage() {
     [session, t],
   );
 
+  /**
+   * The rotation round's own reconnect read (Unit 13). `GET /:roundId/state`
+   * cannot serve a team round: its questions are drawn from the category pool and
+   * never carry a `roundId` (BLD-040), so that endpoint finds nothing. This one
+   * returns exactly what this tablet holds right now, plus the settled result if
+   * the round already ended while the tablet was away.
+   */
+  const refreshRotationState = useCallback(
+    async (roundId: string) => {
+      if (!session) return;
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/gameplay/rotation/${roundId}/state`,
+          {
+            headers: {
+              "x-session-token": session.token,
+              "x-device-id": session.deviceId,
+            },
+          },
+        );
+        if (!response.ok) return;
+        const state = (await response.json()) as RotationTabletStatePayload;
+        setScreen({
+          kind: "rotation",
+          state: toRotationViewState(state, state.result, "RECONNECT"),
+        });
+      } catch {
+        setError(t("player.genericError"));
+      }
+    },
+    [session, t],
+  );
+
   useEffect(() => {
     if (!session || session.role !== "PLAYER") return;
 
@@ -201,35 +324,82 @@ export function PlayerPage() {
     });
 
     socket.on("round:paused", (payload: RoundPausedPayload) => {
-      setScreen((current) => {
-        if (current.kind === "active") {
-          activeSnapshotRef.current = current;
-        }
-        return { kind: "paused", pausedRemainingSeconds: payload.pausedRemainingSeconds };
-      });
+      // Snapshot the screen we are leaving so a resume can return to it. Read via
+      // the mirror, not from inside the updater — writing a ref there would be a
+      // side effect in what must stay a pure function.
+      const current = screenRef.current;
+      if (current.kind === "active") {
+        activeSnapshotRef.current = current;
+      } else if (current.kind === "rotation") {
+        rotationSnapshotRef.current = current.state;
+      }
+      setScreen({ kind: "paused", pausedRemainingSeconds: payload.pausedRemainingSeconds });
     });
 
     socket.on("round:resumed", (payload: RoundResumedPayload) => {
+      const current = screenRef.current;
+      const snapshot =
+        current.kind === "active"
+          ? current
+          : (activeSnapshotRef.current as Extract<ScreenState, { kind: "active" }> | null);
+      const rotationSnapshot =
+        current.kind === "rotation" ? current.state : rotationSnapshotRef.current;
+      setScreen({
+        kind: "resuming",
+        resumesAtMs: payload.resumesAtMs,
+        resumeCountdownSeconds: payload.resumeCountdownSeconds,
+        pausedRemainingSeconds: payload.pausedRemainingSeconds,
+        activeSnapshot: snapshot
+          ? {
+              roundId: snapshot.roundId,
+              competitionId: snapshot.competitionId,
+              durationSeconds: snapshot.durationSeconds,
+              questions: snapshot.questions,
+              savedGrids: snapshot.savedGrids,
+              participationState: snapshot.participationState,
+            }
+          : null,
+        rotationSnapshot,
+      });
+    });
+
+    /**
+     * Unit 13's three rotation pushes. All three are addressed to this one
+     * tablet's room (`tablet:<participantId>`), so nothing here has to check
+     * whether the push was meant for us. `deal` and `rotated` share a shape:
+     * the initial deal, the timed rotation, the post-submit refill and the
+     * stale-hold refresh are all "here is what you hold now".
+     */
+    socket.on("rotation:deal", (payload: RotationPushPayload) => {
+      setScreen({
+        kind: "rotation",
+        state: toRotationViewState(payload, null),
+      });
+    });
+
+    socket.on("rotation:rotated", (payload: RotationPushPayload) => {
+      setScreen({
+        kind: "rotation",
+        state: toRotationViewState(payload, null, payload.reason),
+      });
+    });
+
+    socket.on("rotation:ended", (payload: RotationEndedPushPayload) => {
       setScreen((current) => {
-        const snapshot =
-          current.kind === "active"
-            ? current
-            : (activeSnapshotRef.current as Extract<ScreenState, { kind: "active" }> | null);
+        // Keep the last-known view (the score line, the progress count) and only
+        // overlay the settled result, so the tablet does not blank out.
+        if (current.kind !== "rotation") return current;
         return {
-          kind: "resuming",
-          resumesAtMs: payload.resumesAtMs,
-          resumeCountdownSeconds: payload.resumeCountdownSeconds,
-          pausedRemainingSeconds: payload.pausedRemainingSeconds,
-          activeSnapshot: snapshot
-            ? {
-                roundId: snapshot.roundId,
-                competitionId: snapshot.competitionId,
-                durationSeconds: snapshot.durationSeconds,
-                questions: snapshot.questions,
-                savedGrids: snapshot.savedGrids,
-                participationState: snapshot.participationState,
-              }
-            : null,
+          kind: "rotation",
+          state: {
+            ...current.state,
+            ended: {
+              reason: payload.reason,
+              correctCount: payload.correctCount,
+              score: payload.score,
+              completionTimeSeconds: payload.completionTimeSeconds,
+            },
+          },
         };
       });
     });
@@ -240,33 +410,55 @@ export function PlayerPage() {
     });
 
     socket.on("connect", () => {
-      // After a reconnect, refresh the state for the round we were last on.
-      setScreen((current) => {
-        const roundId =
-          current.kind === "active"
-            ? current.roundId
-            : current.kind === "resuming"
-              ? current.activeSnapshot?.roundId
-              : undefined;
-        if (roundId) {
-          void refreshState(roundId);
-        }
-        return current;
-      });
+      // After a reconnect, refresh the state for the round we were last on. The
+      // two stages have different endpoints: a team round's questions come from
+      // the category pool and never carry a `roundId` (BLD-040), so the
+      // Individual `GET /:roundId/state` finds nothing for it.
+      const current = screenRef.current;
+      if (current.kind === "rotation") {
+        void refreshRotationState(current.state.roundId);
+        return;
+      }
+      const roundId =
+        current.kind === "active"
+          ? current.roundId
+          : current.kind === "resuming"
+            ? (current.activeSnapshot?.roundId ?? rotationSnapshotRef.current?.roundId)
+            : undefined;
+      if (roundId) {
+        void refreshState(roundId);
+      }
     });
 
     return () => {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [session, refreshState]);
+  }, [session, refreshState, refreshRotationState]);
 
   // After a resume's 3-2-1 has played out, return to the active screen. The
   // countdown is cosmetic; the server's timer is the authority (RND-001).
   useEffect(() => {
     if (screen.kind !== "resuming") return;
     const delay = Math.max(0, screen.resumesAtMs - Date.now());
+    // Read the snapshot out here rather than inside the updater: a fetch is a side
+    // effect, and a state updater must stay pure (React re-runs them under
+    // StrictMode).
+    const rotationSnapshot = screen.rotationSnapshot;
     const handle = window.setTimeout(() => {
+      if (rotationSnapshot) {
+        // A team round: restore the held question immediately so the grid is not
+        // blank, then re-read the server's copy — its rotation deadline was
+        // re-armed during the pause, so the snapshot's `nextRotationAtMs` is stale
+        // and only the server knows the new one (invariant 3).
+        setScreen((current) =>
+          current.kind === "resuming"
+            ? { kind: "rotation", state: rotationSnapshot }
+            : current,
+        );
+        void refreshRotationState(rotationSnapshot.roundId);
+        return;
+      }
       setScreen((current) => {
         if (current.kind !== "resuming") return current;
         if (current.activeSnapshot) {
@@ -284,7 +476,7 @@ export function PlayerPage() {
       });
     }, delay);
     return () => window.clearTimeout(handle);
-  }, [screen]);
+  }, [screen, refreshRotationState]);
 
   if (!session || session.role !== "PLAYER") {
     return null;
@@ -329,6 +521,17 @@ export function PlayerPage() {
       <ResumeCountdownScreen
         resumesAtMs={screen.resumesAtMs}
         resumeCountdownSeconds={screen.resumeCountdownSeconds}
+      />
+    );
+  }
+
+  // rotation (Unit 13)
+  if (screen.kind === "rotation") {
+    return (
+      <RotationRoundScreen
+        state={screen.state}
+        sessionToken={session.token}
+        deviceId={session.deviceId}
       />
     );
   }

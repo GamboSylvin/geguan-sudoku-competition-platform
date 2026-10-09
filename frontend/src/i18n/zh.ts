@@ -288,6 +288,27 @@ export const zh: MessageCatalogue = {
     submittedReadOnly: "您的答案(只读)",
     submitting: "正在提交…",
   },
+  // Unit 13:团队赛第一轮的轮转接力。这里的分数是全队共享的统一分值
+  // (SCR-007/SCR-015),与个人赛不同,可以直接显示。
+  rotation: {
+    teamScore: "团队得分",
+    progress: "已解出",
+    nextRotation: "轮转倒计时",
+    submit: "提交答案",
+    submitting: "正在提交…",
+    correct: "回答正确!做得好。",
+    incorrect: "还不对——题目会继续轮转,队友可以接着完成。",
+    nothingToWorkOn: "当前没有可作答的题目",
+    nothingToWorkOnHint: "你所在队伍的题目都已作答完毕,请等待下一道题轮转过来。",
+    roundEnded: "本轮结束",
+    roundEndedAllCorrect: "所有题目均已解答完毕。团队最终得分:",
+    roundEndedTimeLimit: "时间已到。团队最终得分:",
+    movedToTeammate: "这道题已经轮转给队友。",
+    staleHold: "该题目已经轮转出去——这是你现在持有的题目。",
+    errorStale: "该题目已经轮转给其他队员。",
+    errorEnded: "该团队轮次已经结束。",
+    errorGeneric: "提交未成功,请重试。",
+  },
   question: {
     title: "题目",
     category: "组别",
