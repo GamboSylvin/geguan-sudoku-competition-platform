@@ -18,7 +18,7 @@ This folder is the single source of truth a coding agent reads before it builds 
 | `FILL-BEFORE-CODING.md` | The checklist of every blank to fill before coding, with owners | Written, all rows closed or explicitly deferred past coding |
 | `data-model.md` | The data model and schema | Written and **approved** 2026-09-30 (A6), amended several times since; the Prisma schema is its concrete form (one amendment, `Question.roundId` nullable, not yet migrated — see `progress-tracker.md`, "Known Issues") |
 | `specs/00-build-plan.md` | Units, order, dependencies, definition of done | **Approved** 2026-09-30 (A7): 15 units |
-| `specs/01-foundation.md` through `specs/15-*.md` | Each unit's own spec | 12 units built (`01,02,03,05,06,07,08,09,10,11`); specs `12`–`15` are drafted and **approved**, ready to build; Unit `04` has no spec yet, blocked on U-01 — see `progress-tracker.md` |
+| `specs/01-foundation.md` through `specs/15-*.md` | Each unit's own spec | 13 units built (`01,02,03,05,06,07,08,09,10,11,13` — `13` built 2026-10-09, out of plan order); specs `12`, `14` and `15` are drafted and **approved**, ready to build in that order; Unit `04` has no spec yet, blocked on U-01 — see `progress-tracker.md` |
 | `samples/` | Real participant/question sample files from the client | Populated 2026-10-07 — see `samples/README.md` |
 
 **Blanks:** search the folder for `FILL-BEFORE-CODING` (needed before the first unit), `FILL-BEFORE-UNIT` (needed before a named unit) and `FILL-BEFORE-DEPLOYMENT`. **Do not write code while a `FILL-BEFORE-CODING` marker remains.**
