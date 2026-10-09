@@ -70,6 +70,15 @@ export const en = {
     notActive: "The round is not active.",
     notAParticipant: "You are not a participant in this round.",
   },
+  rotation: {
+    // Unit 13. The team rotation relay: a submit is scoped to the member's own
+    // team and to the question their tablet currently holds (spec Security).
+    notATeamMember: "You are not an active member of a team in this round.",
+    rotationNotStarted: "This team round has not been dealt yet.",
+    roundEnded: "This team round has already ended.",
+    staleHold: "That question has already moved to another teammate.",
+    notARotationRound: "This round is not a team rotation round.",
+  },
   scoring: {
     // Unit 08. The scoring module is invoked server-side only; these strings are
     // for the few places it surfaces a failure to log.

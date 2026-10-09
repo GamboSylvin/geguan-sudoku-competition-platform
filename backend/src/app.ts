@@ -1,8 +1,8 @@
 import express, { type Express } from "express";
 import { apiRouter } from "./routes";
 import { cors, errorHandler, requestLogger } from "./shared/middleware";
-import { gameplayService, installCompetitionFinishedHook, installIndividualResultFinalizedHook } from "./modules/gameplay";
-import { roundTimerService } from "./modules/round";
+import { gameplayService, installCompetitionFinishedHook, installIndividualResultFinalizedHook, teamRotationService } from "./modules/gameplay";
+import { roundService, roundTimerService } from "./modules/round";
 import { rankingService } from "./modules/ranking";
 import { bigScreenService } from "./modules/big-screen";
 
@@ -39,6 +39,10 @@ function installListeners(): void {
     if (event.finishedEarly) return;
     void bigScreenService.setMode({ competitionId: event.competitionId, mode: "FINAL" });
   });
+  // Unit 13: the Team stage's rotation round deals its own questions at countdown
+  // zero, replacing the Individual stage's "fetch all 6 puzzles" step. The Round
+  // module cannot import Gameplay (invariant 4), so the hookup lives here.
+  roundService.installTeamRoundStartHook((input) => teamRotationService.startRotationRound(input));
   listenersInstalled = true;
 }
 

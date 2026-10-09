@@ -37,6 +37,7 @@ import * as roundRepository from "../round/round.repository";
 import { roundTimerService } from "../round/round-timer.service";
 import { scoringService } from "../scoring/scoring.service";
 import * as repository from "./gameplay.repository";
+import { teamRotationService } from "./team-rotation.service";
 import type {
   AutosaveInput,
   GameplayStatePayload,
@@ -393,6 +394,19 @@ async function submit(
  * so one bad row cannot strand the whole round.
  */
 async function handleRoundEnded(event: RoundEndedEvent): Promise<void> {
+  // A team round has no `RoundParticipation` rows and no individual result to
+  // write (invariant 7: an autosave/timeout never produces a team score). Its end
+  // settles `TeamRoundResult` instead, so the rotation module owns it — including
+  // the advance to the Team stage's round 2 (Unit 13 Detail 5).
+  const roundRow = await prisma.round.findUnique({
+    where: { id: event.roundId },
+    select: { sequence: true, stage: { select: { type: true } } },
+  });
+  if (roundRow && teamRotationService.isRotationRound(roundRow.stage.type, roundRow.sequence)) {
+    await teamRotationService.handleRotationRoundEnded(event);
+    return;
+  }
+
   const participations = await prisma.roundParticipation.findMany({
     where: { roundId: event.roundId, state: "ACTIVE" },
     select: { participantId: true },
@@ -591,13 +605,12 @@ async function advanceAfterRoundFinalized(
   });
   if (!finished) return;
 
-  // Only the Individual stage auto-advances between rounds (CS-022). The Team
-  // stage's transition is a Unit 13/14 build, gated by Unit 11's commands.
-  if (finished.stage.type !== "INDIVIDUAL") {
-    await finishStageAndMaybeCompetition(stageId, competitionId, roundId);
-    return;
-  }
-
+  // Both stages auto-advance between their own rounds. The Individual stage does
+  // so by CS-022; the Team stage's round 1 → round 2 transition is Unit 13's
+  // Detail 5, reusing this exact path — the next round goes into preparation and
+  // the controller's start command is still what begins a *stage* (RND-006).
+  // Round 2's gameplay is Unit 14's build, which does not exist yet: the hook is
+  // here, the accepted gap the spec records.
   const next = await findNextRoundInStage(stageId, finished.sequence);
   if (!next) {
     await finishStageAndMaybeCompetition(stageId, competitionId, roundId);
@@ -718,6 +731,14 @@ async function recordLeftAnswerPage(
   });
   return { leftAnswerPageCount: updated.leftAnswerPageCount };
 }
+
+// Installed at module load: when a team rotation round settles itself (every
+// team's `TeamRoundResult` written), the advance chain here starts the Team
+// stage's round 2 preparation — Unit 13's Detail 5. The rotation service never
+// imports this file, so there is no cycle (invariant 4).
+teamRotationService.installRotationRoundEndedHook((event) =>
+  advanceAfterRoundFinalized(event.roundId, event.stageId, event.competitionId),
+);
 
 export const gameplayService = {
   autosave,

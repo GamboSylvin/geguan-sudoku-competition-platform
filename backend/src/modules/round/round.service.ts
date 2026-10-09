@@ -65,6 +65,33 @@ export function installRoundStartedHook(hook: RoundStartedHook): void {
   roundStartedHook = hook;
 }
 
+/**
+ * Who performs a **team** round's start (the Gameplay module's rotation service,
+ * Unit 13) installs this hook. A team round's questions are not `Question.roundId`
+ * rows — they are drawn per team from the category's pool at deal time (BLD-040,
+ * Unit 13 Detail 1) — so the Individual stage's "fetch all 6 puzzles" step is
+ * replaced rather than extended. Installed at startup from `app.ts`, which keeps
+ * this module free of any import from gameplay (invariant 4, no cycles).
+ */
+export interface TeamRoundStartInput {
+  roundId: string;
+  competitionId: string;
+  stageId: string;
+  settings: {
+    teamPointsPerQuestion: number;
+    rotationPeriodSeconds: number;
+    teamQuestionCount: number;
+    teamTotalTimeSeconds: number | null;
+  };
+}
+
+type TeamRoundStartHook = (input: TeamRoundStartInput) => Promise<void>;
+let teamRoundStartHook: TeamRoundStartHook | null = null;
+
+export function installTeamRoundStartHook(hook: TeamRoundStartHook): void {
+  teamRoundStartHook = hook;
+}
+
 // ---------------------------------------------------------------------------
 // The dev-only internal trigger (spec step 7)
 // ---------------------------------------------------------------------------
@@ -223,18 +250,6 @@ async function startActivePhaseFromTimer(state: TimerState): Promise<void> {
       return;
     }
 
-    const questionRows = await repository.listRoundQuestions(state.roundId);
-    const questions: RoundQuestionPayload[] = questionRows.map((q) => ({
-      id: q.id,
-      sequence: q.sequence,
-      type: q.type,
-      gridRows: q.gridRows,
-      gridColumns: q.gridColumns,
-      regions: q.regions,
-      startingGrid: q.startingGrid,
-      points: q.points,
-    }));
-
     const durationSeconds = round.settings?.durationSeconds ?? 0;
     const startedAt = now();
 
@@ -249,6 +264,40 @@ async function startActivePhaseFromTimer(state: TimerState): Promise<void> {
     });
 
     await startRoundTimer(state.roundId, state.competitionId, state.stageId, durationSeconds);
+
+    // The Team stage's rotation relay (Unit 13) deals its own questions, one per
+    // team member, from the category pool — `listRoundQuestions` finds nothing for
+    // it because a team round never sets `Question.roundId` (BLD-040). The round's
+    // own clock above stays the authority for pause/resume and for the
+    // controller's end-early command (invariant 3).
+    if (round.stage.type === "TEAM" && round.sequence === 1) {
+      await teamRoundStartHook?.({
+        roundId: state.roundId,
+        competitionId: state.competitionId,
+        stageId: state.stageId,
+        settings: {
+          teamPointsPerQuestion: round.settings?.teamPointsPerQuestion ?? 10,
+          rotationPeriodSeconds: round.settings?.rotationPeriodSeconds ?? 60,
+          teamQuestionCount: round.settings?.teamQuestionCount ?? 10,
+          teamTotalTimeSeconds: round.settings?.teamTotalTimeSeconds ?? null,
+        },
+      });
+      return;
+    }
+
+    // The Individual stage fetches all its puzzles here, at countdown zero, and
+    // pushes them on `round:started` (BLD-006 — never preloaded).
+    const questionRows = await repository.listRoundQuestions(state.roundId);
+    const questions: RoundQuestionPayload[] = questionRows.map((q) => ({
+      id: q.id,
+      sequence: q.sequence,
+      type: q.type,
+      gridRows: q.gridRows,
+      gridColumns: q.gridColumns,
+      regions: q.regions,
+      startingGrid: q.startingGrid,
+      points: q.points,
+    }));
 
     roundStartedHook?.({
       roundId: state.roundId,
@@ -367,6 +416,7 @@ export const roundService = {
   startStage1Round1Preparation,
   startStagePreparation,
   installRoundStartedHook,
+  installTeamRoundStartHook,
   pause,
   resume,
   remaining,

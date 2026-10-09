@@ -56,6 +56,13 @@ export const zh: MessageCatalogue = {
     notActive: "该轮次当前未开始。",
     notAParticipant: "你不是该轮次的参赛选手。",
   },
+  rotation: {
+    notATeamMember: "你不是本轮次任何队伍的在场队员。",
+    rotationNotStarted: "该团队轮次尚未发题。",
+    roundEnded: "该团队轮次已经结束。",
+    staleHold: "该题目已经轮转给其他队员。",
+    notARotationRound: "该轮次不是团队轮转轮次。",
+  },
   scoring: {
     noQuestions: "该轮次没有可评分的题目。",
   },

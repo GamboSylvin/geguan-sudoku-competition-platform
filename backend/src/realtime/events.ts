@@ -54,6 +54,32 @@ export const BIG_SCREEN_EVENTS = {
   mode: "bigScreen:mode",
 } as const;
 
+/**
+ * Team rotation relay events (Unit 13, spec API Contract). Unlike every other
+ * player push these are **per-tablet**, not namespace-wide: each member of a team
+ * holds a different question, so the gateway addresses them by room (the room a
+ * player socket joins on connect is their own participant id). The client never
+ * sends these. Payloads are defined in
+ * `modules/gameplay/team-rotation.types`.
+ *   - `rotation:deal` — the initial deal at round start.
+ *   - `rotation:rotated` — a timed rotation, a correct submit's refill, a rejected
+ *     stale-hold submit, or a reconnect refresh. Carries `reason`.
+ *   - `rotation:ended` — this team's round is settled.
+ */
+export const ROTATION_EVENTS = {
+  deal: "rotation:deal",
+  rotated: "rotation:rotated",
+  ended: "rotation:ended",
+} as const;
+
+/**
+ * The per-tablet room name. One player socket, one room — the smallest possible
+ * audience for a payload that carries that member's own question and grid.
+ */
+export function tabletRoom(participantId: string): string {
+  return `tablet:${participantId}`;
+}
+
 export interface SystemConnectedPayload {
   /** ISO timestamp from the single server clock (the server owns time). */
   serverTime: string;

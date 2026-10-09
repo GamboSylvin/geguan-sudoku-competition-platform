@@ -7,6 +7,7 @@ import { identityService } from "../modules/identity";
 import { bigScreenService } from "../modules/big-screen";
 import type { BigScreenModePayload, BigScreenRankingPayload } from "../modules/big-screen";
 import { roundService, roundTimerService } from "../modules/round";
+import { installRotationHooks } from "../modules/gameplay";
 import type {
   PreparationTickPayload,
   RoundPausedPayload,
@@ -18,8 +19,10 @@ import {
   BIG_SCREEN_EVENTS,
   RANKING_EVENTS,
   REALTIME_NAMESPACES,
+  ROTATION_EVENTS,
   ROUND_EVENTS,
   SYSTEM_EVENTS,
+  tabletRoom,
   type SystemConnectedPayload,
 } from "./events";
 
@@ -96,6 +99,15 @@ export function createRealtimeGateway(httpServer: HttpServer): SocketServer {
             bigScreenService.unregisterConnection(competitionId);
           });
         }
+      }
+
+      // Unit 13: a player socket joins its own per-tablet room so the rotation
+      // pushes (which carry that member's own question and grid) reach exactly one
+      // tablet instead of every connected player. The participant id comes from the
+      // authenticated handshake, never from the client.
+      if (namespace === REALTIME_NAMESPACES.player) {
+        const participantId = socket.data.auth?.participantId as string | null | undefined;
+        if (participantId) socket.join(tabletRoom(participantId));
       }
 
       const payload: SystemConnectedPayload = { serverTime: now().toISOString() };
@@ -192,6 +204,27 @@ export function createRealtimeGateway(httpServer: HttpServer): SocketServer {
   // mode change goes on the wire to that competition's room immediately.
   bigScreenService.installBigScreenModeHook((payload: BigScreenModePayload) => {
     bigScreenNamespace.to(payload.competitionId).emit(BIG_SCREEN_EVENTS.mode, payload);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Team rotation relay pushes (Unit 13)
+  //
+  // The rotation service decides what a tablet holds and when it moves; the
+  // gateway's only job is to put the already-built payload on the wire to that one
+  // tablet's room (invariant 8 — no computation here). `installRotationHooks`
+  // assigns rather than accumulates, so a repeated `createRealtimeGateway` in
+  // tests cannot double-emit.
+  // ---------------------------------------------------------------------------
+  installRotationHooks({
+    onDeal: (target, payload) => {
+      playerNamespace.to(tabletRoom(target.participantId)).emit(ROTATION_EVENTS.deal, payload);
+    },
+    onRotated: (target, payload) => {
+      playerNamespace.to(tabletRoom(target.participantId)).emit(ROTATION_EVENTS.rotated, payload);
+    },
+    onEnded: (target, payload) => {
+      playerNamespace.to(tabletRoom(target.participantId)).emit(ROTATION_EVENTS.ended, payload);
+    },
   });
 
   return io;
