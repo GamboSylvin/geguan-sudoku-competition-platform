@@ -33,3 +33,7 @@ Thumbs.db
 
 # AI agent hand-off notes (continuity files for switching AI platforms) — local only, never committed
 AI-HANDOFF*.md
+
+# The project owner's French deployment aide-mémoire — local only, same as the hand-off notes
+# above; `DEPLOY.md` is the committed, English runbook it complements.
+DEPLOY-CHECKLIST.md
