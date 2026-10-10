@@ -51,6 +51,7 @@ let controllerToken = "";
 let controllerDevice = "";
 
 const createdCompetitionIds: string[] = [];
+const createdJudgeIds: string[] = [];
 const createdAccountUsernames: string[] = [];
 
 // The same tiny 4x4 puzzle Unit 08's tests use: five given cells, one known
@@ -198,6 +199,7 @@ async function seedCompetition(name: string): Promise<SeededCompetition> {
   }
 
   const judge = await prisma.judge.create({ data: { name: `Judge ${suffix}` } });
+  createdJudgeIds.push(judge.id);
   await prisma.competitionJudgeAssignment.create({
     data: {
       competitionId: competition.id,
@@ -299,6 +301,11 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await prisma.competition.deleteMany({ where: { id: { in: createdCompetitionIds } } });
+  // A `Judge` row is not owned by any competition (only its assignment is), so
+  // deleting the competition leaves it behind — remove it explicitly, in the
+  // same order judge.test.ts / judge-supervision.test.ts use.
+  await prisma.account.deleteMany({ where: { judgeId: { in: createdJudgeIds } } });
+  await prisma.judge.deleteMany({ where: { id: { in: createdJudgeIds } } });
   await prisma.account.deleteMany({ where: { username: { in: createdAccountUsernames } } });
   await disconnectRedis().catch(() => undefined);
   await disconnectPrisma().catch(() => undefined);

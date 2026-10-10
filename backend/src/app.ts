@@ -1,10 +1,13 @@
 import express, { type Express } from "express";
 import { apiRouter } from "./routes";
 import { cors, errorHandler, requestLogger } from "./shared/middleware";
+import { env } from "./config/env";
+import { hasBuiltFrontend, serveFrontend } from "./static-frontend";
 import { gameplayService, installCompetitionFinishedHook, installIndividualResultFinalizedHook, teamPartitionService, teamRotationService } from "./modules/gameplay";
 import { roundService, roundTimerService } from "./modules/round";
 import { rankingService } from "./modules/ranking";
 import { bigScreenService } from "./modules/big-screen";
+import { purgeService, resultsService } from "./modules/results";
 
 /**
  * The Express application: middleware plus route mounting (BLD-020). It is kept
@@ -35,9 +38,19 @@ function installListeners(): void {
   // Unit 11: when the competition finishes by itself (spec Detail 8), the screens
   // switch to the final ranking. The controller's "finish early" sets FINAL in its
   // own command path, so this hook covers only the natural finish.
-  installCompetitionFinishedHook((event) => {
-    if (event.finishedEarly) return;
-    void bigScreenService.setMode({ competitionId: event.competitionId, mode: "FINAL" });
+  //
+  // Unit 12: the same hook starts the 15-day retention countdown (RES-004). Both
+  // finish paths — natural and early — announce through `notifyCompetitionFinished`,
+  // so one subscriber covers both. The schedule write is idempotent, and the purge
+  // job also back-fills any ended competition that has no schedule, so a missed
+  // announcement self-heals. Only `installCompetitionFinishedHook` supports a single
+  // subscriber, so the two reactions live in one function.
+  installCompetitionFinishedHook(async (event) => {
+    if (!event.finishedEarly) {
+      await bigScreenService.setMode({ competitionId: event.competitionId, mode: "FINAL" });
+    }
+    // Reads `finishedAt` itself and is idempotent, so it needs no state passed in.
+    await resultsService.ensurePurgeScheduled(event.competitionId);
   });
   // Unit 13/14: the Team stage's rounds deal their own questions at countdown zero,
   // replacing the Individual stage's "fetch all 6 puzzles" step — round 1 is the
@@ -62,6 +75,9 @@ function installListeners(): void {
     }
     return teamRotationService.startRotationRound(input);
   });
+  // The retention poll. Started once per process, `unref()`'d, and never reachable
+  // over HTTP (spec Security Considerations: schedule-driven only).
+  purgeService.startPurgeScheduler();
   listenersInstalled = true;
 }
 
@@ -75,6 +91,15 @@ export function createApp(): Express {
   app.use(requestLogger);
 
   app.use("/api", apiRouter);
+
+  // BLD-048: in the production image the frontend's built bundle is served from this
+  // same app, so the browser and the API share one origin and one open port. Gated on
+  // `FRONTEND_DIST`, which is unset in development (there the Vite dev server serves
+  // the frontend), and mounted only AFTER `/api`, so no existing route changes
+  // behaviour. See `static-frontend.ts`.
+  if (hasBuiltFrontend(env.FRONTEND_DIST)) {
+    serveFrontend(app, env.FRONTEND_DIST);
+  }
 
   // Central error handler last: never swallow an error silently.
   app.use(errorHandler);

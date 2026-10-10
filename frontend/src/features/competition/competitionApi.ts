@@ -143,6 +143,32 @@ export function publishCompetition(id: string): Promise<PublishResultView> {
   });
 }
 
+/**
+ * Read one competition with its full structure (Unit 03's read). The setup screen
+ * uses it to reopen an existing competition — which is how a copy lands back on the
+ * setup screen (Unit 15) instead of starting from a blank form.
+ */
+export function fetchCompetition(id: string): Promise<CompetitionView> {
+  return request<CompetitionView>(`/api/competitions/${encodeURIComponent(id)}`, {
+    method: "GET",
+  });
+}
+
+/**
+ * `POST /api/competitions/:id/copy` — Unit 15's deep copy. The server creates a new
+ * `CREATED` competition carrying the source's categories, round settings, scoring
+ * configuration, question sets/questions and judge assignments, and **nothing else**:
+ * no participant, team, account, attempt, answer, result, correction, ranking or
+ * file. The copy therefore has to be published again through the normal flow.
+ * The response is the new competition, in the same shape `createCompetition` returns.
+ */
+export function copyCompetition(id: string): Promise<CompetitionView> {
+  return request<CompetitionView>(
+    `/api/competitions/${encodeURIComponent(id)}/copy`,
+    { method: "POST" },
+  );
+}
+
 /** Pull the unmet readiness conditions out of a publish rejection, if present. */
 export function unmetConditionsFrom(error: unknown): ReadinessCondition[] | null {
   if (

@@ -6,5 +6,6 @@
  * the public interface), repository (Prisma access), types, and this barrel.
  */
 export { competitionService } from "./competition.service";
+export { competitionCopyService } from "./competition-copy.service";
 export { competitionRouter } from "./competition.controller";
 export type * from "./competition.types";

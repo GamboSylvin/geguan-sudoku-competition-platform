@@ -18,6 +18,7 @@ import { translate } from "../../shared/i18n";
 import { requireAuth } from "../../shared/middleware";
 import { parseInput } from "../../shared/validation";
 import { rankingService } from "./ranking.service";
+import { schoolRankingService } from "./school-ranking.service";
 
 export const rankingRouter = Router({ mergeParams: true });
 
@@ -57,6 +58,28 @@ rankingRouter.get(
           code: "ranking.notFound",
         });
       }
+      res.status(200).json(ranking);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * GET /api/competitions/:id/categories/:categoryId/school-ranking — Unit 15's
+ * school leaderboard for one category. Controller-only (ROL-002), same as the
+ * individual read above. An incomplete category still returns 200 with whatever
+ * is computable and `isFinal: false`; only a missing competition/Individual stage
+ * is a 404.
+ */
+rankingRouter.get(
+  "/:categoryId/school-ranking",
+  requireAuth,
+  requireController,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id, categoryId } = parseInput(paramsSchema, req.params);
+      const ranking = await schoolRankingService.getSchoolCategoryRanking(id, categoryId);
       res.status(200).json(ranking);
     } catch (error) {
       next(error);

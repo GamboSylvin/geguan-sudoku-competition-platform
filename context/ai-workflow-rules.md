@@ -17,7 +17,7 @@ The agent MUST do the following before writing any code:
 4. Read `code-standards.md`.
 5. Read `ui-context.md` (for UI work).
 6. Read `progress-tracker.md`.
-7. Read the relevant unit spec in `specs/` (none exist yet).
+7. Read the relevant unit spec in `specs/` *(this parenthetical used to read "none exist yet", true on 2026-09-26 when the file was drafted; every spec from `01` to `15` now exists except Unit `04`'s, which has none — see `README.md`'s Files table)*.
 8. Inspect the existing implementation.
 9. Identify dependencies and potential conflicts.
 

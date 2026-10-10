@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { LocaleProvider } from "../src/i18n/locale-context";
 import { CompetitionSetupPage } from "../src/features/competition";
 
@@ -7,11 +8,16 @@ import { CompetitionSetupPage } from "../src/features/competition";
  * structure, and publishes. A refused publish shows the specific unmet conditions
  * (parsed from the backend's 422 payload); a successful publish shows both links.
  * `fetch` is mocked; no server is contacted.
+ *
+ * The page is rendered at the create route, so it has no `:id` param: Unit 15's
+ * load-an-existing-competition effect stays inert and nothing is fetched on mount.
  */
 function renderPage() {
   return render(
     <LocaleProvider initialLocale="en">
-      <CompetitionSetupPage />
+      <MemoryRouter initialEntries={["/controller/competition/new"]}>
+        <CompetitionSetupPage />
+      </MemoryRouter>
     </LocaleProvider>,
   );
 }

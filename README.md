@@ -15,7 +15,7 @@ A live Sudoku competition platform (individual and team stages, judge supervisio
 | Cursor | `.cursorrules` |
 | Windsurf | `.windsurfrules` |
 
-**Project status:** actively being built, final push before the event. `CLAUDE.md`'s "Current status" section and [`context/progress-tracker.md`](context/progress-tracker.md) are the two places this is kept accurate day to day — read those for the real, current picture rather than trusting a summary here, which would only go stale again. In short: 10 of 15 units have shipped code (login, competition setup, judge management, round runtime, submission/scoring, individual ranking, big-screen display, judge supervision) — anyone pulling this repository will see a working Individual-stage competition flow, not just a skeleton.
+**Project status:** the build is complete and awaiting verification and deployment. `CLAUDE.md`'s "Current status" section and [`context/progress-tracker.md`](context/progress-tracker.md) are the two places this is kept accurate day to day — read those for the real, current picture rather than trusting a summary here, which would only go stale again. In short: **14 of the 15 planned units have shipped code** — login, competition setup, question import, judge management, round runtime, submission/scoring, individual ranking, big-screen display, judge supervision, controller live commands, results/corrections/export/purge, both team-stage rounds (rotation relay and partition collaboration) and school ranking/competition copy — so anyone pulling this repository gets a complete Individual **and** Team competition flow, not a skeleton. The one exception is Unit `04` (participant Excel import), which has no code because its one blocking input — a real participant file with data rows, U-01 — has still never arrived. Two caveats, stated plainly rather than glossed: Unit `14` is **built but never verified** (Docker Desktop has been down since it was written, so it has not been compiled, tested or migrated), and the merged `app.ts` has not been compiled either. Deployment to a single Alibaba Cloud ECS instance is decided (BLD-048) and its files are built and locally verified, but the instance itself is not created — see [`DEPLOY.md`](DEPLOY.md).
 
 Full product and technical documentation lives in [`context/`](context/) (start at [`context/README.md`](context/README.md)) and is the source of truth for what is decided, open, or still to be built.
 
@@ -55,7 +55,7 @@ Full product and technical documentation lives in [`context/`](context/) (start 
   { "status": "ok", "uptimeSeconds": 12, "dependencies": { "database": "up", "redis": "up" } }
   ```
   (HTTP 503 with `"status": "error"` if the database or Redis isn't reachable — check the Docker logs.)
-- `http://localhost:5173` serves the real app: login (with a role picker), competition setup, judge management, the round runtime and gameplay screens, submission, individual ranking, the big-screen leaderboard, and the judge supervision dashboard — all with the i18n scaffold (English/Chinese) wired up. Question import, team-stage rounds, controller live commands, results/export and school ranking are not built yet — see `context/progress-tracker.md`.
+- `http://localhost:5173` serves the real app: login (with a role picker), competition setup, question import and question-set selection, judge management, the round runtime and gameplay screens (Individual active round, Team rotation relay, Team partition collaboration), submission, individual ranking, the big-screen leaderboard, the judge supervision dashboard, the controller live-command dashboard, the results/corrections/export screen and the school-ranking screen — all with the English/Chinese i18n catalogues wired up and shape-checked by the compiler. The one screen that does not exist is the participant Excel import, because Unit `04` has no code yet (blocked on U-01); participants must be seeded or created another way to exercise the flow. See `context/progress-tracker.md`. *(This bullet used to list question import, team-stage rounds, controller live commands, results/export and school ranking as "not built yet" — true when it was written, superseded; all five now exist in this tree.)*
 
 To stop the stack:
 ```bash
@@ -103,7 +103,11 @@ backend/     Express + TypeScript API, Prisma schema/migrations, module-first st
 frontend/    React + TypeScript + Vite app
 context/     Product and technical documentation a coding agent (or developer) builds from
 context-feeders/  Requirements and decision-tracking record that feeds context/
-docker-compose.yml   One command to run the full stack (Postgres, Redis, backend, frontend)
+docker-compose.yml   One command to run the full development stack (Postgres, Redis, backend, frontend)
+docker-compose.prod.yml  The separate production stack (BLD-048) — see DEPLOY.md
+DEPLOY.md    The deployment runbook for the single Alibaba Cloud ECS instance
 ```
+
+The two compose files are **separate projects**, not an override pair: `docker-compose.prod.yml` carries an explicit top-level `name: sudoku-prod` so bringing it up can never treat the running development containers as orphans and destroy them. Only port 80 is published in production, and the built frontend is served same-origin by the Express backend.
 
 For what is decided, proposed, or still open — and the full build plan — read [`context/README.md`](context/README.md) first, then `context/progress-tracker.md` for current phase and next steps.

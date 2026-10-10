@@ -9,6 +9,14 @@
 // flagged in this model"). Deliberately omitted here:
 //   - PurgeSchedule.includesArchivedScores / includesCorrectionLog /
 //     includesParticipantExcel   (U-59, U-62 — the 15-day purge scope)
+//     STALE AS OF 2026-10-11: neither item is open any more. U-62's participant-Excel
+//     half is answered yes (RES-009, 2026-10-01), completing RES-005; U-59's protection
+//     question is answered "no special protection needed" (RES-008, 2026-10-01). All three
+//     scopes are therefore always `true`, so they are handled in code and never stored as
+//     columns. The columns are still absent on purpose — adding a constant-`true` flag
+//     would need a migration and a project-owner call, and the comment is corrected here
+//     rather than the schema changed unilaterally. See context/data-model.md's 2026-10-11
+//     note under "Reconciled with the stakeholder pack's Part 2 answers".
 // Account.sessionExpiresAt is now present: I-16 was resolved by AUTH-001 (the
 // session lasts 24 hours from login) and Unit 02 added the column by migration.
 // The second team round (齐心协力 / partition collaboration) IS modelled as gameplay,
@@ -160,8 +168,12 @@ model Competition {
   bigScreenLinkToken  String @unique @default(uuid())
 
   // Copy keeps settings/questions/judges, not results (CMP-100). What exactly a copy
-  // carries is partly open (U-10); kept as a plain reference to avoid inventing a
-  // self-relation's shape before that is answered.
+  // carries ~~is partly open (U-10)~~ **is resolved (CMP-103, 2026-10-01, resolves
+  // U-10): a copy never carries participants over** — student data is always deleted 15
+  // days after the original (RES-004, RES-009), so a copy always re-imports a fresh
+  // participant list. Kept as a plain reference (no self-relation shape invented) since
+  // that reading needed no extra column either way. Comment corrected 2026-10-11; the
+  // field is unchanged. Unit 15 built this (competition copy, verified 2026-10-09).
   copiedFromCompetitionId String?
 
   categories         CompetitionCategory[]
@@ -189,6 +201,12 @@ model CompetitionCategory {
   id            String @id @default(uuid())
   competitionId String
   code          String // e.g. U6 .. U20
+  // STALE EXAMPLE, corrected 2026-10-11: the real category scheme is the **3 age-pair
+  // groups — grades 1–2, 3–4, 5–6** (BLD-041, resolves U-99, confirmed 2026-10-07),
+  // which *supersedes* the "U6 to U20" scheme (BLD-027, 2026-09-30). The field is a free
+  // string either way, so no schema change was ever needed — only this comment's example
+  // was out of date. Whatever codes the controller creates in Unit 03 are what the
+  // question import (Unit 05) attaches files to.
   name          String
   sequence      Int
 
@@ -302,7 +320,16 @@ model Question {
   // the partition round addresses puzzles by index.
   roundId       String?
   sequence      Int
-  // Sub-types are OPEN; only the generic kinds are modelled.
+  // Sub-types are OPEN (U-01's "supported shapes and the shape↔type link", IND-4);
+  // only the generic kinds are modelled — `type` stays the two-value STANDARD/VARIANT.
+  // That openness is *narrowed*, not closed, by what Unit 05 actually built (2026-10-08,
+  // BLD-044/BLD-045): one `QuestionSet` per imported file, and the importer computes a
+  // standard box partition for the families standard, diagonal, size-comparison,
+  // fortress and anti-knight, **rejecting an irregular ("不规则") file outright** with a
+  // named reason, because neither the text column (BLD-047) nor any extraction method can
+  // supply a custom non-rectangular region layout. So the real files' variants are known
+  // in practice; no enum value was added for them, and none should be until U-01 is
+  // answered. Corrected/annotated 2026-10-11; field unchanged.
   type          QuestionType @default(STANDARD)
 
   // Generic grid model: rows, columns and regions — never assume 9x9 (BLD-011).
@@ -311,11 +338,19 @@ model Question {
   regions      Json
   startingGrid Json
   // The solution is stored with the question; the answer check compares against it
-  // (BLD-010). This relies on a unique solution (U-90).
+  // (BLD-010). This relies on a unique solution (U-90) — **confirmed 2026-10-01 [C]:
+  // every puzzle has exactly one valid solution**, so U-90 is no longer open (BLD-010's
+  // register row). The companion question, what happens if a *stored* solution is wrong,
+  // is resolved too (RES-010, resolves U-44): use the existing correction mechanism.
   solution     Json
 
   // Points are a whole number >= 1 (SCR-014); they belong to the question, so they
-  // follow the category's set (RND-005). Whether the PDF carries them is OPEN (U-03).
+  // follow the category's set (RND-005). Whether the ~~PDF~~ imported file carries them
+  // ~~is OPEN (U-03)~~ **is resolved (BLD-038, 2026-10-01, resolves U-03): yes** — the
+  // file supplies the starting value (a flat 5 points per question in the real samples,
+  // U-92/BLD-025), and the controller can change it before a round per SCR-005. Note
+  // "PDF" is stale wording too: the format is Excel, not PDF (BLD-024). Corrected
+  // 2026-10-11; the field itself is unchanged — `points Int` was always right.
   points Int
 
   questionSet QuestionSet @relation(fields: [questionSetId], references: [id], onDelete: Cascade)
@@ -711,8 +746,11 @@ model PurgeSchedule {
   status        String    @default("SCHEDULED")
 
   // The three retention flags (includesArchivedScores, includesCorrectionLog,
-  // includesParticipantExcel) are OPEN (U-59, U-62) and are deliberately NOT
-  // created until the stakeholder answers.
+  // includesParticipantExcel) ~~are OPEN (U-59, U-62)~~ **were resolved, both, on
+  // 2026-10-01** (RES-005/RES-009 for U-62, RES-008 for U-59) — every scope is always
+  // `true`, so the flags are handled in code and are still deliberately NOT stored as
+  // columns (adding a constant-`true` column would need a migration and a project-owner
+  // call). Comment corrected 2026-10-11; see the file header note.
 
   competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
 

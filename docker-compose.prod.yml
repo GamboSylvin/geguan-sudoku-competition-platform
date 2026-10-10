@@ -1,0 +1,112 @@
+# Sudoku Arena — PRODUCTION Docker Compose (BLD-048: single Alibaba Cloud ECS
+# instance, Mainland China region, reached by public IP, no domain, plain HTTP).
+#
+# A NEW, FULL compose file — not an override of `docker-compose.yml`. Reason: the dev
+# file's whole shape is what production must NOT have (source bind-mounts over the
+# built `dist/`, `tsx watch`, a Vite dev server, published Postgres/Redis ports), and
+# an override that removed all of it would be harder to read than a standalone file.
+# This one is what runs on the server:
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# `docker-compose.yml` (the development stack) is untouched by this file and by
+# anything else in this deployment track — a second contributor is building Units
+# 13/14 against it right now. The two files share no service definition, no volume
+# and no container name, so they can even run side by side on different host ports
+# (see DEPLOY.md, "Testing the production stack locally").
+
+# EXPLICIT PROJECT NAME — this line is load-bearing, not decoration.
+# Compose derives the project name from the containing DIRECTORY, so without it both
+# files in this repository belong to the same project. They also share service names
+# (`postgres`, `redis`, `backend`), which means `docker compose -f docker-compose.prod.yml
+# up` treats the running development containers as ORPHANS of that project and REMOVES
+# them. That was observed, not theorised: bringing this stack up on a machine where the
+# dev stack was running destroyed `sudoku-backend`, `sudoku-postgres` and `sudoku-redis`.
+# With a distinct project name the two stacks are genuinely separate projects — separate
+# containers, separate volume prefix, separate network — and `down` on one never touches
+# the other.
+name: sudoku-prod
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: sudoku-prod-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sudoku}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env — never deploy the template placeholder}
+      POSTGRES_DB: ${POSTGRES_DB:-sudoku}
+      TZ: ${TZ:-Asia/Shanghai}
+    # NO published port: the database is reachable only from inside this Compose
+    # network. Publishing 5432 on a public-IP server would expose it to the internet.
+    volumes:
+      - postgres-prod-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sudoku} -d ${POSTGRES_DB:-sudoku}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    container_name: sudoku-prod-redis
+    restart: unless-stopped
+    # Persistence on (BLD-007): working grids survive a restart.
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
+    # NO published port, for the same reason as Postgres.
+    volumes:
+      - redis-prod-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      # Repository ROOT as the context: the image builds both the backend and the
+      # frontend's static bundle (see `backend/Dockerfile.prod`).
+      context: .
+      dockerfile: backend/Dockerfile.prod
+    container_name: sudoku-prod-backend
+    restart: unless-stopped
+    env_file:
+      # The REAL environment file, not `.env.example` / `.env.production.example`.
+      # Compose reads it from the directory the command is run in (DEPLOY.md step 4).
+      - .env
+    environment:
+      NODE_ENV: production
+      # In-container hostnames override whatever `.env` says (Compose network).
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
+      STORAGE_ROOT: /app/storage
+      # Where the image put the built frontend bundle, so Express serves it.
+      FRONTEND_DIST: /app/frontend-dist
+    # The ONE port the server needs open. Plain HTTP: no domain means no TLS and no
+    # ICP备案 (BLD-048) — deliberate current state, flagged as I-40 to revisit before
+    # the real event. Host side is configurable so this file can be tested locally
+    # without fighting a busy port 80.
+    ports:
+      - "${HTTP_PORT:-80}:${BACKEND_PORT:-3000}"
+    volumes:
+      # NO source bind-mount here (that is a dev-only convenience and would hide the
+      # built `dist/` and the frontend bundle inside the container).
+      # The uploaded/exported files live on the server's disk (BLD-001), in a named
+      # volume — same pattern as the dev compose file, just durable rather than shared.
+      - storage-prod-data:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # Applies the versioned Prisma migrations, then starts the compiled server.
+    command: ["sh", "-c", "npx prisma migrate deploy && npm start"]
+
+# NOTE: there is no `frontend` service. The frontend is a static bundle served by the
+# backend above — one origin, one port, and no IP address baked in at build time.
+# See DEPLOY.md, "How the frontend is served".
+
+volumes:
+  postgres-prod-data:
+  redis-prod-data:
+  storage-prod-data:

@@ -1,0 +1,49 @@
+# Sudoku Arena — Docker build-context exclusions for the PRODUCTION image.
+#
+# A NEW file at the repository root. `backend/Dockerfile.prod` uses the repository
+# root as its build context (it needs both `backend/` and `frontend/`), so this file
+# keeps that context small and, more importantly, keeps secrets and local cruft out of
+# the image.
+#
+# This does NOT affect the development stack: Docker reads the `.dockerignore` that
+# sits at the root of each build context, and `docker-compose.yml` uses `./backend`
+# and `./frontend` as its contexts, neither of which has one. Nothing here changes
+# `docker compose up`.
+
+# Secrets — never inside an image layer. The real values come from `.env` at runtime
+# through `env_file`, not from the build context.
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Version control.
+.git
+.gitignore
+.github
+
+# Dependencies: reinstalled inside the image from the lockfile, so a host-side copy
+# (possibly built for Windows) must never leak in.
+**/node_modules
+
+# Build output: rebuilt inside the image.
+**/dist
+**/coverage
+
+# Local file storage (BLD-001) — mounted as a volume at runtime, never baked in.
+storage
+**/storage
+
+# Local scratch and docs that the image does not need.
+.claude
+.cowork-temp
+building-with-ai
+testing
+
+# Logs and editor/OS droppings.
+*.log
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+~$*

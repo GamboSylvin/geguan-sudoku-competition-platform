@@ -26,6 +26,13 @@ const envSchema = z.object({
   // File storage (BLD-001).
   STORAGE_ROOT: z.string().default("./storage"),
 
+  // Where the frontend's built static bundle lives (BLD-048's single-origin
+  // production deployment: the Express server serves the SPA itself, so one port
+  // and one origin cover both). UNSET IN DEVELOPMENT on purpose — there the Vite dev
+  // server serves the frontend on its own port, and `app.ts` skips static serving
+  // entirely when this is empty, so no development route changes behaviour.
+  FRONTEND_DIST: z.string().default(""),
+
   // Session length: a fixed window from login, never refreshed on activity
   // (AUTH-001). Kept configurable so the event day's needs can be tuned without a
   // code change; the default is the decided 24 hours.

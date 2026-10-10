@@ -6,6 +6,8 @@
  * the public interface), repository (Prisma access), types, and this barrel.
  */
 export { rankingService } from "./ranking.service";
+export { schoolRankingService } from "./school-ranking.service";
 export { rankingRouter } from "./ranking.controller";
 export type * from "./ranking.types";
 export type { IndividualResultFinalizedEvent } from "./ranking.types";
+export type * from "./school-ranking.types";

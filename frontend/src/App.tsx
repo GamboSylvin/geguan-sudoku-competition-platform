@@ -6,6 +6,8 @@ import { CompetitionSetupPage } from "./features/competition";
 import { ControllerLivePage, ControllerPickerPage } from "./features/controller";
 import { JudgeDashboardPage, JudgeLandingPage, JudgeManagementPage } from "./features/judge";
 import { PlayerPage } from "./features/player";
+import { SchoolRankingPage } from "./features/ranking";
+import { ResultsPage } from "./features/results";
 
 /**
  * The app entry (Unit 02): the i18n provider, the router, the login page and the
@@ -22,6 +24,10 @@ import { PlayerPage } from "./features/player";
  * Unit 10 adds the judge's supervision dashboard at /judge/dashboard.
  * Unit 11 replaces the controller's placeholder landing with the competition picker
  * and adds the live-command dashboard at /controller/competitions/:id/live.
+ * Unit 12 adds the controller's results screen at /controller/competitions/:id/results.
+ * Unit 15 adds the school leaderboard at /controller/competitions/:id/school-ranking
+ * and a setup route for an existing competition at /controller/competitions/:id/setup
+ * (where a copied competition lands, since it has to be published again).
  */
 export function App() {
   return (
@@ -38,7 +44,19 @@ export function App() {
             path="/controller/competitions/:id/live"
             element={<ControllerLivePage />}
           />
+          <Route
+            path="/controller/competitions/:id/results"
+            element={<ResultsPage />}
+          />
           <Route path="/controller/competition/new" element={<CompetitionSetupPage />} />
+          <Route
+            path="/controller/competitions/:id/setup"
+            element={<CompetitionSetupPage />}
+          />
+          <Route
+            path="/controller/competitions/:id/school-ranking"
+            element={<SchoolRankingPage />}
+          />
           <Route path="/controller/judges" element={<JudgeManagementPage />} />
           <Route path="/big-screen/:token" element={<BigScreenPage />} />
           <Route path="*" element={<Navigate to="/login" replace />} />

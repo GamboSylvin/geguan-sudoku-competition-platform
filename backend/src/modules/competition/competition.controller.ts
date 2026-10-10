@@ -12,6 +12,7 @@ import { translate } from "../../shared/i18n";
 import { requireAuth } from "../../shared/middleware";
 import { parseInput } from "../../shared/validation";
 import { competitionService } from "./competition.service";
+import { competitionCopyService } from "./competition-copy.service";
 
 export const competitionRouter = Router();
 
@@ -159,6 +160,28 @@ competitionRouter.post(
       const { id } = parseInput(idParamSchema, req.params);
       const result = await competitionService.publishCompetition(id);
       res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * POST /api/competitions/:id/copy — Unit 15 (CMP-100). 201 with the newly created,
+ * unpublished competition: same categories, round settings, scoring configuration,
+ * question sets/questions and judge assignments as the source; zero participants,
+ * teams, accounts, attempts, answers, results, corrections, rankings or files.
+ * 404 `competition.notFound` on an unknown id.
+ */
+competitionRouter.post(
+  "/:id/copy",
+  requireAuth,
+  requireController,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = parseInput(idParamSchema, req.params);
+      const competition = await competitionCopyService.copyCompetition(id);
+      res.status(201).json(competition);
     } catch (error) {
       next(error);
     }
