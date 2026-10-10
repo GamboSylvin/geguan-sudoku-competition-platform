@@ -1,5 +1,7 @@
 # Project Instructions
 
+> **If you are a new AI agent being introduced to this project, read the matching hand-off file at the repository root first, in full, before this one:** `AI-HANDOFF-CONTEXT.md` if you are the context-keeping agent (never writes `backend/`/`frontend/` code), or `AI-HANDOFF-CODE.md` if you are the coding agent. Either file explains the role, the hard rules, and how the project owner works — this file and the rest of `context/` describe the project itself, not how to behave on it. (Both hand-off files are local-only, listed in `.gitignore` by the project owner's choice — they may not exist in every checkout.)
+
 ## Application Building Context
 
 **Before anything else, read `context/FILL-BEFORE-CODING.md`.** Search `context/` for the blanks it describes: `FILL-BEFORE-CODING` (blocks all coding), `FILL-BEFORE-UNIT` (blocks only the unit it names), `FILL-BEFORE-DEPLOYMENT` (blocks deployment, not coding). **None of today's open rows block coding** — see "Current status" below for exactly what's open and why it doesn't block.
