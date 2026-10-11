@@ -37,6 +37,8 @@ import * as roundRepository from "../round/round.repository";
 import { roundTimerService } from "../round/round-timer.service";
 import { scoringService } from "../scoring/scoring.service";
 import * as repository from "./gameplay.repository";
+import { teamRotationService } from "./team-rotation.service";
+import { teamPartitionService } from "./team-partition.service";
 import type {
   AutosaveInput,
   GameplayStatePayload,
@@ -393,6 +395,27 @@ async function submit(
  * so one bad row cannot strand the whole round.
  */
 async function handleRoundEnded(event: RoundEndedEvent): Promise<void> {
+  // A team round has no `RoundParticipation` rows and no individual result to
+  // write (invariant 7: an autosave/timeout never produces a team score). Its end
+  // settles `TeamRoundResult` instead, so the rotation module owns it — including
+  // the advance to the Team stage's round 2 (Unit 13 Detail 5).
+  const roundRow = await prisma.round.findUnique({
+    where: { id: event.roundId },
+    select: { sequence: true, stage: { select: { type: true } } },
+  });
+  if (roundRow && teamRotationService.isRotationRound(roundRow.stage.type, roundRow.sequence)) {
+    await teamRotationService.handleRotationRoundEnded(event);
+    return;
+  }
+  // Unit 14: the Team stage's round 2 is the partition collaboration. Same reason,
+  // same shape — its end settles `TeamRoundResult` per team, and because it is the
+  // last round of the last stage its settle is what triggers Unit 11's
+  // whole-competition finish check (Unit 14 Detail 5).
+  if (roundRow && teamPartitionService.isPartitionRound(roundRow.stage.type, roundRow.sequence)) {
+    await teamPartitionService.handlePartitionRoundEnded(event);
+    return;
+  }
+
   const participations = await prisma.roundParticipation.findMany({
     where: { roundId: event.roundId, state: "ACTIVE" },
     select: { participantId: true },
@@ -591,13 +614,13 @@ async function advanceAfterRoundFinalized(
   });
   if (!finished) return;
 
-  // Only the Individual stage auto-advances between rounds (CS-022). The Team
-  // stage's transition is a Unit 13/14 build, gated by Unit 11's commands.
-  if (finished.stage.type !== "INDIVIDUAL") {
-    await finishStageAndMaybeCompetition(stageId, competitionId, roundId);
-    return;
-  }
-
+  // Both stages auto-advance between their own rounds. The Individual stage does
+  // so by CS-022; the Team stage's round 1 → round 2 transition is Unit 13's
+  // Detail 5, reusing this exact path — the next round goes into preparation and
+  // the controller's start command is still what begins a *stage* (RND-006).
+  // Round 2 is Unit 14's partition collaboration, built 2026-10-09: it installs the
+  // same hook, and because it is the Team stage's last round the `!next` branch below
+  // is where its settle reaches Unit 11's whole-competition finish check.
   const next = await findNextRoundInStage(stageId, finished.sequence);
   if (!next) {
     await finishStageAndMaybeCompetition(stageId, competitionId, roundId);
@@ -718,6 +741,22 @@ async function recordLeftAnswerPage(
   });
   return { leftAnswerPageCount: updated.leftAnswerPageCount };
 }
+
+// Installed at module load: when a team rotation round settles itself (every
+// team's `TeamRoundResult` written), the advance chain here starts the Team
+// stage's round 2 preparation — Unit 13's Detail 5. The rotation service never
+// imports this file, so there is no cycle (invariant 4).
+teamRotationService.installRotationRoundEndedHook((event) =>
+  advanceAfterRoundFinalized(event.roundId, event.stageId, event.competitionId),
+);
+
+// Unit 14: the same hook for the partition round. It is the Team stage's **last**
+// round, so this call is what carries the advance into
+// `finishStageAndMaybeCompetition` → Unit 11's whole-competition finish check
+// (Detail 5). Nothing about that check is re-implemented in Unit 14.
+teamPartitionService.installPartitionRoundEndedHook((event) =>
+  advanceAfterRoundFinalized(event.roundId, event.stageId, event.competitionId),
+);
 
 export const gameplayService = {
   autosave,

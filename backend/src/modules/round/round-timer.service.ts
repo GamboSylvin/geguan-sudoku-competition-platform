@@ -588,6 +588,26 @@ export async function cancelPreparation(roundId: string): Promise<boolean> {
 }
 
 /**
+ * Release a round's live timer without ending it early (Unit 13). The caller has
+ * already driven the round to its own natural end — a team rotation round whose
+ * queue emptied — and only needs the timer to stop ticking and the competition's
+ * active-round slot freed. Deliberately **not** `stopRoundEarly`: that path runs
+ * the round-end completion with `earlyEnded: true`, the controller's end-round-early
+ * flag (§7.4), which would mislabel a round that finished on its own. The caller
+ * owns the durable round status. Idempotent: a round with no live timer returns
+ * false and nothing happens.
+ */
+export async function releaseTimer(roundId: string): Promise<boolean> {
+  const state = await loadTimerState(roundId);
+  if (!state) return false;
+
+  cancelWakeup(roundId);
+  await deleteTimerState(roundId);
+  await clearActiveRound(state.competitionId, roundId);
+  return true;
+}
+
+/**
  * The authoritative remaining seconds for a round. Zero if the round is not
  * running. Safe to call any time, including after the round has finished.
  */
@@ -670,6 +690,7 @@ export const roundTimerService = {
   startPreparationTimer,
   startRoundTimer,
   stopRoundEarly,
+  releaseTimer,
   cancelPreparation,
   restartRoundTimerFullDuration,
   pause,

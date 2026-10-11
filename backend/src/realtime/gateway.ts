@@ -7,6 +7,7 @@ import { identityService } from "../modules/identity";
 import { bigScreenService } from "../modules/big-screen";
 import type { BigScreenModePayload, BigScreenRankingPayload } from "../modules/big-screen";
 import { roundService, roundTimerService } from "../modules/round";
+import { installRotationHooks, installPartitionHooks } from "../modules/gameplay";
 import type {
   PreparationTickPayload,
   RoundPausedPayload,
@@ -16,10 +17,13 @@ import type {
 } from "../modules/round";
 import {
   BIG_SCREEN_EVENTS,
+  PARTITION_EVENTS,
   RANKING_EVENTS,
   REALTIME_NAMESPACES,
+  ROTATION_EVENTS,
   ROUND_EVENTS,
   SYSTEM_EVENTS,
+  tabletRoom,
   type SystemConnectedPayload,
 } from "./events";
 
@@ -96,6 +100,15 @@ export function createRealtimeGateway(httpServer: HttpServer): SocketServer {
             bigScreenService.unregisterConnection(competitionId);
           });
         }
+      }
+
+      // Unit 13: a player socket joins its own per-tablet room so the rotation
+      // pushes (which carry that member's own question and grid) reach exactly one
+      // tablet instead of every connected player. The participant id comes from the
+      // authenticated handshake, never from the client.
+      if (namespace === REALTIME_NAMESPACES.player) {
+        const participantId = socket.data.auth?.participantId as string | null | undefined;
+        if (participantId) socket.join(tabletRoom(participantId));
       }
 
       const payload: SystemConnectedPayload = { serverTime: now().toISOString() };
@@ -192,6 +205,47 @@ export function createRealtimeGateway(httpServer: HttpServer): SocketServer {
   // mode change goes on the wire to that competition's room immediately.
   bigScreenService.installBigScreenModeHook((payload: BigScreenModePayload) => {
     bigScreenNamespace.to(payload.competitionId).emit(BIG_SCREEN_EVENTS.mode, payload);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Team rotation relay pushes (Unit 13)
+  //
+  // The rotation service decides what a tablet holds and when it moves; the
+  // gateway's only job is to put the already-built payload on the wire to that one
+  // tablet's room (invariant 8 — no computation here). `installRotationHooks`
+  // assigns rather than accumulates, so a repeated `createRealtimeGateway` in
+  // tests cannot double-emit.
+  // ---------------------------------------------------------------------------
+  installRotationHooks({
+    onDeal: (target, payload) => {
+      playerNamespace.to(tabletRoom(target.participantId)).emit(ROTATION_EVENTS.deal, payload);
+    },
+    onRotated: (target, payload) => {
+      playerNamespace.to(tabletRoom(target.participantId)).emit(ROTATION_EVENTS.rotated, payload);
+    },
+    onEnded: (target, payload) => {
+      playerNamespace.to(tabletRoom(target.participantId)).emit(ROTATION_EVENTS.ended, payload);
+    },
+  });
+
+  // ---------------------------------------------------------------------------
+  // Team partition collaboration pushes (Unit 14, 齐心协力)
+  //
+  // Same split as the rotation round: the service builds the payload, the gateway
+  // only puts it on the wire to that one tablet's room. The round's two deal-shaped
+  // pushes (`partition:deal` and `partition:puzzle-solved`) are one hook, because the
+  // spec gives them one payload type — `reason` is the only difference — so the event
+  // name is chosen from it here rather than the service carrying two hooks.
+  // ---------------------------------------------------------------------------
+  installPartitionHooks({
+    onDeal: (target, payload) => {
+      const room = playerNamespace.to(tabletRoom(target.participantId));
+      if (payload.reason === "PUZZLE_SOLVED") room.emit(PARTITION_EVENTS.puzzleSolved, payload);
+      else room.emit(PARTITION_EVENTS.deal, payload);
+    },
+    onEnded: (target, payload) => {
+      playerNamespace.to(tabletRoom(target.participantId)).emit(PARTITION_EVENTS.roundEnded, payload);
+    },
   });
 
   return io;

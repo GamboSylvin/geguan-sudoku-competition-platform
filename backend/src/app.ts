@@ -3,8 +3,14 @@ import { apiRouter } from "./routes";
 import { cors, errorHandler, requestLogger } from "./shared/middleware";
 import { env } from "./config/env";
 import { hasBuiltFrontend, serveFrontend } from "./static-frontend";
-import { gameplayService, installCompetitionFinishedHook, installIndividualResultFinalizedHook } from "./modules/gameplay";
-import { roundTimerService } from "./modules/round";
+import {
+  gameplayService,
+  installCompetitionFinishedHook,
+  installIndividualResultFinalizedHook,
+  teamPartitionService,
+  teamRotationService,
+} from "./modules/gameplay";
+import { roundService, roundTimerService } from "./modules/round";
 import { rankingService } from "./modules/ranking";
 import { bigScreenService } from "./modules/big-screen";
 import { purgeService, resultsService } from "./modules/results";
@@ -55,6 +61,29 @@ function installListeners(): void {
   // The retention poll. Started once per process, `unref()`'d, and never reachable
   // over HTTP (spec Security Considerations: schedule-driven only).
   purgeService.startPurgeScheduler();
+  // Unit 13/14: the Team stage's rounds deal their own questions at countdown zero,
+  // replacing the Individual stage's "fetch all 6 puzzles" step — round 1 is the
+  // rotation relay (Unit 13), round 2 the partition collaboration, 齐心协力 (Unit 14).
+  // The Round module cannot import Gameplay (invariant 4), so the hookup and the
+  // round-1/round-2 dispatch live here. `input.partition` is populated only for
+  // round 2 (see `round.service.ts`'s TEAM branch); the fallback values are the same
+  // ones the `RoundSettings` column defaults carry, so a round-2 start can never be
+  // missing them silently.
+  roundService.installTeamRoundStartHook((input) => {
+    if (input.roundSequence === 2) {
+      return teamPartitionService.startPartitionRound({
+        roundId: input.roundId,
+        competitionId: input.competitionId,
+        stageId: input.stageId,
+        partition: input.partition ?? {
+          puzzleCount: 3,
+          totalTimeSeconds: 1800,
+          pointsPerPuzzle: 20,
+        },
+      });
+    }
+    return teamRotationService.startRotationRound(input);
+  });
   listenersInstalled = true;
 }
 

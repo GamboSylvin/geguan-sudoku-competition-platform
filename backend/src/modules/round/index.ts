@@ -15,6 +15,7 @@
  *     accompanies them stays in one place.
  */
 export { roundService } from "./round.service";
+export type { TeamRoundStartInput } from "./round.service";
 export { roundTimerService, RESUME_COUNTDOWN_SECONDS } from "./round-timer.service";
 export { roundRouter } from "./round.controller";
 export type * from "./round.types";
