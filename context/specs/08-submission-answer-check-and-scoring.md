@@ -1,8 +1,8 @@
 # Unit 08: Submission, answer check and scoring — APPROVED (2026-10-05)
 
-> **Approved spec.** This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
+> **Approved spec.** This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`. **Built 2026-10-05**, backend 55/55 green across 7 suites under Docker.
 > This unit has no open item blocking it (not listed in `../specs/00-build-plan.md`, "Units that cannot be specified"). The build plan's own note — "**Waits:** unique solutions (U-90)" — is resolved: every puzzle has exactly one valid solution, confirmed by the stakeholder [C] (U-90).
-> Present this spec for review before starting the unit, per the methodology.
+> ~~Present this spec for review before starting the unit, per the methodology.~~ — done: reviewed and approved 2026-10-05, then built. The instruction is kept struck through rather than removed so nothing is silently dropped.
 
 ## Goal
 
@@ -21,7 +21,7 @@ Goal in one testable sentence: **a manual submit with every puzzle correct and t
 - **Time expiry** [T]: the latest autosaved state for the whole round is submitted automatically. An empty grid scores 0. No penalty, ever, for a zero score, no moves, never submitting, or disconnection.
 - **Answer check** [C] (BLD-010): the submitted grid is compared with `Question.solution`, with no rule checker per variant — simple equality, relying on the confirmed unique solution [C] (U-90).
 - **All-or-nothing scoring** [C] (SCR-001): any wrong or blank cell in a puzzle means 0 for that puzzle; every puzzle in the round counts, none are unscored/practice [T] (SCR-019). Points per question were set by the controller (`Question.points`, from Unit 05's eventual import or, meanwhile, seed data) and scores are stored as integers.
-- **Early-finish bonus, Individual stage only** [C] (SCR-008–SCR-011): 3 points per whole minute early (`RoundSettings.earlyBonusRate`, customizable), earned only when the student submits **manually**, **before time ends**, with **every puzzle in the round fully correct**; counted in whole minutes (1 min 30 s early counts as 1). No cap by default; an optional per-round cap may be set (`RoundSettings.earlyBonusCap`). The bonus is part of the round score (a round can exceed its nominal maximum). Measured on the server round timer, which stops during a pause (Unit 07's timer service). An automatic submission (timeout, or a controller-ended round — Unit 11, not yet built) earns **no bonus**. A student who submitted earlier keeps their bonus even if the round later ends early for everyone else.
+- **Early-finish bonus, Individual stage only** [C] (SCR-008–SCR-011): 3 points per whole minute early (`RoundSettings.earlyBonusRate`, customizable), earned only when the student submits **manually**, **before time ends**, with **every puzzle in the round fully correct**; counted in whole minutes (1 min 30 s early counts as 1). No cap by default; an optional per-round cap may be set (`RoundSettings.earlyBonusCap`). The bonus is part of the round score (a round can exceed its nominal maximum). Measured on the server round timer, which stops during a pause (Unit 07's timer service). An automatic submission (timeout, or a controller-ended round — Unit 11, ~~not yet built~~ **built and verified 2026-10-08**) earns **no bonus**. A student who submitted earlier keeps their bonus even if the round later ends early for everyone else.
 - **Seeing scores** [C] (SUB-007, BLD-029): a student sees "submission accepted," never their score, until the whole competition reaches `FINISHED` — this unit implements the "accepted" response; the score-reveal gate at `FINISHED` is Unit 09/12's concern (ranking and results), not this unit's.
 
 ## Implementation Details
@@ -71,7 +71,7 @@ Goal in one testable sentence: **a manual submit with every puzzle correct and t
 ### Constraints
 
 - No schema change — `Attempt`, `Answer`, `IndividualRoundResult`, `RoundParticipation` already exist from Unit 1.
-- Builds and tests against hand-transcribed seed `Question` data (BLD-026) — does not depend on, or wait for, Unit 05's real import pipeline, which is unblocked (2026-10-07) but not yet built.
+- Builds and tests against hand-transcribed seed `Question` data (BLD-026) — does not depend on, or wait for, Unit 05's real import pipeline, which was unblocked (2026-10-07) and **has since been built and verified (2026-10-08, backend 94/94 across 10 suites, frontend 16/16 across 5 suites)** — so the seed-only testing stance here is a choice of isolation, not a consequence of Unit 05 being absent. *(This line used to read "which is unblocked (2026-10-07) but not yet built". Note the date mismatch it carried: the unit was approved and built 2026-10-05, before the 2026-10-07 unblocking it cites — the line was evidently updated later. Recorded rather than silently smoothed over.)*
 - Does not build ranking (cumulative stage score, tie-break, the big-screen ranking cycle) — Unit 09.
 - Does not build the controller's "end a round early" command (which also yields `submissionType = CONTROLLER_END`, no bonus) — Unit 11; this unit's scoring logic already treats any non-manual-before-expiry submission as bonus-ineligible, so Unit 11 only needs to trigger the same auto-submit path this unit builds, not duplicate the scoring rule.
 - Does not build team-stage scoring (rotation relay, partition collaboration — different rules, no early bonus) — Units 13, 14.

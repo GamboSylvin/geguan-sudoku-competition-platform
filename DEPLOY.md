@@ -147,10 +147,27 @@ Puts the code in `/opt/sudoku-arena`. Any folder works; `/opt` is the convention
 for software you installed yourself, and it survives upgrades.
 
 ```bash
-git checkout louise
+git checkout sylvin
 ```
 
 Switches to the branch the build is on. Skip if you deploy from the default branch.
+
+> **Corrected 2026-10-11.** This used to read `git checkout louise`, which was right when
+> this runbook was written (2026-10-09, on the `louise` branch, carrying Unit 12, Unit 15
+> and this deployment track). The two contributors' branches were merged on 2026-10-11 —
+> `louise` into `sylvin` — so `sylvin` is now the only tree holding *every* unit: the Team
+> rotation relay (Unit 13) and the partition collaboration (Unit 14) exist only there.
+> Checking out `louise` now would deploy a tree **without** Units 13 and 14, i.e. without
+> the whole Team stage. **Check which branch actually holds the merge commit before you
+> run this. **Update, 2026-10-11:** the merge **is** now committed — `da9cf4d` on `sylvin`,
+> two parents (`6bd1b97` + `6deb21d`), so `git checkout sylvin` is the correct step and the
+> merge commit is on `sylvin`, not yet on `main` and **not pushed** (16 commits ahead of
+> `origin/sylvin`). It is committed but **unverified**: Docker Desktop was down, so the
+> merged `app.ts` (a union of both branches' hooks) has never been compiled, linted,
+> typechecked or tested, and Unit 14 has never been verified either. **Run the checks in
+> `context/progress-tracker.md`, "In Progress" before deploying** — deploying an
+> uncompilable composition root would fail at the build step in §3 anyway. If the deployment
+> happens after the merge is concluded into `main`, deploy from `main` instead and skip this step.
 
 ### 1.5 Create the environment file
 
@@ -518,6 +535,10 @@ Recorded here so nobody mistakes them for oversights:
   would go to 5173 and 404), so with two days to the event and a second contributor
   working in the same tree, the fallback is **left as it is and flagged** rather than
   changed unilaterally.
+  *(The "two days to the event" is the count as of when this was written, 2026-10-09; as
+  of 2026-10-11 the event is about a day away, so the argument for not changing it is
+  stronger, not weaker. The "second contributor working in the same tree" part has also
+  changed — the two branches were merged on 2026-10-11, so there is now one tree.)*
 
 ---
 

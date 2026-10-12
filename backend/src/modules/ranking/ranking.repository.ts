@@ -26,10 +26,21 @@ export function findIndividualStageWithRounds(competitionId: string) {
  * Every active participant in a category. The ranking lists participants, so the
  * read includes the display name the big screen shows. Only active participants
  * are ranked (a removed participant drops out of the leaderboard).
+ *
+ * **Filtered on `individualEvent: true`** (Unit 04, spec §8 Q3). This is the
+ * individual ranking's field, and the participant file's `个人赛` column defines it.
+ * Without the filter the ranking's own `isFinal` check —
+ * `participants.every(p => finalizedRounds >= roundCount)` in `ranking.service.ts` —
+ * could never pass for a category containing a team-only participant, who is never
+ * dealt into an Individual round and so never has a finalized result: the leaderboard
+ * would stay provisional for the rest of the event. The school ranking reads
+ * `listActiveCategoryParticipantsWithSchool` instead and is deliberately **not**
+ * filtered: SCR-018 sums every player of a school, and a team-only player simply
+ * contributes no individual result rows.
  */
 export function listActiveCategoryParticipants(categoryId: string) {
   return prisma.participant.findMany({
-    where: { categoryId, active: true },
+    where: { categoryId, active: true, individualEvent: true },
     select: { id: true, name: true },
     orderBy: { participantNumber: "asc" },
   });

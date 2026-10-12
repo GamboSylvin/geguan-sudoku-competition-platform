@@ -59,7 +59,10 @@ function installListeners(): void {
     await resultsService.ensurePurgeScheduled(event.competitionId);
   });
   // The retention poll. Started once per process, `unref()`'d, and never reachable
-  // over HTTP (spec Security Considerations: schedule-driven only).
+  // over HTTP (spec Security Considerations: schedule-driven only). Called exactly
+  // once: both merge sides carried this line, in two different positions inside
+  // `installListeners()`; only one survives here because the position is not
+  // load-bearing (the whole function is guarded by `listenersInstalled`).
   purgeService.startPurgeScheduler();
   // Unit 13/14: the Team stage's rounds deal their own questions at countdown zero,
   // replacing the Individual stage's "fetch all 6 puzzles" step — round 1 is the

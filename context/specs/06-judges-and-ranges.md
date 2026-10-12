@@ -76,7 +76,7 @@ Goal in one testable sentence: **a controller creates a judge and sees generated
 ### Implementation Notes
 
 - The authority-scoping check should be a single exported function from the `identity` module's public interface (`index.ts`), so Unit 10 and any later judge-facing unit call into it rather than re-implementing the range check.
-- Judge credential generation can share its random-password-generation utility with what Unit 04 will later build for participants, but the two features' data flows (one manually created by the controller, one bulk-imported from Excel) stay separate — do not couple this unit's code to Unit 04's not-yet-built import pipeline.
+- Judge credential generation can share its random-password-generation utility with what Unit 04 will later build for participants, but the two features' data flows (one manually created by the controller, one bulk-imported from Excel) stay separate — do not couple this unit's code to Unit 04's ~~not-yet-built~~ import pipeline (built 2026-10-11; the two did stay separate — Unit 04 issues `p<number>` usernames itself and does not call into judge credential generation).
 
 ### Related Features
 

@@ -136,6 +136,56 @@ export const en = {
     forbidden: "Only a judge or the controller can use this endpoint.",
     outOfRange: "This participant is outside your assigned range.",
   },
+  participant: {
+    // Unit 04. Every endpoint is controller-only (ROL-002): this module mints player
+    // logins. The `import.*` keys are the row-level rejection reasons a 422 lists, so
+    // each names the problem plainly beside the row number the API returns. `slips.*`
+    // are the column headers of the generated credential workbook, which prints.
+    forbidden: "Only a controller can manage participants.",
+    notFound: "Participant not found.",
+    import: {
+      noFile: "Choose an Excel file to upload.",
+      notAnExcelFile: "This is not a readable .xlsx file.",
+      emptyFile: "The file has no participant rows.",
+      missingRequiredColumn: "The file is missing a required column.",
+      nameRequired: "The name (姓名) is empty.",
+      schoolRequired: "The school (学校名称) is empty.",
+      unknownCategory: "This group (组别) does not exist in this competition.",
+      invalidIndividualFlag:
+        "The individual event (个人赛) cell must be 1, 2 or blank.",
+      invalidTeamFlag: "The team event (团队赛) cell must be 1, 2 or blank.",
+      duplicateParticipant:
+        "This participant appears more than once in the file (same name, school and group).",
+      competitionNameMismatch:
+        "The competition name in this file does not match this competition.",
+      noteRowSkipped: "An instruction row was skipped.",
+      notAllowedAfterPublish:
+        "Participants can only be imported while the competition is still being set up. Use the single-participant edit instead.",
+    },
+    edit: {
+      unknownCategory: "This group does not exist in this competition.",
+      unknownSchool: "This school does not exist in this competition.",
+      numberTaken: "Another participant already has this number.",
+    },
+    add: {
+      nameRequired: "A name is required.",
+      schoolRequired: "A school is required.",
+      unknownCategory: "This group does not exist in this competition.",
+      duplicate: "This participant already exists (same name, school and group).",
+    },
+    credentials: {
+      none: "There are no participants to export credentials for.",
+    },
+    slips: {
+      number: "Number",
+      name: "Name",
+      school: "School",
+      category: "Group",
+      username: "Username",
+      password: "Password",
+      entryLink: "Entry link",
+    },
+  },
   question: {
     // Unit 05. Every endpoint is controller-only (ROL-002). The `import.*` keys are
     // the row-level rejection reasons a 422 lists, so each names the problem plainly;

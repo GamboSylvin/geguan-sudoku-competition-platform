@@ -85,6 +85,15 @@ function jsonResponse(status: number, body: unknown) {
   return { ok: status >= 200 && status < 300, status, json: async () => body };
 }
 
+/** Un roster vide, à la forme de `ParticipantListView`. */
+function emptyRoster() {
+  return {
+    competitionId: "comp-1",
+    participants: [],
+    counts: { total: 0, active: 0, individualEvent: 0, teamEvent: 0, teamFlaggedBySchool: [] },
+  };
+}
+
 /**
  * `CompetitionSetupPage` also mounts the judge-range panel (Unit 06), which fetches
  * the judge list on mount. Routing the mock on method + URL — instead of queueing
@@ -116,6 +125,17 @@ function baseRoutes(): Route[] {
       url: /\/questions\/pool$/,
       status: 200,
       body: { categoryId: "cat-1", groups: [] },
+    },
+    // Le panneau participant (Unit 04) est monté sur cet écran lui aussi et charge le
+    // roster dès qu'une compétition existe. Sans cette route la requête du panneau lève,
+    // il affiche sa propre erreur `role="alert"` à côté de celle sur laquelle le test de
+    // publication porte, et `getByRole("alert")` échoue sur le doublon. Un roster vide
+    // suffit : le panneau n'affiche alors aucune erreur de son côté.
+    {
+      method: "GET",
+      url: /\/api\/competitions\/comp-1\/participants/,
+      status: 200,
+      body: emptyRoster(),
     },
   ];
 }
