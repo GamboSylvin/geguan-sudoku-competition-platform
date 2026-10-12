@@ -10,6 +10,7 @@ import { scoringRouter } from "./modules/scoring";
 import { rankingRouter } from "./modules/ranking";
 import { bigScreenRouter } from "./modules/big-screen";
 import { resultsRouter } from "./modules/results";
+import { participantRouter } from "./modules/participant";
 
 /**
  * Mounts each module's routes under `/api` (BLD-020). Only the health check and the
@@ -52,3 +53,8 @@ apiRouter.use("/big-screen", bigScreenRouter);
 // competition path with `mergeParams` reading `:id` (the same pattern Units 05, 09 and
 // 11 use). The purge has no route — it is schedule-driven only.
 apiRouter.use("/competitions/:id", resultsRouter);
+// Unit 04: the participant import, roster, single-row edits and credential slips are all
+// competition-scoped and controller-only, so this router is mounted on the competition
+// path with `mergeParams` reading `:id` (the same pattern Units 05, 09, 11 and 12 use).
+// No route it declares collides with the orchestrator's or the results module's.
+apiRouter.use("/competitions/:id", participantRouter);

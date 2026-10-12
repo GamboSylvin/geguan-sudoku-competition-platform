@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useLocale } from "../../i18n/locale-context";
 import { clearSession } from "../auth/session";
 import { JudgeRangeAssignmentPanel } from "../judge/JudgeRangeAssignmentPanel";
+import { ParticipantPanel } from "../participant/ParticipantPanel";
 import { QuestionPanel } from "../question/QuestionPanel";
 import {
   createCompetition,
@@ -29,8 +30,8 @@ import {
  * Unit 15 gives it a second mode: `/controller/competitions/:id/setup` opens an
  * **existing** competition instead of the create form. That is where a copy lands,
  * because the copy is a fresh `CREATED` competition that still has to go through
- * this screen's publish flow — including a participant import, which Unit 04 owes it
- * and which is why publishing a brand-new copy fails its readiness check until then.
+ * this screen's publish flow — the participant import Unit 04 built and the question
+ * import Unit 05 built, both of which a copy starts from scratch.
  */
 
 function stageRoundLabel(
@@ -334,6 +335,19 @@ export function CompetitionSetupPage() {
 
           {/* Judge range assignment (Unit 06) — changeable any time during the event. */}
           <JudgeRangeAssignmentPanel competitionId={competition.id} />
+
+          {/* Participant import, roster and credential slips (Unit 04). It sits before the
+              question panel because the publish readiness check needs both a participant
+              and a question set in every category, and participants come first in the
+              organizer's own order of work. No team formation is offered here — teams are
+              deferred out of Unit 04 (spec §8 Q10, U-102). */}
+          <ParticipantPanel
+            competitionId={competition.id}
+            categories={competition.categories.map((category) => ({
+              id: category.id,
+              name: category.name,
+            }))}
+          />
 
           {/* Question import, pool and per-round selection (Unit 05, BLD-040). Only
               Individual rounds hold a selection; Team rounds draw from the pool. */}

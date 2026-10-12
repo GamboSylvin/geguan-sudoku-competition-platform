@@ -1,0 +1,42 @@
+-- Unit 04 (2026-10-11): the participant file's own two event flags.
+--
+-- The real template `context/samples/选手信息.xlsx` carries both `个人赛` (column J)
+-- and `团队赛` (column K), and its cell L2 states the rule no project document had
+-- captured: `个人赛团队赛参加填写1，未参加空白或者是2` — write `1` if taking part,
+-- leave blank or write `2` if not. Before this migration the schema could represent
+-- the *team* half only indirectly (a `Team` row, and `Participant.teamId`) and could
+-- not represent the *individual* half at all, so "registered for the individual
+-- event" was stored nowhere. The project owner resolved this 2026-10-11 (spec §8 Q3):
+-- follow the file's rule and store both flags.
+--
+-- Defaults matter and are not arbitrary. `individualEvent` defaults to TRUE and
+-- `teamEvent` to FALSE so that every row already in the database keeps exactly the
+-- behaviour the tree was verified with: nothing before Unit 04 distinguished the
+-- two, and every participant row that exists today (all of it hand-seeded by tests)
+-- is an individual entrant with no team. A migration that defaulted the other way
+-- would silently drop every existing participant out of the Individual round.
+--
+-- Two reads must filter on `individualEvent`, and both are part of this unit rather
+-- than a later one, because storing the flag without honouring it breaks a
+-- verified path: `round.repository.ts`'s `listActiveParticipants` (the 2026-10-08
+-- `RoundParticipation` fix) would deal a non-individual student into the Individual
+-- round, where Unit 08's round-ended auto-submit sweep finalizes an empty `Attempt`
+-- and writes a zero `IndividualRoundResult`, putting them in the ranking; and
+-- `ranking.service.ts`'s `isFinal` — which requires *every* active participant of
+-- the category to have a finalized result for every round — could then never
+-- complete for a category containing such a student. `school-ranking` needs no
+-- change: its individual half already sums every player of the school in the
+-- category (SCR-018), and a non-individual player simply contributes no result rows.
+--
+-- Hand-written to match what `prisma migrate dev` emits, because Docker Desktop's
+-- engine was returning 500 on every API call (including `/_ping`) when this unit was
+-- built, so no database was reachable — the same situation Unit 14's migration was
+-- written in. Purely additive: two new columns with server defaults, no data
+-- rewritten, no index, no constraint changed, so it is safe against a database
+-- holding rows from Units 01-15.
+
+-- AlterTable
+ALTER TABLE "Participant" ADD COLUMN "individualEvent" BOOLEAN NOT NULL DEFAULT true;
+
+-- AlterTable
+ALTER TABLE "Participant" ADD COLUMN "teamEvent" BOOLEAN NOT NULL DEFAULT false;

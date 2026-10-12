@@ -155,12 +155,20 @@ export function findRuntimeState(
  * `Stage`/`Round` rows are per-competition (Unit 03's structure), not per
  * category, so one round is shared by every category's participants and there is
  * nothing to iterate category by category.
+ *
+ * **Filtered on `individualEvent: true`** (Unit 04, spec §8 Q3). This read feeds only
+ * `openParticipationsForRound`, which opens the Individual round's field — and the
+ * participant file's `个人赛` column says who is in it. Without the filter a student
+ * who is in the team event only would be dealt a puzzle, and Unit 08's round-ended
+ * auto-submit sweep would write them a zero `IndividualRoundResult`, putting them in
+ * the individual ranking they never entered. A **Team**-stage round must not use this
+ * function: it would exclude the team-only players, who are exactly its field.
  */
 export function listActiveParticipants(
   competitionId: string,
 ): Promise<{ id: string; categoryId: string }[]> {
   return prisma.participant.findMany({
-    where: { competitionId, active: true },
+    where: { competitionId, active: true, individualEvent: true },
     select: { id: true, categoryId: true },
   });
 }

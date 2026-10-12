@@ -431,6 +431,24 @@ model Participant {
   sequence          Int
   // Reflects removal from the active set (§7.2.4).
   active            Boolean @default(true)
+  // The participant file's own two event flags (Unit 04, spec §8 Q3, project owner
+  // 2026-10-11). The file's rule, written in its cell L2, is
+  // `个人赛团队赛参加填写1，未参加空白或者是2` — `1` = taking part, blank or `2` = not.
+  //
+  // `individualEvent` defaults to `true` and `teamEvent` to `false` so every row that
+  // existed before this migration keeps the behaviour the tree was verified with
+  // (before Unit 04 nothing could distinguish the two, and every hand-seeded test
+  // participant was an individual entrant). Both are read, never inferred: team
+  // membership is still `teamId != null`, and these columns say what the student
+  // *registered for*.
+  //
+  // Two queries must filter on `individualEvent` or an Individual round breaks — a
+  // student who never sits the round has no finalized result, so
+  // `ranking.service.ts`'s `isFinal` could never complete, and
+  // `round.repository.ts`'s `listActiveParticipants` would deal them in and let
+  // Unit 08's auto-submit sweep write a zero result for them. See the spec's §8 Q3.
+  individualEvent   Boolean @default(true)
+  teamEvent         Boolean @default(false)
 
   competition Competition         @relation(fields: [competitionId], references: [id], onDelete: Cascade)
   category    CompetitionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
