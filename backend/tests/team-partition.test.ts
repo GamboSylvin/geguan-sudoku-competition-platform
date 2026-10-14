@@ -423,6 +423,36 @@ afterAll(async () => {
   await disconnectPrisma().catch(() => undefined);
 });
 
+/**
+ * Relâche les minuteurs de round dès la fin de CHAQUE test, pas seulement au
+ * `afterAll` global.
+ *
+ * Pourquoi : chaque test appelle `startPartitionRound`, qui démarre un minuteur de
+ * 4000 s dont la boucle de tick se réarme toutes les 250 ms tant qu'il n'est pas
+ * relâché (`round-timer.service.ts`'s `scheduleWakeup`). Sans nettoyage par test, les
+ * minuteurs de tous les tests précédents restent vivants et s'accumulent jusqu'à la
+ * fin du fichier : chaque tick fait un `redis.get`, et ~25 minuteurs empilés saturent
+ * la boucle d'événements et la connexion Redis. Les deux derniers tests du fichier
+ * ("...against an Individual-stage round" et "...against a round that does not exist")
+ * tombent alors au point de bascule et leur simple POST expire à 5000 ms. C'est le même
+ * pattern de fuite de minuteur déjà corrigé au niveau *inter*-suites, qui se reproduisait
+ * ici *intra*-fichier.
+ *
+ * `releaseTimer` est idempotent (renvoie false quand il n'y a plus d'état Redis), donc
+ * relibérer des minuteurs déjà relâchés par un test — ou par le `releaseTimer` manuel
+ * d'un test — est sans effet de bord. Le `afterAll` global reste comme filet de sécurité
+ * pour les minuteurs qu'un test démarrerait hors de `createdCompetitionIds`.
+ */
+afterEach(async () => {
+  const rounds = await prisma.round.findMany({
+    where: { stage: { competitionId: { in: createdCompetitionIds } } },
+    select: { id: true },
+  });
+  for (const round of rounds) {
+    await roundTimerService.releaseTimer(round.id).catch(() => undefined);
+  }
+});
+
 describe("pure partition rules (no I/O)", () => {
   it("isPartitionRound: only the Team stage's round 2", () => {
     expect(teamPartitionService.isPartitionRound("TEAM", 2)).toBe(true);
