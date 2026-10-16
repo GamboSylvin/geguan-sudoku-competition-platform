@@ -221,6 +221,109 @@ describe("create a competition (AC 1, AC 2)", () => {
   });
 });
 
+/**
+ * BLD-051 (decided 2026-10-15): the scoring configuration is settable by the
+ * controller, on create and on update, through the endpoints that already existed.
+ * The default case is asserted by the create test above ("0.6" / 180), so what this
+ * block pins is that a supplied value is actually stored and read back, that an
+ * update sticks and that a partial update leaves the other field alone.
+ */
+describe("scoring configuration CRUD (BLD-051)", () => {
+  const CATEGORIES = [
+    { code: "U8", name: "Under 8" },
+    { code: "U12", name: "Under 12" },
+  ];
+
+  it("creates with supplied values and reads them back from GET /:id", async () => {
+    const created = await authed(request(app).post("/api/competitions")).send({
+      name: `Scoring create ${suffix}`,
+      categories: CATEGORIES,
+      scoringConfiguration: { schoolCoefficient: 0.75, rankingCycleSeconds: 300 },
+    });
+
+    expect(created.status).toBe(201);
+    createdCompetitionIds.push(created.body.id);
+    // A Decimal comes back serialized as a string; the int stays a number.
+    expect(created.body.scoringConfiguration.schoolCoefficient).toBe("0.75");
+    expect(created.body.scoringConfiguration.rankingCycleSeconds).toBe(300);
+
+    const read = await authed(request(app).get(`/api/competitions/${created.body.id}`)).send();
+    expect(read.status).toBe(200);
+    expect(read.body.scoringConfiguration.schoolCoefficient).toBe("0.75");
+    expect(read.body.scoringConfiguration.rankingCycleSeconds).toBe(300);
+  });
+
+  it("updates the values and a partial update leaves the other field alone", async () => {
+    const created = await authed(request(app).post("/api/competitions")).send({
+      name: `Scoring update ${suffix}`,
+      categories: CATEGORIES,
+      scoringConfiguration: { schoolCoefficient: 0.75, rankingCycleSeconds: 300 },
+    });
+    createdCompetitionIds.push(created.body.id);
+    const id = created.body.id;
+
+    const full = await authed(request(app).patch(`/api/competitions/${id}`)).send({
+      scoringConfiguration: { schoolCoefficient: 0.5, rankingCycleSeconds: 60 },
+    });
+    expect(full.status).toBe(200);
+    expect(full.body.scoringConfiguration.schoolCoefficient).toBe("0.5");
+    expect(full.body.scoringConfiguration.rankingCycleSeconds).toBe(60);
+
+    // Only the cycle is named, so the coefficient must keep its stored value.
+    const partial = await authed(request(app).patch(`/api/competitions/${id}`)).send({
+      scoringConfiguration: { rankingCycleSeconds: 45 },
+    });
+    expect(partial.status).toBe(200);
+    expect(partial.body.scoringConfiguration.rankingCycleSeconds).toBe(45);
+    expect(partial.body.scoringConfiguration.schoolCoefficient).toBe("0.5");
+
+    const read = await authed(request(app).get(`/api/competitions/${id}`)).send();
+    expect(read.body.scoringConfiguration.schoolCoefficient).toBe("0.5");
+    expect(read.body.scoringConfiguration.rankingCycleSeconds).toBe(45);
+  });
+
+  it("still edits the scoring configuration after publish, since it is a value not structure", async () => {
+    const competition = await makeCompetition(`Scoring locked ${suffix}`);
+    await seedReadinessData(competition.id, { judgeRanges: true });
+
+    const published = await authed(
+      request(app).post(`/api/competitions/${competition.id}/publish`),
+    ).send();
+    expect(published.status).toBe(200);
+
+    const edited = await authed(request(app).patch(`/api/competitions/${competition.id}`)).send({
+      scoringConfiguration: { schoolCoefficient: 0.9 },
+    });
+    expect(edited.status).toBe(200);
+    expect(edited.body.scoringConfiguration.schoolCoefficient).toBe("0.9");
+    expect(edited.body.scoringConfiguration.rankingCycleSeconds).toBe(180);
+  });
+
+  it("rejects values that cannot be stored", async () => {
+    const zeroCoefficient = await authed(request(app).post("/api/competitions")).send({
+      name: `Scoring bad ${suffix}`,
+      categories: CATEGORIES,
+      scoringConfiguration: { schoolCoefficient: 0 },
+    });
+    expect(zeroCoefficient.status).toBe(400);
+
+    const fractionalCycle = await authed(request(app).post("/api/competitions")).send({
+      name: `Scoring bad ${suffix}`,
+      categories: CATEGORIES,
+      scoringConfiguration: { rankingCycleSeconds: 1.5 },
+    });
+    expect(fractionalCycle.status).toBe(400);
+
+    // An unknown field is refused outright by the strict object.
+    const unknownField = await authed(request(app).post("/api/competitions")).send({
+      name: `Scoring bad ${suffix}`,
+      categories: CATEGORIES,
+      scoringConfiguration: { notAField: 1 },
+    });
+    expect(unknownField.status).toBe(400);
+  });
+});
+
 describe("publish readiness (AC 3, AC 4)", () => {
   it("refuses publish and names every unmet condition", async () => {
     const competition = await makeCompetition(`NotReady ${suffix}`);

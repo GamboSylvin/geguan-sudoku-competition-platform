@@ -68,6 +68,31 @@ export const en = {
       TEAM2: "Team round 2",
     },
   },
+  school: {
+    title: "Schools",
+    empty: "No school yet. Add one below.",
+    nameLabel: "School name",
+    add: "Add school",
+    addPlaceholder: "School name",
+    // Une étiquette distincte de `nameLabel` : les deux champs (ajout et renommage)
+    // peuvent être présents à l'écran en même temps, et deux contrôles partageant un
+    // nom accessible sont impossibles à viser — pour un test comme pour un lecteur
+    // d'écran.
+    addLabel: "New school name",
+    rename: "Rename",
+    remove: "Remove",
+    save: "Save",
+    cancel: "Cancel",
+    created: "School added",
+    renamed: "School renamed",
+    removed: "School removed",
+    participantsCount: "participants",
+    teamsCount: "teams",
+    blockedParticipants: "Still has participants — remove them first.",
+    blockedTeam: "Still has a team — remove it first.",
+    nameTaken: "A school with this name already exists.",
+    genericError: "Something went wrong. Please try again.",
+  },
   judge: {
     title: "Judges",
     name: "Judge name",
@@ -144,6 +169,27 @@ export const en = {
     pickCopy: "Copy this competition",
     copying: "Copying…",
     copyFailed: "The competition could not be copied. Please try again.",
+    // BLD-050. This dialog is the only thing standing between an impatient click and
+    // permanent, unrecoverable data loss, so every category of data destroyed is named
+    // in plain language and the delete button stays disabled until the competition's
+    // own name is typed back exactly.
+    pickDelete: "Delete this competition",
+    deleteTitle: "Delete this competition forever?",
+    deleteWarning:
+      "This permanently destroys everything in the competition. None of it can be recovered, and there is no undo:",
+    deleteListStructure: "the competition itself and its categories, stages and rounds",
+    deleteListQuestions: "every imported question and question set",
+    deleteListJudges: "every judge's assignment to this competition (the judges themselves are kept)",
+    deleteListPeople: "every school, every team and every participant",
+    deleteListAccounts: "every student login and every device it signed in from",
+    deleteListResults: "every result, score correction, ranking and audit entry",
+    deleteListFiles: "every uploaded file, removed from disk",
+    deleteTypeLabel: "Type the competition's exact name to confirm:",
+    deleteTypeHint: "Name to type:",
+    deleteConfirm: "Delete forever",
+    deleting: "Deleting…",
+    deleteCancel: "Back",
+    deleteFailed: "The competition could not be deleted. Please try again.",
     results: "Results",
     pickCreate: "Create a competition",
     pickManageJudges: "Manage judges",

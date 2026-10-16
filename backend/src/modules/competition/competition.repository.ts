@@ -5,7 +5,7 @@
  */
 import type { Competition, Prisma, StageType } from "@prisma/client";
 import { prisma } from "../../infra";
-import type { RoundSettingsPatch } from "./competition.types";
+import type { RoundSettingsPatch, ScoringConfigurationInput } from "./competition.types";
 
 /**
  * The shape every read of a competition uses: its categories, its stages with their
@@ -95,23 +95,39 @@ export interface CreateCompetitionData {
   description: string | null;
   categories: CategoryStructureInput[];
   stages: StageStructureInput[];
+  /**
+   * Scoring-configuration overrides (BLD-051). An empty/absent object creates the row
+   * with the schema defaults (coefficient 0.6, ranking cycle 180s), exactly as before
+   * this decision; supplied fields override their default.
+   */
+  scoringConfiguration?: ScoringConfigurationInput;
 }
 
 /**
- * Create the competition, its categories, its 1:1 scoring configuration (schema
- * defaults: coefficient 0.6, ranking cycle 180s) and the fixed stage/round structure
- * with each round's settings — all in one nested write, so a failure creates nothing.
- * The two link tokens come from the schema's `@default(uuid())`, so they exist from
- * this moment.
+ * Create the competition, its categories, its 1:1 scoring configuration (any supplied
+ * value, else the schema defaults: coefficient 0.6, ranking cycle 180s) and the fixed
+ * stage/round structure with each round's settings — all in one nested write, so a
+ * failure creates nothing. The two link tokens come from the schema's
+ * `@default(uuid())`, so they exist from this moment.
  */
 export function createCompetition(
   data: CreateCompetitionData,
 ): Promise<CompetitionWithStructure> {
+  const scoring = data.scoringConfiguration ?? {};
   return prisma.competition.create({
     data: {
       name: data.name,
       description: data.description,
-      scoringConfiguration: { create: {} },
+      scoringConfiguration: {
+        create: {
+          ...(scoring.schoolCoefficient !== undefined
+            ? { schoolCoefficient: scoring.schoolCoefficient }
+            : {}),
+          ...(scoring.rankingCycleSeconds !== undefined
+            ? { rankingCycleSeconds: scoring.rankingCycleSeconds }
+            : {}),
+        },
+      },
       categories: { create: data.categories },
       stages: {
         create: data.stages.map((stage) => ({
@@ -140,6 +156,33 @@ export function updateCompetitionMeta(
   data: { name?: string; description?: string | null },
 ): Promise<Competition> {
   return prisma.competition.update({ where: { id }, data });
+}
+
+/**
+ * Update the 1:1 scoring configuration's supplied fields (BLD-051). The row always
+ * exists (created with the competition), so this is a nested `update`, not an upsert;
+ * only the fields present in `data` change, the rest keep their stored value. The
+ * caller guards against an empty object so this is not run pointlessly.
+ */
+export function updateScoringConfiguration(
+  id: string,
+  data: ScoringConfigurationInput,
+): Promise<Competition> {
+  return prisma.competition.update({
+    where: { id },
+    data: {
+      scoringConfiguration: {
+        update: {
+          ...(data.schoolCoefficient !== undefined
+            ? { schoolCoefficient: data.schoolCoefficient }
+            : {}),
+          ...(data.rankingCycleSeconds !== undefined
+            ? { rankingCycleSeconds: data.rankingCycleSeconds }
+            : {}),
+        },
+      },
+    },
+  });
 }
 
 export interface CategoryChangePlan {

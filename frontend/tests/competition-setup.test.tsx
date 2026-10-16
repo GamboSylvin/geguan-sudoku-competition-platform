@@ -85,7 +85,7 @@ function jsonResponse(status: number, body: unknown) {
   return { ok: status >= 200 && status < 300, status, json: async () => body };
 }
 
-/** Un roster vide, à la forme de `ParticipantListView`. */
+/** An empty roster, shaped like `ParticipantListView`. */
 function emptyRoster() {
   return {
     competitionId: "comp-1",
@@ -126,16 +126,25 @@ function baseRoutes(): Route[] {
       status: 200,
       body: { categoryId: "cat-1", groups: [] },
     },
-    // Le panneau participant (Unit 04) est monté sur cet écran lui aussi et charge le
-    // roster dès qu'une compétition existe. Sans cette route la requête du panneau lève,
-    // il affiche sa propre erreur `role="alert"` à côté de celle sur laquelle le test de
-    // publication porte, et `getByRole("alert")` échoue sur le doublon. Un roster vide
-    // suffit : le panneau n'affiche alors aucune erreur de son côté.
+    // The participant panel (Unit 04) is also mounted on this screen and loads the
+    // roster as soon as a competition exists. Without this route the panel's request
+    // throws, it renders its own `role="alert"` beside the one the publish test is
+    // about, and `getByRole("alert")` fails on the duplicate. An empty roster is
+    // enough: the panel then shows no error of its own.
     {
       method: "GET",
       url: /\/api\/competitions\/comp-1\/participants/,
       status: 200,
       body: emptyRoster(),
+    },
+    // The schools panel (BLD-052) is also mounted on this screen and loads its list as
+    // soon as a competition exists. Without this route the mock throws, the panel
+    // renders its own `role="alert"` and the publish test fails on the duplicate.
+    {
+      method: "GET",
+      url: /\/api\/competitions\/comp-1\/schools$/,
+      status: 200,
+      body: { schools: [] },
     },
   ];
 }

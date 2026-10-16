@@ -471,3 +471,178 @@ describe("controller competition picker", () => {
     });
   });
 });
+
+/**
+ * BLD-050's hard delete. The server accepts it at any status and destroys everything,
+ * so this dialog is the only guard — which is what these tests pin down: the button
+ * stays disarmed until the competition's own name is typed back, the warning names
+ * every category of data being lost, and the DELETE only goes out once armed.
+ */
+describe("controller picker hard delete (BLD-050)", () => {
+  const NAME = "Winter Cup";
+
+  /** The single competition the picker shows, so one test can serve it and then not. */
+  function seededCompetitions() {
+    return [
+      {
+        id: "comp-2",
+        name: NAME,
+        status: "ROUND_ACTIVE",
+        createdAt: "2026-10-08T09:00:00.000Z",
+        publishedAt: null,
+        startedAt: null,
+        finishedAt: null,
+      },
+    ];
+  }
+
+  function pickerRoutes(deleteStatus = 204): MockRoute[] {
+    return [
+      {
+        method: "GET",
+        url: /\/api\/competitions$/,
+        status: 200,
+        body: { competitions: seededCompetitions() },
+      },
+      {
+        method: "DELETE",
+        url: /\/api\/competitions\/comp-2$/,
+        status: deleteStatus,
+        body: deleteStatus === 204 ? null : { error: { code: "competition.forbidden" } },
+      },
+    ];
+  }
+
+  /** Open the delete dialog for the one seeded competition. */
+  async function openDialog(): Promise<void> {
+    seedControllerSession();
+    mockFetch(pickerRoutes());
+    renderAt("/controller", "/controller", <ControllerPickerPage />);
+
+    await screen.findByText(NAME);
+    fireEvent.click(screen.getByRole("button", { name: "Delete this competition" }));
+    await screen.findByRole("dialog");
+  }
+
+  it("names every category of data being destroyed, in plain language", async () => {
+    await openDialog();
+
+    const dialog = screen.getByRole("dialog");
+    // Count-based rather than wording-based: one entry per category of data the delete
+    // clears (structure, questions, judge assignments, people, accounts, results,
+    // files). EN and ZH phrase them differently, so the copy itself is not asserted.
+    expect(within(dialog).getAllByRole("listitem").length).toBeGreaterThanOrEqual(7);
+    // The competition's own name is on show, since it has to be retyped to arm.
+    expect(within(dialog).getAllByText(NAME).length).toBeGreaterThan(0);
+  });
+
+  it("keeps the confirm button disabled until the exact name is typed", async () => {
+    await openDialog();
+    const confirm = screen.getByRole("button", { name: "Delete forever" });
+    const input = screen.getByLabelText(/exact name/i);
+
+    expect(confirm).toBeDisabled();
+
+    fireEvent.change(input, { target: { value: "Winter" } });
+    expect(confirm).toBeDisabled();
+
+    // Wrong case is a wrong name. Deliberately unforgiving.
+    fireEvent.change(input, { target: { value: "winter cup" } });
+    expect(confirm).toBeDisabled();
+
+    // Surrounding whitespace is trimmed, so a stray space is not a blocker.
+    fireEvent.change(input, { target: { value: `  ${NAME}  ` } });
+    expect(confirm).toBeEnabled();
+
+    fireEvent.change(input, { target: { value: "" } });
+    expect(confirm).toBeDisabled();
+  });
+
+  it("sends the DELETE only once armed, then the row is gone from the list", async () => {
+    seedControllerSession();
+    // Stateful list: once the DELETE lands, the server no longer returns that row, so
+    // the re-read the page does on success is what makes it disappear. A fixed body
+    // would make "the row is gone" untestable.
+    let deleted = false;
+    const calls = mockFetch([
+      {
+        method: "GET",
+        url: /\/api\/competitions$/,
+        status: 200,
+        get body() {
+          return { competitions: deleted ? [] : seededCompetitions() };
+        },
+      },
+      {
+        method: "DELETE",
+        url: /\/api\/competitions\/comp-2$/,
+        status: 204,
+        get body() {
+          deleted = true;
+          return null;
+        },
+      },
+    ]);
+    renderAt("/controller", "/controller", <ControllerPickerPage />);
+
+    await screen.findByText(NAME);
+    fireEvent.click(screen.getByRole("button", { name: "Delete this competition" }));
+
+    // Clicking the disarmed button sends nothing — the "impatient click" case.
+    fireEvent.click(screen.getByRole("button", { name: "Delete forever" }));
+    expect(calls.find((c) => c.method === "DELETE")).toBeUndefined();
+
+    fireEvent.change(screen.getByLabelText(/exact name/i), { target: { value: NAME } });
+    fireEvent.click(screen.getByRole("button", { name: "Delete forever" }));
+
+    await waitFor(() => {
+      expect(
+        calls.some((c) => c.method === "DELETE" && /\/api\/competitions\/comp-2$/.test(c.url)),
+      ).toBe(true);
+    });
+    // The dialog closes and the list is re-read, so the deleted row disappears.
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(screen.queryByText(NAME)).not.toBeInTheDocument();
+  });
+
+  it("closes without deleting when the controller backs out", async () => {
+    seedControllerSession();
+    const calls = mockFetch(pickerRoutes());
+    renderAt("/controller", "/controller", <ControllerPickerPage />);
+
+    await screen.findByText(NAME);
+    fireEvent.click(screen.getByRole("button", { name: "Delete this competition" }));
+    fireEvent.change(screen.getByLabelText(/exact name/i), { target: { value: NAME } });
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(calls.find((c) => c.method === "DELETE")).toBeUndefined();
+
+    // Reopening starts from an empty field: the previously typed name is not carried over.
+    fireEvent.click(screen.getByRole("button", { name: "Delete this competition" }));
+    expect(screen.getByRole("button", { name: "Delete forever" })).toBeDisabled();
+  });
+
+  it("shows the failure and keeps the dialog armed when the server refuses", async () => {
+    seedControllerSession();
+    mockFetch(pickerRoutes(403));
+    renderAt("/controller", "/controller", <ControllerPickerPage />);
+
+    await screen.findByText(NAME);
+    fireEvent.click(screen.getByRole("button", { name: "Delete this competition" }));
+    fireEvent.change(screen.getByLabelText(/exact name/i), { target: { value: NAME } });
+    fireEvent.click(screen.getByRole("button", { name: "Delete forever" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "The competition could not be deleted. Please try again.",
+      );
+    });
+    // Nothing was lost from the controller's point of view: the dialog is still open and
+    // still armed, so the refusal can be read and the attempt repeated or abandoned.
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete forever" })).toBeEnabled();
+  });
+});

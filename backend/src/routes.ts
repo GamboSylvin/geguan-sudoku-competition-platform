@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { healthRouter } from "./health";
-import { competitionRouter } from "./modules/competition";
+import { competitionRouter, schoolRouter } from "./modules/competition";
 import { identityRouter, judgeRouter, judgeAssignmentRouter, judgeSupervisionRouter } from "./modules/identity";
 import { questionRouter } from "./modules/question";
 import { roundRouter } from "./modules/round";
@@ -29,6 +29,9 @@ apiRouter.use("/auth", identityRouter);
 apiRouter.use("/competitions", competitionRouter);
 // Judge range assignment lives on the competition path (Unit 06 API contract).
 apiRouter.use("/competitions/:id/judge-assignments", judgeAssignmentRouter);
+// BLD-052: the school CRUD surface. Mounted ahead of the generic `/competitions/:id`
+// routers so its `/schools` paths are never matched by one of their command routes.
+apiRouter.use("/competitions/:id/schools", schoolRouter);
 apiRouter.use("/judges", judgeRouter);
 // Unit 10: the judge's own supervision endpoints live under the singular /judge
 // (the management endpoints under /judges are controller-only).

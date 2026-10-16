@@ -169,6 +169,20 @@ export function copyCompetition(id: string): Promise<CompetitionView> {
   );
 }
 
+/**
+ * `DELETE /api/competitions/:id` — BLD-050's hard delete. Permanent and total: the
+ * competition, its structure, its questions, its participants and their accounts, its
+ * results, rankings, corrections, audit rows and uploaded files all go. Only this
+ * competition's judge *assignments* are removed; the judge list itself is reusable
+ * across competitions and survives. The server accepts it at any status and answers
+ * 204 with no body, hence `void`.
+ */
+export async function deleteCompetition(id: string): Promise<void> {
+  await request<null>(`/api/competitions/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
 /** Pull the unmet readiness conditions out of a publish rejection, if present. */
 export function unmetConditionsFrom(error: unknown): ReadinessCondition[] | null {
   if (

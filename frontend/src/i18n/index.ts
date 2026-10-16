@@ -9,7 +9,12 @@ import { zh } from "./zh";
  */
 export const LOCALES = ["en", "zh"] as const;
 export type Locale = (typeof LOCALES)[number];
-export const DEFAULT_LOCALE: Locale = "en";
+/**
+ * Chinese is the default locale (U-68, BLD-053): the event's students, judges and
+ * audience are in mainland China. English stays available through the language
+ * switcher, and a choice saved in `localStorage` overrides this default.
+ */
+export const DEFAULT_LOCALE: Locale = "zh";
 
 export const catalogues: Record<Locale, MessageCatalogue> = { en, zh };
 

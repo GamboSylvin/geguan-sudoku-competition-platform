@@ -34,10 +34,25 @@ const categorySchema = z.object({
   name: z.string().trim().min(1).max(64),
 });
 
+/**
+ * The scoring configuration (BLD-051, decided 2026-10-15). Both fields optional: a
+ * create or update that omits them leaves the schema defaults (0.6 / 180) alone, so
+ * every existing caller and test behaves exactly as before. `schoolCoefficient` is
+ * accepted as a plain positive number even though it is stored as a Decimal — a
+ * float is what a caller has, and Prisma converts it.
+ */
+const scoringConfigurationSchema = z
+  .object({
+    schoolCoefficient: z.number().positive().optional(),
+    rankingCycleSeconds: z.number().int().positive().optional(),
+  })
+  .strict();
+
 const createSchema = z.object({
   name: z.string().trim().min(1).max(120),
   description: z.string().trim().max(2000).nullish(),
   categories: z.array(categorySchema).min(1),
+  scoringConfiguration: scoringConfigurationSchema.optional(),
 });
 
 /** Every round-settings field is optional; each is a whole number (null clears an optional one). */
@@ -64,6 +79,7 @@ const updateSchema = z
     description: z.string().trim().max(2000).nullish(),
     categories: z.array(categorySchema).min(1).optional(),
     roundSettings: z.record(z.string().min(1), roundSettingsPatchSchema).optional(),
+    scoringConfiguration: scoringConfigurationSchema.optional(),
   })
   .strict();
 
@@ -160,6 +176,31 @@ competitionRouter.post(
       const { id } = parseInput(idParamSchema, req.params);
       const result = await competitionService.publishCompetition(id);
       res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * DELETE /api/competitions/:id — BLD-050, decided 2026-10-15. Hard-deletes the
+ * competition and everything in it, permanently. Allowed at any status; the frontend
+ * is what makes this deliberate (a typed-name confirmation naming every category of
+ * data being destroyed), not a server-side status gate. 204 on success, 404
+ * `competition.notFound` on an unknown id.
+ *
+ * 204 rather than 200-with-the-row: after this call the row no longer exists, so
+ * there is nothing to return (the convention `judgeAssignmentRouter`'s delete uses).
+ */
+competitionRouter.delete(
+  "/:id",
+  requireAuth,
+  requireController,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = parseInput(idParamSchema, req.params);
+      await competitionService.deleteCompetition(id);
+      res.status(204).end();
     } catch (error) {
       next(error);
     }

@@ -18,10 +18,24 @@ export interface CategoryInput {
   name: string;
 }
 
+/**
+ * The optional scoring-configuration values a caller may supply (BLD-051, decided
+ * 2026-10-15). Both fields optional on both create and update: an omitted field keeps
+ * the schema default (coefficient 0.6, ranking cycle 180s) on create, or the current
+ * stored value on update. `schoolCoefficient` is a plain number here even though it is
+ * stored as a Decimal — Prisma converts it, and a read returns it as a Decimal-serialized
+ * string.
+ */
+export interface ScoringConfigurationInput {
+  schoolCoefficient?: number;
+  rankingCycleSeconds?: number;
+}
+
 export interface CreateCompetitionInput {
   name: string;
   description?: string | null;
   categories: CategoryInput[];
+  scoringConfiguration?: ScoringConfigurationInput;
 }
 
 /**
@@ -53,6 +67,8 @@ export interface UpdateCompetitionInput {
   categories?: CategoryInput[];
   /** Edits keyed by round id. Allowed before publish and, per the existing rule, after. */
   roundSettings?: Record<string, RoundSettingsPatch>;
+  /** Scoring-configuration values to change (BLD-051); omitted fields stay as they are. */
+  scoringConfiguration?: ScoringConfigurationInput;
 }
 
 /**

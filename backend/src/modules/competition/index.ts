@@ -8,4 +8,9 @@
 export { competitionService } from "./competition.service";
 export { competitionCopyService } from "./competition-copy.service";
 export { competitionRouter } from "./competition.controller";
+// BLD-052: the school CRUD surface is competition-scoped setup data, so it lives in
+// this module rather than a new one (see `school.repository.ts`'s header for why).
+export { schoolService } from "./school.service";
+export { schoolRouter } from "./school.controller";
 export type * from "./competition.types";
+export type * from "./school.types";

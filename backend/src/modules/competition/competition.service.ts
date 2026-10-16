@@ -16,6 +16,7 @@
  *   (Unit 03 spec, Implementation Details 4).
  */
 import { now } from "../../shared/clock";
+import { logger } from "../../infra";
 import {
   ConflictError,
   NotFoundError,
@@ -25,6 +26,7 @@ import {
 import { translate } from "../../shared/i18n";
 import * as repository from "./competition.repository";
 import type { CompetitionWithStructure } from "./competition.repository";
+import * as deleteRepository from "./competition-delete.repository";
 import {
   defaultDurationSeconds,
   isStructureLocked,
@@ -181,6 +183,9 @@ export async function createCompetition(
     description: input.description ?? null,
     categories: buildCategories(input.categories),
     stages: buildStructure(),
+    ...(input.scoringConfiguration !== undefined
+      ? { scoringConfiguration: input.scoringConfiguration }
+      : {}),
   });
 }
 
@@ -222,6 +227,16 @@ export async function updateCompetition(
   if (input.roundSettings !== undefined) {
     for (const [roundId, patch] of Object.entries(input.roundSettings)) {
       await updateRoundSettings(id, roundId, patch);
+    }
+  }
+
+  // Scoring configuration (BLD-051): a value, not structure, so it is editable at any
+  // status — the same latitude round settings already have. An empty object changes
+  // nothing, so it is skipped rather than issuing a no-op write.
+  if (input.scoringConfiguration !== undefined) {
+    const scoring = input.scoringConfiguration;
+    if (scoring.schoolCoefficient !== undefined || scoring.rankingCycleSeconds !== undefined) {
+      await repository.updateScoringConfiguration(id, scoring);
     }
   }
 
@@ -428,6 +443,42 @@ export async function getCompetition(id: string): Promise<CompetitionWithStructu
 }
 
 // ---------------------------------------------------------------------------
+// Hard delete (BLD-050, decided 2026-10-15)
+// ---------------------------------------------------------------------------
+
+/**
+ * Delete a competition and everything in it, permanently. Deliberately available at
+ * any `Competition.status` — the project owner's reason is that a day produces many
+ * throwaway competitions and waiting out the 15-day purge (RES-004) for each is not
+ * workable. That purge still exists and is unchanged; this is a separate, manual,
+ * immediate and total mechanism, and the two must not be confused with each other in
+ * code or in UI copy (architecture.md, Storage model).
+ *
+ * `Judge` rows survive: the judge list is reusable across competitions (Unit 06), so
+ * only this competition's assignments to them are removed.
+ *
+ * Files on disk are unlinked after the transaction commits, best effort — see
+ * `competition-delete.repository.ts`.
+ */
+export async function deleteCompetition(id: string): Promise<deleteRepository.DeleteCounts> {
+  if (!(await deleteRepository.competitionExists(id))) {
+    throw notFoundError();
+  }
+
+  const files = await deleteRepository.readStoredFilePaths(id);
+  const counts = await deleteRepository.deleteCompetitionEverything(id);
+
+  logger.info("competition.delete: competition hard-deleted", {
+    competitionId: id,
+    counts,
+  });
+
+  await deleteRepository.unlinkStoredFiles(id, files);
+
+  return counts;
+}
+
+// ---------------------------------------------------------------------------
 // Public interface
 // ---------------------------------------------------------------------------
 
@@ -439,4 +490,5 @@ export const competitionService = {
   validateRoundSettingsPatch,
   listCompetitions,
   getCompetition,
+  deleteCompetition,
 };

@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { LocaleProvider } from "./i18n/locale-context";
+import { LanguageSwitcher, readStoredLocale } from "./i18n/LanguageSwitcher";
 import { LoginPage } from "./features/auth";
 import { BigScreenPage } from "./features/big-screen";
 import { CompetitionSetupPage } from "./features/competition";
@@ -28,11 +29,17 @@ import { ResultsPage } from "./features/results";
  * Unit 15 adds the school leaderboard at /controller/competitions/:id/school-ranking
  * and a setup route for an existing competition at /controller/competitions/:id/setup
  * (where a copied competition lands, since it has to be published again).
+ * BLD-053 adds the language switcher: the platform was bilingual on paper only, with
+ * catalogues and a `setLocale` nobody could reach. The switcher is rendered once here
+ * rather than per screen because there is no shared header (see LanguageSwitcher.tsx).
  */
 export function App() {
   return (
-    <LocaleProvider>
+    <LocaleProvider initialLocale={readStoredLocale() ?? undefined}>
       <BrowserRouter>
+        {/* The switcher must be INSIDE the router: it reads `useLocation()` to hide
+            itself on the gameplay and big-screen routes. */}
+        <LanguageSwitcher />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/player" element={<PlayerPage />} />
