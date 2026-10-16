@@ -24,13 +24,13 @@ import {
  * went out of its way to avoid. An incomplete category is shown as provisional
  * rather than as an error, because that is what the server returns.
  *
- * Visuel : ambiance B « clair, sobre, cartes blanches » (BLD-054, révise U-66).
- * Choix à signaler : le rapport classe ses propres écrans de classement
- * (`RankingView`, `DisplayFinalRankingView`…) en ambiance C sombre — mais ce sont
- * les vues projetées dans la salle. Cet écran-ci est atteint depuis les Résultats
- * du pilotage et lu par l'organisateur seul, il reste donc en B comme le dit la
- * table de `context/ui-context.md`, et il reçoit exactement les mêmes recettes que
- * `ResultsPage` (un seul style par rôle visuel, §6/6).
+ * Visual: mood B, "light, sober, white cards" (BLD-054, revising U-66).
+ * A choice worth flagging: the report classifies its own ranking screens
+ * (`RankingView`, `DisplayFinalRankingView`…) as dark mood C — but those are the
+ * views projected in the hall. This screen is reached from the controller's Results
+ * and read by the organizer alone, so it stays in B as the table in
+ * `context/ui-context.md` says, and it receives exactly the same recipes as
+ * `ResultsPage` (one single style per visual role, §6/6).
  */
 
 /** The summed submission time, as `m:ss`, the way the other screens show it. */
@@ -122,8 +122,8 @@ export function SchoolRankingPage() {
 
   return (
     <main className="flex min-h-screen flex-col gap-6 bg-gray-50 p-4 text-gray-900 sm:p-6">
-      {/* Bandeau d'en-tête de l'ambiance B (§3.2/2), identique à celui des Résultats :
-          le div existait déjà, rien n'est ajouté à l'arbre. */}
+      {/* Mood B header banner (§3.2/2), identical to the Results one:
+          the div already existed, nothing is added to the tree. */}
       <div className="-mx-4 -mt-4 flex flex-col gap-3 bg-gradient-to-r from-indigo-700 to-purple-700 px-4 py-4 text-white shadow-lg sm:-mx-6 sm:-mt-6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div>
           <h1 className="text-lg font-bold sm:text-xl">

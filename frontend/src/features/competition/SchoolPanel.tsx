@@ -24,11 +24,11 @@ import {
  * come from the list itself, so no extra request is needed to decide the button's
  * state.
  *
- * Visuel : ambiance B « clair, sobre, cartes blanches » (BLD-054, révise U-66).
- * Même carte blanche que les autres panneaux de la page hôte ; le bouton « remove »
- * reprend la recette rouge des actions destructrices de l'ambiance B (comme dans
- * `JudgeManagementPage`) — un seul style par rôle visuel (§6/6). Les boutons
- * désactivés passent tous à `disabled:opacity-50`, la convention unique du rapport.
+ * Visual: mood B, "light, sober, white cards" (BLD-054, revising U-66).
+ * The same white card as the other panels of the host page; the "remove" button
+ * follows mood B's red recipe for destructive actions (as in
+ * `JudgeManagementPage`) — one single style per visual role (§6/6). Disabled
+ * buttons all move to `disabled:opacity-50`, the report's single convention.
  */
 export function SchoolPanel({ competitionId }: { competitionId: string }) {
   const { t } = useLocale();

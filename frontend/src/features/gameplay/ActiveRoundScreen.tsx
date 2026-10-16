@@ -9,18 +9,18 @@
  * There is deliberately no live correctness feedback (spec Free movement): the
  * grid shows what the player typed, nothing more.
  *
- * Visuel : ambiance C « sombre, grand, lisible » (BLD-054) — c'est l'écran posé sur
- * une tablette en pleine salle, la lumière doit venir de la grille et non du fond.
- * La grille suit la recette du rapport (§4.C « SudokuGrid ») en ne reprenant que les
- * états qui existent réellement ici : `given` (`bg-gray-800 text-white`), `selected`
- * (`bg-indigo-600 text-white`) et libre (`bg-gray-700 text-gray-200
- * hover:bg-gray-600`). Les états « validated » et « proposed » du rapport n'ont
- * aucun équivalent dans ce code (aucun retour de correction en direct, cf. ci-dessus)
- * et ne sont donc pas inventés. Les filets entre cellules sont rendus par le
- * `gap-px` sur `bg-gray-600`, l'équivalent fonctionnel du `border-gray-600` du
- * rapport. Le minuteur porte `font-mono tabular-nums` (§3.5 : un compte à rebours
- * comparé d'un coup d'œil), la modale de confirmation passe en `z-50` (§3.10) et
- * toutes les désactivations en `disabled:opacity-50`, la convention unique.
+ * Visual: mood C, "dark, large, readable" (BLD-054) — this is the screen sitting on
+ * a tablet in the middle of the hall, so the light must come from the grid and not
+ * from the background. The grid follows the report's recipe (§4.C, "SudokuGrid")
+ * while keeping only the states that genuinely exist here: `given`
+ * (`bg-gray-800 text-white`), `selected` (`bg-indigo-600 text-white`) and free
+ * (`bg-gray-700 text-gray-200 hover:bg-gray-600`). The report's "validated" and
+ * "proposed" states have no equivalent in this code (no live correctness feedback,
+ * see above) and are therefore not invented. The lines between cells are rendered by
+ * the `gap-px` over `bg-gray-600`, the functional equivalent of the report's
+ * `border-gray-600`. The timer carries `font-mono tabular-nums` (§3.5: a countdown
+ * compared at a glance), the confirmation modal moves to `z-50` (§3.10) and every
+ * disabled control to `disabled:opacity-50`, the single convention.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { API_BASE_URL } from "@/config/env";

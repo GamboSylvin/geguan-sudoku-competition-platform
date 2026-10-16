@@ -72,7 +72,7 @@ export const zh: MessageCatalogue = {
     nameLabel: "学校名称",
     add: "添加学校",
     addPlaceholder: "学校名称",
-    // Étiquette distincte de `nameLabel` : les deux champs peuvent coexister à l'écran.
+    // A label distinct from `nameLabel`: the two fields may coexist on screen.
     addLabel: "新学校名称",
     rename: "重命名",
     remove: "删除",

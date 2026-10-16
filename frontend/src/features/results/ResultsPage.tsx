@@ -27,11 +27,11 @@ import {
  * localizable message, and a cancelled competition's gate surfaces here as the
  * `results_competitionCancelled` message instead of any numbers.
  *
- * Visuel : ambiance B « clair, sobre, cartes blanches » (BLD-054, révise U-66).
- * Écran de lecture uniquement côté pilotage, donc tout est en cartes blanches sur
- * `bg-gray-50`, avec le bandeau dégradé indigo→violet (§3.2/2) pour l'en-tête.
- * Les colonnes de rang, de score et de temps portent `tabular-nums` : ce sont des
- * chiffres comparés d'une ligne à l'autre (§3.5).
+ * Visual: mood B, "light, sober, white cards" (BLD-054, revising U-66).
+ * A read-only screen on the controller's side, so everything is white cards over
+ * `bg-gray-50`, with the indigo→purple gradient banner (§3.2/2) for the header.
+ * The rank, score and time columns carry `tabular-nums`: these are figures compared
+ * from one row to the next (§3.5).
  */
 
 /** The correction target the form was opened for, if any. */
@@ -206,9 +206,9 @@ export function ResultsPage() {
 
   return (
     <main className="flex min-h-screen flex-col gap-6 bg-gray-50 p-4 text-gray-900 sm:p-6">
-      {/* Bandeau d'en-tête de l'ambiance B (§3.2/2) : le div existait déjà, il porte
-          maintenant le dégradé et les trois actions deviennent des boutons « verre »
-          (§3.6), exactement comme sur le poste de pilotage — un seul style par rôle. */}
+      {/* Mood B header banner (§3.2/2): the div already existed, it now carries the
+          gradient and the three actions become "glass" buttons (§3.6), exactly as on
+          the live command desk — one single style per role. */}
       <div className="-mx-4 -mt-4 flex flex-col gap-3 bg-gradient-to-r from-indigo-700 to-purple-700 px-4 py-4 text-white shadow-lg sm:-mx-6 sm:-mt-6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div>
           <h1 className="text-lg font-bold sm:text-xl">

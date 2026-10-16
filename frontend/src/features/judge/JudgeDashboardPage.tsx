@@ -10,9 +10,9 @@ import { StudentsSupervisionPanel } from "./StudentsSupervisionPanel";
  * spec Detail 6). This page adds only what is the judge's own: the page header and
  * the logout action.
  *
- * Visuel : ambiance B « clair, sobre, cartes blanches » (BLD-054, révise U-66).
- * §4.B du rapport nomme explicitement cet écran (« JudgeControlPage »), donc il
- * n'y a pas de doute sur l'ambiance à appliquer ici.
+ * Visual: mood B, "light, sober, white cards" (BLD-054, revising U-66).
+ * §4.B of the report explicitly names this screen ("JudgeControlPage"), so there is
+ * no doubt about which mood applies here.
  */
 export function JudgeDashboardPage() {
   const { t } = useLocale();
@@ -25,8 +25,8 @@ export function JudgeDashboardPage() {
 
   return (
     <main className="flex min-h-screen flex-col bg-gray-50 p-4 text-gray-900 sm:p-6">
-      {/* Bandeau d'en-tête de l'ambiance B : dégradé indigo→violet (§3.2/2), avec le
-          bouton « verre » de §3.6. Ce div existait déjà ; rien n'est ajouté à l'arbre. */}
+      {/* Mood B header banner: indigo→purple gradient (§3.2/2), with the "glass"
+          button of §3.6. This div already existed; nothing is added to the tree. */}
       <div className="mb-4 -mx-4 -mt-4 flex justify-end bg-gradient-to-r from-indigo-700 to-purple-700 px-4 py-3 text-white shadow-lg sm:-mx-6 sm:-mt-6 sm:px-6">
         <button
           type="button"

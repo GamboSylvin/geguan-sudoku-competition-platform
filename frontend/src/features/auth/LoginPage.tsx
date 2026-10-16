@@ -12,10 +12,10 @@ import { login, landingPath, type RoleSlug } from "./session";
  * On success it stores the session and redirects to the role's placeholder landing
  * route; on failure it shows one generic rejection (AUTH-002).
  *
- * Visuel : ambiance A « verre sur dégradé » (BLD-054, révise UI-008/U-66).
- * `backdrop-blur-lg` est réservé à cette ambiance et ne doit pas apparaître
- * sur un écran B ou C. Recette : RAPPORT-CSS-sudoku_arena.md §4.A, mapping
- * dans context/ui-context.md « Visual design system ».
+ * Visual: mood A, "glass over gradient" (BLD-054, revising UI-008/U-66).
+ * `backdrop-blur-lg` is reserved to this mood and must not appear on a B or C
+ * screen. Recipe: RAPPORT-CSS-sudoku_arena.md §4.A, mapping in
+ * context/ui-context.md, "Visual design system".
  */
 const ROLES: readonly RoleSlug[] = ["player", "judge", "controller"];
 

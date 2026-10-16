@@ -21,13 +21,12 @@ import {
  * which point the backend refuses with `question.selection.locked` and the panel shows
  * that refusal instead of silently keeping a stale choice.
  *
- * Visuel : ambiance B « clair, sobre, cartes blanches » (BLD-054, révise U-66).
- * Même carte blanche que les autres panneaux de la page hôte (`CompetitionSetupPage`) —
- * un seul style par rôle visuel (§6/6). Chaque groupe du pool est un sous-panneau
- * `bg-gray-50` dans la carte, la même recette que le formulaire d'ajout du panneau
- * des participants. Le compteur « x / 6 » et les numéros de grille portent
- * `tabular-nums` (§3.5). Boutons désactivés : `disabled:opacity-50`, la convention
- * unique du rapport.
+ * Visual: mood B, "light, sober, white cards" (BLD-054, revising U-66).
+ * The same white card as the other panels of the host page (`CompetitionSetupPage`) —
+ * one single style per visual role (§6/6). Each group of the pool is a `bg-gray-50`
+ * sub-panel inside the card, the same recipe as the participant panel's add form.
+ * The "x / 6" counter and the grid numbers carry `tabular-nums` (§3.5). Disabled
+ * buttons: `disabled:opacity-50`, the report's single convention.
  */
 export interface QuestionPanelCategory {
   id: string;

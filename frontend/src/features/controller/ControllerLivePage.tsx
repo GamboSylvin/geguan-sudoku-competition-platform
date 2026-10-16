@@ -41,9 +41,9 @@ import {
  * big-screen mode every few seconds. The screen is one client on one desk, so this
  * is far cheaper than a push channel and needs no new event contract.
  *
- * Visuel : ambiance B « clair, sobre, cartes blanches » (BLD-054, révise U-66).
- * Recette : RAPPORT-CSS-sudoku_arena.md §4.B. Les boutons désactivés utilisent
- * `disabled:opacity-50` (la convention unique du rapport) et non plus `opacity-40`.
+ * Visual: mood B, "light, sober, white cards" (BLD-054, revising U-66).
+ * Recipe: RAPPORT-CSS-sudoku_arena.md §4.B. Disabled buttons use
+ * `disabled:opacity-50` (the report's single convention) and no longer `opacity-40`.
  */
 const POLL_INTERVAL_MS = 3000;
 
@@ -305,8 +305,8 @@ export function ControllerLivePage() {
 
   return (
     <main className="flex min-h-screen flex-col gap-6 bg-gray-50 p-4 text-gray-900 sm:p-6">
-      {/* Bandeau d'en-tête de l'ambiance B : dégradé indigo→violet (§3.2/2), boutons
-          « verre » de §3.6. Le `header` existait déjà ; seul son habillage change. */}
+      {/* Mood B header banner: indigo→purple gradient (§3.2/2), "glass" buttons of
+          §3.6. The `header` already existed; only its dressing changes. */}
       <header className="-mx-4 -mt-4 flex flex-col gap-3 bg-gradient-to-r from-indigo-700 to-purple-700 px-4 py-4 text-white shadow-lg sm:-mx-6 sm:-mt-6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div>
           <h1 className="text-lg font-bold sm:text-xl">{t("controller.title")}</h1>

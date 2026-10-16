@@ -10,13 +10,13 @@
  * endpoint returns. There is no local round-state machine beyond "which payload
  * arrived most recently".
  *
- * Visuel : ambiance C « sombre, grand, lisible » (BLD-054). C'est l'écran d'une
- * tablette posée sur une table de concours : fond `bg-gray-900`, texte blanc, un
- * compte à rebours géant en `tabular-nums` (chiffres comparés d'un coup d'œil, §3.5).
- * Le carton de règles de la préparation, qui était blanc, passe au panneau sombre du
- * rapport (`bg-gray-800 rounded-lg p-4`) : le dépôt ne mélange jamais une carte
- * blanche dans un écran sombre (§4). Aucun blanc nulle part sur cette page — les
- * écrans de round délégués à `features/gameplay` suivent la même ambiance.
+ * Visual: mood C, "dark, large, readable" (BLD-054). This is the screen of a tablet
+ * lying on a competition table: `bg-gray-900` background, white text, a giant
+ * countdown in `tabular-nums` (figures compared at a glance, §3.5). The preparation
+ * rules card, which used to be white, moves to the report's dark panel
+ * (`bg-gray-800 rounded-lg p-4`): the repository never mixes a white card into a
+ * dark screen (§4). No white anywhere on this page — the round screens delegated to
+ * `features/gameplay` follow the same mood.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";

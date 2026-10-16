@@ -17,14 +17,14 @@
  * `PLAYER_CLOSEUP` and `TEAM_SPLIT` have no data behind them yet and fall through to
  * the ranking view so a mode the controller can set is never a blank screen.
  *
- * Visuel : ambiance C « sombre, grand, lisible du fond de la salle » (BLD-054).
- * C'est exactement le rôle de cet écran — projeté dans la salle, lu de loin, sans
- * souris : le dégradé géant du rapport (§3.2/3, `from-gray-900 via-slate-900
- * to-gray-800`), les séparateurs `border-white/10` en en-tête et `border-white/5`
- * entre les lignes, et des corps de tableau en `text-2xl sm:text-3xl`. Rang, score
- * et temps portent `tabular-nums`, le temps `font-mono` : ce sont des chiffres
- * comparés d'une ligne à l'autre (§3.5). Aucune carte blanche ici — le dépôt ne
- * mélange jamais une carte blanche dans un écran sombre (§4).
+ * Visual: mood C, "dark, large, readable from the back of the room" (BLD-054).
+ * That is exactly this screen's role — projected in the hall, read from a distance,
+ * with no mouse: the report's giant gradient (§3.2/3, `from-gray-900 via-slate-900
+ * to-gray-800`), the `border-white/10` separators in the header and `border-white/5`
+ * between rows, and table bodies in `text-2xl sm:text-3xl`. Rank, score and time
+ * carry `tabular-nums`, and time `font-mono`: these are figures compared from one
+ * row to the next (§3.5). No white card here — the repository never mixes a white
+ * card into a dark screen (§4).
  */
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";

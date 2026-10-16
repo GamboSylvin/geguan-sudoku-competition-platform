@@ -35,13 +35,13 @@ import {
  * plaintext password is never stored, so closing this panel is the end of the only
  * on-screen chance to read it. The slips download is the retrieval path afterwards.
  *
- * Visuel : ambiance B « clair, sobre, cartes blanches » (BLD-054, révise U-66).
- * Même carte blanche que les autres panneaux de la page hôte (`CompetitionSetupPage`) —
- * un seul style par rôle visuel (§6/6). Le bloc des identifiants émis reprend la recette
- * ambre de `JudgeManagementPage`, parce que c'est le même rôle visuel : une information
- * à lire une seule fois. Numéros d'élève et compteurs portent `tabular-nums`, les
- * identifiants `font-mono` (§3.5). Tous les boutons désactivés passent à
- * `disabled:opacity-50`, la convention unique du rapport.
+ * Visual: mood B, "light, sober, white cards" (BLD-054, revising U-66).
+ * The same white card as the other panels of the host page (`CompetitionSetupPage`) —
+ * one single style per visual role (§6/6). The issued-credentials block follows the
+ * amber recipe of `JudgeManagementPage`, because it is the same visual role: a piece
+ * of information to be read only once. Student numbers and counters carry
+ * `tabular-nums`, and the credentials `font-mono` (§3.5). All disabled buttons move
+ * to `disabled:opacity-50`, the report's single convention.
  */
 export interface ParticipantPanelCategory {
   id: string;

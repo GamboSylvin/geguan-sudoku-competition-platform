@@ -148,8 +148,8 @@ export function ControllerPickerPage() {
 
   return (
     <main className="flex min-h-screen flex-col bg-gray-50 p-4 text-gray-900 sm:p-6">
-      {/* Bandeau d'en-tête de l'ambiance B : dégradé indigo→violet (§3.2/2 du rapport).
-          Les boutons qui y vivent sont les boutons « verre » de §3.6. */}
+      {/* Mood B header banner: indigo→purple gradient (§3.2/2 of the report).
+          The buttons that live in it are the "glass" buttons of §3.6. */}
       <div className="mb-4 -mx-4 -mt-4 flex flex-col gap-3 bg-gradient-to-r from-indigo-700 to-purple-700 px-4 py-4 text-white shadow-lg sm:-mx-6 sm:-mt-6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div>
           <h1 className="text-lg font-bold sm:text-xl">{t("controller.pickTitle")}</h1>

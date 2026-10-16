@@ -21,12 +21,12 @@ import { LOCALES, type Locale } from "./index";
  * Persisting the choice is handled by `readStoredLocale` / `writeStoredLocale` below,
  * used by `App.tsx` to initialize the provider.
  *
- * Visuel (BLD-054) : ce contrôle flotte au-dessus de **tous** les écrans, il n'appartient
- * donc à aucune ambiance en particulier. Il est traité comme une carte de l'ambiance B
- * (blanc, `shadow-lg`, bouton actif indigo) parce qu'il n'est présent que sur les écrans
- * clairs — il disparaît justement des routes joueur et grand écran, qui sont les seules
- * en ambiance C sombre. Un seul style par rôle visuel (§6/6) : le bouton actif reprend la
- * recette indigo des boutons primaires de l'ambiance B.
+ * Visual (BLD-054): this control floats above **all** screens, so it belongs to no
+ * particular mood. It is treated as a mood B card (white, `shadow-lg`, indigo active
+ * button) because it is only present on the light screens — it precisely disappears
+ * from the player and big-screen routes, which are the only ones in dark mood C. One
+ * single style per visual role (§6/6): the active button follows the indigo recipe of
+ * mood B's primary buttons.
  */
 
 const STORAGE_KEY = "sudoku-arena.locale";

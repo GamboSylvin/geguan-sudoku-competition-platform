@@ -23,9 +23,9 @@ import { SchoolPanel } from "./SchoolPanel";
 
 /**
  * The competition-creation and publish screen (Unit 03, frontend `competition`
- * feature). Ambiance B « clair, sobre, cartes blanches » (BLD-054) : coquille
- * `bg-gray-50`, cartes `bg-white rounded-xl shadow p-4 sm:p-6`, boutons primaires
- * indigo-600, champs `border-gray-300` + focus en anneau indigo. It shows the venue
+ * feature). Mood B, "light, sober, white cards" (BLD-054): `bg-gray-50` shell,
+ * `bg-white rounded-xl shadow p-4 sm:p-6` cards, indigo-600 primary buttons,
+ * `border-gray-300` fields + indigo ring on focus. It shows the venue
  * Wi-Fi advisory note (U-56, UI copy only), the auto-generated structure with its
  * editable round durations, and the publish action with its readiness-failure /
  * success display.

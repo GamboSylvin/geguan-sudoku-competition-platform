@@ -14,9 +14,9 @@ import {
  * one-time credentials for the slip export, list every judge, remove a judge (with
  * the ROL-010 removal-guard error naming the blocking competition).
  *
- * Visuel : ambiance B « clair, sobre, cartes blanches » (BLD-054, révise U-66).
- * Recette : RAPPORT-CSS-sudoku_arena.md §4.B, mapping dans context/ui-context.md
- * « Visual design system ».
+ * Visual: mood B, "light, sober, white cards" (BLD-054, revising U-66).
+ * Recipe: RAPPORT-CSS-sudoku_arena.md §4.B, mapping in context/ui-context.md,
+ * "Visual design system".
  */
 export function JudgeManagementPage() {
   const { t } = useLocale();

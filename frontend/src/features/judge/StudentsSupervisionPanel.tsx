@@ -21,10 +21,10 @@ import {
  * (~300 tablets, a handful of judges, one controller). A realtime upgrade is a
  * later unit's call.
  *
- * Visuel : ambiance B « clair, sobre, cartes blanches » (BLD-054, révise U-66).
- * Ce panneau est rendu dans deux écrans B (le tableau de bord du juge et le
- * poste de pilotage en direct), donc il garde exactement les mêmes recettes
- * dans les deux cas : un seul style par rôle visuel.
+ * Visual: mood B, "light, sober, white cards" (BLD-054, revising U-66).
+ * This panel is rendered in two B screens (the judge's dashboard and the live
+ * command desk), so it keeps exactly the same recipes in both cases: one single
+ * style per visual role.
  */
 const POLL_INTERVAL_MS = 3000;
 

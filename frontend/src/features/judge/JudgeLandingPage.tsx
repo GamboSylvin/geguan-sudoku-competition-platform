@@ -10,8 +10,8 @@ import { useNavigate } from "react-router-dom";
  * participant-number range — or a "not yet assigned" note. The full supervision
  * dashboard (status view, single-student restart) is Unit 10, not this unit.
  *
- * Visuel : ambiance B « clair, sobre, cartes blanches » (BLD-054, révise U-66).
- * Aucun élément ajouté à l'arbre : la carte repose sur les `li` qui existaient déjà.
+ * Visual: mood B, "light, sober, white cards" (BLD-054, revising U-66).
+ * No element added to the tree: the card rests on the `li` items that already existed.
  */
 export function JudgeLandingPage() {
   const { t } = useLocale();

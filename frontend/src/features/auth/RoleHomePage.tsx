@@ -20,7 +20,7 @@ export function RoleHomePage({ role }: { role: Role }) {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
-      {/* Carte claire de l'ambiance B : bg-white rounded-xl shadow (§3.5 du rapport) */}
+      {/* Light card of mood B: bg-white rounded-xl shadow (§3.5 of the report) */}
       <div className="flex w-full max-w-md flex-col items-center gap-4 rounded-xl bg-white p-6 shadow sm:p-8">
         <h1 className="text-center text-xl font-bold text-gray-900 sm:text-2xl">
           {t(`auth.landing.${role.toLowerCase()}`)}

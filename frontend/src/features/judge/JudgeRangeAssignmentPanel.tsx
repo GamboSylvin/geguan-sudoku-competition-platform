@@ -17,10 +17,10 @@ import {
  * the same CompetitionJudgeAssignment rows, so a saved range immediately counts
  * toward publish readiness.
  *
- * Visuel : ambiance B « clair, sobre, cartes blanches » (BLD-054, révise U-66).
- * Carte blanche exactement identique à celle des autres panneaux de la page hôte
- * (`CompetitionSetupPage`) : un seul style par rôle visuel (§6/6). Les plages de
- * numéros portent `tabular-nums` — ce sont des nombres alignés (§3.5).
+ * Visual: mood B, "light, sober, white cards" (BLD-054, revising U-66).
+ * A white card exactly identical to that of the other panels of the host page
+ * (`CompetitionSetupPage`): one single style per visual role (§6/6). The number
+ * ranges carry `tabular-nums` — these are aligned figures (§3.5).
  */
 export function JudgeRangeAssignmentPanel({ competitionId }: { competitionId: string }) {
   const { t } = useLocale();

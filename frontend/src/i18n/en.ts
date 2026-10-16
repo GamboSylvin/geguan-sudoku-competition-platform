@@ -74,10 +74,9 @@ export const en = {
     nameLabel: "School name",
     add: "Add school",
     addPlaceholder: "School name",
-    // Une étiquette distincte de `nameLabel` : les deux champs (ajout et renommage)
-    // peuvent être présents à l'écran en même temps, et deux contrôles partageant un
-    // nom accessible sont impossibles à viser — pour un test comme pour un lecteur
-    // d'écran.
+    // A label distinct from `nameLabel`: the two fields (add and rename) may be
+    // present on screen at the same time, and two controls sharing one accessible
+    // name are impossible to target — for a test as well as for a screen reader.
     addLabel: "New school name",
     rename: "Rename",
     remove: "Remove",
