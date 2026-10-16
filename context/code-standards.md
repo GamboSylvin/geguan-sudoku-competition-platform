@@ -36,7 +36,7 @@
 ## Error handling
 
 - Never swallow errors silently. Log failures with enough context to diagnose.
-- Error shape and messages: **OPEN.** User-facing messages must exist in both English and Chinese [C]/[T] (ARCH-026).
+- Error shape and messages: ~~**OPEN.**~~ **Settled by practice across all 15 units, reconciled 2026-10-13/14:** every rejection carries a stable, dot-separated error code (e.g. `participant.import.notAllowedAfterPublish`) resolved through `shared/i18n/{en,zh}.ts`; a code with no catalogue entry degrades to a generic message rather than a raw key or a blank screen (every frontend feature's `messageFor` helper follows this). User-facing messages must exist in both English and Chinese [C]/[T] (ARCH-026) — enforced at compile time in `zh.ts`, typed as `MessageCatalogue`, so a missing key fails the build.
 
 ## Naming conventions
 
@@ -45,7 +45,7 @@
 
 ## API conventions
 
-**OPEN.** The API contract is a "Working Position", explicitly a starting point and not final (ARCH-023). Real-time uses WebSocket [T]. Handler order of operations (validate input, then enforce auth and ownership, then run logic, then respond) and response shape: **OPEN.**
+~~**OPEN.** The API contract is a "Working Position"… Handler order of operations… and response shape: **OPEN.**~~ **Settled by practice across all 15 units, reconciled 2026-10-13/14** (the contract itself stays a "Working Position" per unit, ARCH-023 — this is the convention every unit followed, not a frozen final contract): REST under `/api`, resources nested by competition (`/api/competitions/:id/...`); handler order is consistently validate input → enforce auth/ownership (a `requireAuth` + role check, e.g. `requireController`) → run the module's service logic → respond; success responses return the created/updated resource or a small result object, never a bare `{}`; real-time uses WebSocket (Socket.io) [T], one event namespace per module, named `<domain>:<event>`.
 Decided behaviour that affects the API: separate login endpoints per role [T]; a repeated submission never changes the result [C].
 
 ## Testing

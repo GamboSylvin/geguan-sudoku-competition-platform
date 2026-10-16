@@ -1,10 +1,12 @@
 # Manual Test Scenarios — Sudoku Arena
 
-**Purpose.** A step-by-step, click-by-click script for a human to manually verify every feature that has been built so far — no coding knowledge required beyond following the steps. This is separate from, and does not replace, the project's automated tests (94 backend tests across 10 suites, 16 frontend tests across 5 suites, run in CI on every pull request — see `backend/tests/` and `frontend/tests/`). Automated tests catch regressions fast; this guide is for a human to confirm the whole system actually behaves as intended when used for real, and to sign off before the event.
+**Purpose.** A step-by-step, click-by-click script for a human to manually verify every feature that has been built so far — no coding knowledge required beyond following the steps. This is separate from, and does not replace, the project's automated tests (**242 backend tests across 17 suites, 55 frontend tests across 10 suites** — see `backend/tests/` and `frontend/tests/`). Automated tests catch regressions fast; this guide is for a human to confirm the whole system actually behaves as intended when used for real, and to sign off before the event.
 
-**Coverage.** Every unit that is built today — `01` Foundation, `02` Authentication, `03` Competition setup, `05` Question import, `06` Judges and ranges, `07` Round runtime, `08` Submission and scoring, `09` Ranking and big screen, `10` Judge supervision — has at least one scenario below. Units `11`–`15` (controller live commands, results/export, team stages, school ranking) are not built yet; see the note at the end.
+**Coverage.** All 15 built units have at least one scenario below: `01` Foundation, `02` Authentication, `03` Competition setup, `04` Participant import, `05` Question import, `06` Judges and ranges, `07` Round runtime, `08` Submission and scoring, `09` Ranking and big screen, `10` Judge supervision, `11` Controller live commands, `12` Results/corrections/export, `13` Team stage rotation relay, `14` Team stage partition collaboration, `15` School ranking. Nothing is "not built yet" any more.
 
-**Last verified against the system:** 2026-10-08. If a step's wording, button label or URL has visibly changed since, that's a sign this file needs a refresh, not that you're doing something wrong.
+**Last verified against the system: 2026-10-14.** If a step's wording, button label or URL has visibly changed since, that's a sign this file needs a refresh, not that you're doing something wrong.
+
+**Correction, 2026-10-15: `context/samples/选手信息.xlsx` is NOT the empty template this section used to describe.** Every check from 2026-10-13/14 onward (including the one this section originally cited) compared the file's unchanged size/date to an earlier check and wrongly concluded "still empty," without ever re-unzipping it. It actually holds 3 real rows (张三/李四/刘一), and the project owner ran the first real import through Unit 04 manually, correctly — see `context/progress-tracker.md`'s Unit 04 row for the full account. Section A8 below still works as a hand-add exercise on a *copy* of the file if you want extra synthetic rows, but you no longer need to invent data to see a real import succeed — the file already has some. Team rows are in a different position: no application code anywhere creates a `Team` row (Finding 11, `U-102` stays open with the stakeholder on *random* team formation) — the seed script below hand-creates one team per school per category so Units 13/14/15 have something to run against, exactly the way the backend's own `team-rotation.test.ts`/`team-partition.test.ts` do it.
 
 ---
 
@@ -13,30 +15,45 @@
 1. Start the stack: `docker compose up -d` from the project root.
 2. Wait until it's healthy: open `http://localhost:3001/api/health` — it should return `{"status":"ok", ...}`. (Port may differ if you changed `BACKEND_PORT` in `.env`; check with `docker compose ps`.)
 3. Open the frontend at `http://localhost:5173`.
-4. Create the test data (accounts, a published competition, players, a judge) by running, in a terminal:
+4. Create the test data (accounts, a published competition, players, teams, a judge) by running, in a terminal:
    ```bash
    docker compose exec backend npx tsx prisma/seed-manual-qa.ts
    ```
-   This prints every login you'll need. **Keep that output open** — you'll copy usernames/passwords from it as you go. If you've already run it once, it reprints the same accounts instead of duplicating anything (the judge's password only prints the first time it's created — re-run against a fresh database if you need to see it again).
+   This prints every login you'll need, plus one line per seeded **team** (with its id, needed for the `TEAM` scope in section E). **Keep that output open** — you'll copy usernames/passwords/ids from it as you go. If you've already run it once, it reprints the same accounts and teams instead of duplicating anything (the judge's password only prints the first time it's created — re-run against a fresh database if you need to see it again).
 
-Example of what it prints (yours may have different random values for the judge password and the generated IDs):
+   **If you seeded this competition before 2026-10-14** (i.e. before this guide's Units 13/14/15 sections existed), the existing "Manual QA Competition" row predates team creation and the script's idempotent branch will not retrofit teams onto it. Delete it first so the script rebuilds it with teams:
+   ```bash
+   docker compose exec backend node -e "
+   const { PrismaClient } = require('@prisma/client');
+   const p = new PrismaClient();
+   p.competition.findFirst({ where: { name: 'Manual QA Competition' } })
+     .then(c => c ? p.competition.delete({ where: { id: c.id } }) : null)
+     .then(r => { console.log(r ? 'deleted' : 'nothing to delete'); return p.\$disconnect(); });
+   "
+   ```
+   then re-run the seed command above.
+
+Example of what it prints (yours may have different random values for the judge password and the generated ids):
 
 ```
 Controller login: qa-controller / test-pass-1234
 Judge login: qa-judge-239cf4 / DSXSHPBJ
-  Player #1 (QA School Alpha (G1-2), Grades 1-2): qa-player-1 / test-pass-1234
-  Player #2 (QA School Alpha (G1-2), Grades 1-2): qa-player-2 / test-pass-1234
+  Player #1 (QA School Alpha (G1-2), Grades 1-2, team QA School Alpha Team (G1-2)): qa-player-1 / test-pass-1234
   ... (8 players total, across 2 categories and 4 schools)
+
+  Team QA School Alpha Team (G1-2) (Grades 1-2): id=9324c53d-...
+  ... (4 teams total, one per school per category)
+
 Big-screen URL (open directly, no login): /big-screen/<token>
 ```
 
 Everyone's password is **`test-pass-1234`** unless noted otherwise.
 
-**If a route that should exist returns "Cannot GET/POST ..." right after a `git pull`:** the backend's file watcher can miss files added by `git` (a known Docker-on-Windows bind-mount limitation) and keep running the old code. Run `docker compose restart backend` and try again before assuming something is broken.
+**If a route that should exist returns "Cannot GET/POST ..." right after a `git pull`:** the backend's file watcher can miss files added by `git` (a known Docker-on-Windows bind-mount limitation) and keep running the old code. Run `docker compose restart backend` and, if the frontend looks stale too (an old screen, a missing button), `docker compose restart frontend` as well, before assuming something is broken.
 
 ---
 
-## A. Controller scenarios
+## A. Controller scenarios — setup
 
 ### A1 — Login and generic error message (Units 01, 02)
 
@@ -45,7 +62,7 @@ Everyone's password is **`test-pass-1234`** unless noted otherwise.
 3. Type a wrong password for `qa-controller`. Submit.
    - **Expect:** a generic error (something like "incorrect username or password") — it must **not** say which of the two is wrong (`AUTH-002`).
 4. Now log in for real: `qa-controller` / `test-pass-1234`.
-   - **Expect:** you land on the controller home / competition setup area, no error.
+   - **Expect:** you land on the controller's competition picker (`/controller`), no error.
 
 ### A2 — One active device per account (Unit 02, `PAR-005`)
 
@@ -59,14 +76,14 @@ Everyone's password is **`test-pass-1234`** unless noted otherwise.
 2. Fill in a name (e.g. "My Test Competition") and add at least one category, e.g. code `G1-2`, name "Grades 1-2".
 3. Save / create.
    - **Expect:** the competition is created in draft form; you can see the two stages (Individual, Team) and their rounds already exist automatically — you did not create them by hand.
-4. Try to publish immediately, before adding questions/judges.
-   - **Expect:** publish is refused, naming what's still missing (no question sets assigned to rounds, no judge range, etc.) — this is the readiness check (`REQUIREMENTS.md` §publish readiness).
+4. Try to publish immediately, before adding participants/questions/judges.
+   - **Expect:** publish is refused, naming what's still missing (no question sets assigned to rounds, no judge range, etc.) — this is the readiness check. Note that **teams are not among the readiness conditions** (Finding 11) — the Individual stage runs fine with zero `Team` rows.
 
 ### A4 — Import a real question file (Unit 05) — the big one
 
 This is the scenario that proves the whole import pipeline works end to end, using a **real file from the client**, hand-prepared with the given-cell text column (no OCR, no image reading — `BLD-047`).
 
-1. On the same competition-setup page, find the **question import** panel for category `G1-2` (or whichever category you created in A3).
+1. On the same competition-setup page, find the **question import** panel ("Questions") for category `G1-2` (or whichever category you created in A3).
 2. Upload: `context/samples/【一二年级组】四宫标准60_文字版.xlsx`.
    - **Expect:** success — it reports a `QuestionSet` created with **24 questions** imported (the variant label "四宫标准数独" is recognized as the standard 4×4 family).
 3. Open the pool view for that category.
@@ -100,12 +117,22 @@ This is the scenario that proves the whole import pipeline works end to end, usi
 4. Try to remove a judge who is assigned to this competition (and the competition isn't finished).
    - **Expect:** blocked (`ROL-010`) — reassign or wait until the competition finishes.
 
-### A7 — Publish the competition (Unit 03)
+### A7 — Note on participants in these scenarios (Unit 04)
 
-1. Once categories have participants (see note below), 6+6 questions assigned per round, and judge ranges covering everyone — publish.
-   - **Expect:** success this time; you get an entry link and a big-screen link.
+Unit 04 built a real participant-import panel ("Participants", mounted above the question panel in competition setup), and it works — the 500 some earlier manual testing hit was a stale generated Prisma client, fixed 2026-10-11. But for sections B–J below, **don't import participants through the UI for your own test competition** — use the seeded **Manual QA Competition** (section 0) instead, or import via the seed script's pattern. The reasons: (1) the real file's 3 rows (see the corrected note at the top of this file) are too few to populate a full multi-category test run on their own, and (2) critically, **the import panel cannot create `Team` rows at all** (Finding 11) — Units 13/14/15 need teams, and the only way to get them today is the seed script's hand-seeding. If you want to exercise the import *panel itself*, do that separately in A8, on its own throwaway competition.
 
-> **Note on participants:** ~~there is no UI yet to import participants (Unit 04 is blocked on the real stakeholder data, `U-01`)~~ **Update 2026-10-11: Unit 04 is now built — there *is* a participant-import panel** (`features/participant`, mounted in `CompetitionSetupPage` above the question panel; backend `modules/participant`). ~~**But it is written, not verified:** nothing in it has been compiled, linted, typechecked, tested or migrated (the Docker engine returns 500 on every sandbox API call), and — because the real `选手信息.xlsx` has only a header row and no data (U-01) — **the importer has never parsed a populated file.**~~ **Update 2026-10-11, later the same day: the import 500 is FIXED and the migration is applied/live.** The first real attempt at the panel threw `Unknown field 'individualEvent' for select statement on model 'Participant'` (HTTP 500) — the root cause was a **stale generated Prisma client** in the `backend-node-modules` volume, *not* a missing migration (the DB columns were already there). Fixed with `docker compose exec backend npx prisma generate` then `docker compose restart backend`; a smoke select against the exact failing query now returns cleanly, so **the import endpoint works**. What is still *not* proven: the automated suites (`tests/participant.test.tsx`, 6 cases) have never been run, and — because the real `选手信息.xlsx` has only a header row and no data (U-01) — **the importer has never parsed a fully populated file end-to-end.** So for the QA scenarios below, still rely on the seed script (`seed-manual-qa.ts`), which creates the 8 QA players directly and is verified. If you created your **own** competition in A3 instead of using the seeded one, publishing through the UI alone now *should* work via the new import panel (the 500 is gone), but that path is only smoke-tested, not suite-verified — the safe route is still to add participants via the seed script or direct database access, or just use the already-published **Manual QA Competition** the seed script creates. Treat a first real use of the import panel as its own smoke test, not as part of these scenarios.
+### A8 — Import participants via the UI (Unit 04)
+
+This tests the importer itself, in isolation — it does not need to feed the rest of your test run, since (per A7) a real competition for B–J should come from the seed script instead.
+
+1. Make a working copy of `context/samples/选手信息.xlsx`. It has the 12 real columns (`比赛名称`, `选手编号`, `姓名`, `年龄`, `省`, `市`, `区（县）`, `学校名称`, `组别`, `个人赛`, `团队赛`, `备注`) and **3 real data rows already** (张三/李四/刘一, plus column L2's note explaining the flag rule attached to the first row) — add 2-3 more by hand if you want a bigger sample (any plausible name/school/category; set `个人赛`/`团队赛` to `1` for a couple of them and leave one blank to test the "not taking part" default).
+2. On a competition you created in A3 (still in draft, not published), find the **Participants** panel and click **Import file**. Upload your copy.
+   - **Expect:** success — "Imported: N" where N is your data-row count; the note row itself is skipped and reported as a warning (`participant.import.noteRowSkipped`), not counted as data and not an error.
+3. Open the roster list.
+   - **Expect:** your rows appear with the right name/school/category, and the `个人赛`/`团队赛` flags match what you typed (a blank cell → not participating in that event).
+4. **Negative test (Finding 10):** re-upload the same file after changing only one row's `团队赛` from `1` to blank (same name + school + category as before).
+   - **Expect:** the roster still shows the **same number of participants** — the existing row's flag is updated in place, not replaced by a new row (this is the asked-not-guessed resolution in `participant.service.ts`'s `flagChangeIsAnUpdateNotAReplacement()`; the question itself, whether this is the right call, is still open and tracked as `I-41`).
+5. **Note what you will *not* see:** no team is created and no participant gets a `teamId`, however many students have `团队赛 = 1` (Finding 11) — this is expected, not a bug, and it's why section A7 tells you to use the seeded competition for everything downstream.
 
 ---
 
@@ -131,34 +158,40 @@ This is the scenario that proves the whole import pipeline works end to end, usi
 1. With Stage 1 Round 1 active (see C1), on the judge dashboard, find a student in your range and click **Restart**.
 2. Confirm the dialog.
    - **Expect:** success message; that student's working grid is cleared and they get a fresh blank attempt (their answers so far are archived, not deleted — `ROL-005`); the shared round timer is **not** affected, everyone else keeps going.
+   - **Note (fixed 2026-10-14):** the restarted participant has no placeholder attempt at all until they actually submit again — earlier, a judge/controller restart could leave a non-archived placeholder that made Unit 08's finalize silently drop the student from the ranking. That's closed now; a restarted student who goes on to submit normally should get a normal ranking result like anyone else.
 3. Try restarting a student **outside** your assigned range (if you have another judge/range, or inspect the API directly).
    - **Expect:** rejected (403, out of range).
 
 ---
 
-## C. Player scenarios
+## C. Player scenarios — Individual stage
 
-### C1 — Start Stage 1 Round 1 (the one manual step with no UI yet)
+### C1 — Start Stage 1 Round 1
 
-Unit 11 (the controller's live "start round" button) isn't built yet — today this is triggered through a direct API call. This is expected, not a bug.
+Unit 11 is built now, so the real way to do this is the controller's **Live control** screen — no `curl` needed any more.
 
-1. Get a fresh controller session:
-   ```bash
-   curl -s -X POST http://localhost:3001/api/auth/controller/login \
-     -H "Content-Type: application/json" -H "x-device-id: manual-qa" \
-     -d '{"username":"qa-controller","password":"test-pass-1234"}'
-   ```
-   Copy both the `"token"` **and** the `"deviceId"` from the response — every later request needs **both** headers (`x-session-token` and `x-device-id`, the latter set to the response's `deviceId`, not the arbitrary string you sent at login — PAR-005's one-active-device check validates it on every request, not just at login; omitting it or reusing your own string causes a `401 auth.deviceTakenOver`, which looks confusing but just means this header is missing or wrong).
-2. Find the competition id (the seed script prints it, e.g. `Seeded and published competition <id>`).
-3. Trigger the round:
-   ```bash
-   curl -s -X POST http://localhost:3001/api/rounds/dev/start-stage1-round1 \
-     -H "Content-Type: application/json" \
-     -H "x-session-token: <paste token here>" \
-     -H "x-device-id: <paste the response's deviceId here>" \
-     -d '{"competitionId":"<paste competition id here>"}'
-   ```
-   - **Expect:** `201` with the started preparation's details.
+1. Log in as `qa-controller`, go to `http://localhost:5173/controller`, and open the **Manual QA Competition**'s control panel (or whichever competition you published).
+2. Under **Sequence**, click **Start stage** next to "Individual 1".
+   - **Expect:** a success notice ("Stage started. The preparation countdown is running.") and the Individual stage's Round 1 shows status "Preparation" in the **Rounds** table.
+3. That's it — Round 1 moves from Preparation to Running on its own once the countdown ends, and **Round 2 starts automatically** when Round 1 finishes (both stages auto-advance between their own rounds; only moving from one *stage* to the next needs another click here, `RND-006`).
+
+<details>
+<summary>Dev-only fallback, if you need to script this instead of clicking (kept for completeness, not the normal path)</summary>
+
+```bash
+curl -s -X POST http://localhost:3001/api/auth/controller/login \
+  -H "Content-Type: application/json" -H "x-device-id: manual-qa" \
+  -d '{"username":"qa-controller","password":"test-pass-1234"}'
+```
+Copy both the `"token"` **and** the `"deviceId"` from the response — every later request needs **both** headers (`x-session-token` and `x-device-id`, the latter set to the response's `deviceId`, not the arbitrary string you sent at login — `PAR-005`'s one-active-device check validates it on every request, not just at login; omitting it or reusing your own string causes a `401 auth.deviceTakenOver`).
+```bash
+curl -s -X POST http://localhost:3001/api/rounds/dev/start-stage1-round1 \
+  -H "Content-Type: application/json" \
+  -H "x-session-token: <token>" -H "x-device-id: <deviceId>" \
+  -d '{"competitionId":"<competition id>"}'
+```
+This route refuses to run in production and exists only as the narrow form Unit 11 generalized.
+</details>
 
 ### C2 — Preparation countdown, active round, autosave (Unit 07)
 
@@ -178,12 +211,13 @@ Unit 11 (the controller's live "start round" button) isn't built yet — today t
    - **Expect:** a confirmation dialog naming how many puzzles are still blank (if any), then a read-only "submission accepted" screen. You cannot go back and edit.
 3. Try clicking submit again (e.g. resubmitting the form via browser back + forward).
    - **Expect:** no error, no duplicate effect (idempotent no-op, `PL-009`).
-4. Check that the player is never shown their score or rank on this screen (`SUB-007`/`BLD-029`) — final results only appear once the whole competition is published as finished, a later unit.
+4. Check that the player is never shown their score or rank on this screen (`SUB-007`/`BLD-029`) — final results only appear once the controller publishes the competition's results (section F).
 
 ### C4 — A second player, for ranking (Units 08, 09)
 
 1. Repeat C2–C3 logged in as `qa-player-2` (same category, different school) with a different pattern of correct/incorrect answers.
-2. This gives you at least two finalized results in the same category, needed for B1/D1's ranking checks to show something meaningful.
+2. This gives you at least two finalized results in the same category, needed for B2/D1/F1's ranking checks to show something meaningful.
+3. Repeat the whole of C1 (if needed)–C4 for `qa-player-3`/`qa-player-4` (the other G1-2 school) and `qa-player-5`–`qa-player-8` (G3-4) once you're ready to also exercise school ranking (section I) — a school's total needs **every** one of its players finalized to stop being "incomplete" (J1).
 
 ---
 
@@ -201,20 +235,171 @@ Unit 11 (the controller's live "start round" button) isn't built yet — today t
 
 ---
 
-## E. Quick coverage checklist
+## E. Controller live commands (Unit 11)
+
+All of these live on the **Live control** screen (`/controller/competitions/:id/live`), reached from the controller's competition picker. The dashboard polls the server every ~3 seconds; every button's enabled/disabled state is read from the server, never guessed client-side.
+
+### E1 — Pause and resume (RND, global timer)
+
+*(Needs a round actually running — do C1 first.)*
+
+1. With a round active, click **Pause** (next to the Sequence section's Start-stage buttons).
+   - **Expect:** "Paused on every screen." notice; the **Remaining** readout freezes; the big screen switches to its paused display; on a player's screen, the round shows paused too.
+2. Click **Resume** (the same button, now labeled differently).
+   - **Expect:** "Resuming: the screens count down 3, 2, 1, Start." — the countdown does **not** eat into round or preparation time (`RND-001`).
+3. With nothing running (e.g. before C1, or after a stage finished), check that **Pause** is disabled rather than clickable-but-rejected.
+
+### E2 — End a round early
+
+1. With a round active, in the **Rounds** table, click **End early** on that row. Confirm the dialog ("Every student still playing is closed and scored as-is, with no early-submission bonus. This cannot be undone.").
+   - **Expect:** success notice; the round's status becomes "Finished"; any player still mid-round is auto-submitted with whatever they had typed.
+2. Check a player who was still playing: their screen should now show the submitted/read-only state, not an error.
+
+### E3 — Reset / rematch, with its scope picker
+
+1. Under **Reset / rematch**, open the **Scope** dropdown: `Whole event (the round in flight)`, `One round`, `One participant`, `One team`.
+2. Pick **One participant**, paste a participant id (e.g. from the judge dashboard, or a player's id from the database) into the field that appears, click **Reset**, confirm.
+   - **Expect:** "Reset applied. Earlier attempts are archived." — that participant's current attempt is archived (not deleted) and they get the round's full duration again.
+3. Pick **One team** and paste one of the team ids the seed script printed, to reset a whole team's round state the same way.
+4. On a `FINISHED`/`CANCELLED` competition, check the whole Reset/rematch section is disabled.
+
+### E4 — Big-screen mode and rotation
+
+1. Under **Big screens**, click each of **Live ranking**, **Paused screen**, **Final results** in turn.
+   - **Expect:** the button for the current mode is disabled (you can't re-select the mode you're already in); the big-screen tab (D1) reflects the change within a couple of seconds.
+2. Click **Enable rotation** / **Disable rotation** (category rotation, when more than one category exists).
+   - **Expect:** the label flips and the big screen starts/stops cycling between categories.
+
+### E5 — Finish the competition early
+
+1. Click **Finish the competition early** (in **Terminal actions**). Read the confirmation body carefully — it is explicit that this cannot be undone.
+2. Confirm.
+   - **Expect:** "The competition is finished early." notice; every section's controls (Start stage, Pause, Reset, big-screen mode changes) become disabled; a "This competition is closed." note appears.
+3. Open the results screen (section F) for this competition.
+   - **Expect:** results are readable (a competition finished early still releases its results, `Competition.finishedEarly`), unlike a cancelled one (E6).
+
+*Do this on a competition you don't mind losing — it's terminal. Use a throwaway one from A3, not the shared Manual QA Competition, if you want to keep testing the rest of this guide afterwards.*
+
+### E6 — Cancel the competition
+
+1. On a **different** throwaway competition (cancel is just as terminal as finish-early, and the two have different downstream behaviour worth seeing separately), click **Cancel the competition**. Read the warning: no results will ever be released.
+2. Confirm.
+   - **Expect:** "The competition is cancelled. No results will be released." notice.
+3. Open the results screen (section F) for this competition.
+   - **Expect:** rejected — `results.errors.results_competitionCancelled` (`ROL-009`, `U-31`), not a page full of numbers.
+
+---
+
+## F. Results, corrections and export (Unit 12)
+
+Reached from **Live control**'s **Results** link, or the controller's competition picker's "Open results" (`/controller/competitions/:id/results`). Needs at least one finalized result — do C1–C4 on the Manual QA Competition first.
+
+### F1 — Read results and the category leaderboard
+
+1. Open the results screen for a competition with at least two finished players in a category (C4).
+   - **Expect:** a **Category leaderboard** (rank, name, score, time) and, below it, every round's detail table (participant number, name, rank, raw score, bonus, total, time, submission type, an action column).
+2. Check the submission-type column reflects reality: `Manual` for a normal submit, `Timeout` if a round ended by the clock, `Ended by controller` if you used E2, `Automatic` for an auto-submit sweep.
+
+### F2 — Correct a score
+
+1. Click **Correct** on any row. A dialog opens showing the participant, round and current total.
+2. Try saving with the reason field left blank.
+   - **Expect:** rejected client-side ("A reason is required...") before it even reaches the server.
+3. Enter a new score and a reason ("manual QA test correction"), click **Save correction**.
+   - **Expect:** "The score was corrected and the ranking recalculated." — the leaderboard above updates immediately, and a new row appears in **Correction history** (old → new score, the reason, the timestamp) — this history is permanent and visible, never silently editable (`RES-003`).
+4. Try correcting a score on a **cancelled** competition (E6).
+   - **Expect:** the whole results screen is already rejected (F1's negative case), so there's nothing to correct.
+
+### F3 — Export and the purge notice
+
+1. Click **Export .xlsx**.
+   - **Expect:** a file downloads; "Export downloaded" notice names the filename.
+2. Look for the purge notice near the top of the screen (a banner, not a control — there is deliberately **no manual purge button anywhere**; purging is schedule-driven on the server only).
+   - **Expect:** either "This competition's student data will be permanently purged on `<date>`" or, if the purge already ran, "...was permanently purged on `<date>`".
+
+---
+
+## G. Team stage — rotation relay (Unit 13)
+
+Needs Stage 1 (Individual) **fully finished** for the Manual QA Competition first (`RND-006` — stages run in sequence), then Stage 2 ("Team") started from **Live control** exactly like C1 (click **Start stage** next to "Team 2"). Team Round 1 is the rotation relay.
+
+### G1 — Play a rotation round as a team member
+
+1. Log in as `qa-player-1` (or any seeded team member) once Team Round 1 is active.
+   - **Expect:** a **different** screen from the Individual stage's: one question at a time, a **Team score** shown openly (unlike the Individual stage, a team round's score is never hidden from players, `SCR-007`/`SCR-015`), and a submit button that checks your answer **immediately**.
+2. Submit a wrong answer on purpose.
+   - **Expect:** an "incorrect" message; the question **stays in circulation** and will rotate to a teammate rather than disappearing (`keepIncorrectSubmitInCirculation()` — Finding 7, not a bug).
+3. Submit a correct answer.
+   - **Expect:** a "Correct!" message and the next question rotates in (either immediately, if the queue had one waiting, or after the configured rotation period — the seed script shortens this to 20s so you don't have to wait long).
+4. Log in as a **second** member of the **same team** (e.g. `qa-player-2`, if they share a school) in a different browser/tab at the same time.
+   - **Expect:** they hold a **different** question (or the same one if it already rotated to them) — never literally the same held question as another member at once.
+5. Let the round run until every pool question is answered correctly, or the round's duration elapses.
+   - **Expect:** a "Round over" screen with the final shared team score; this is one flat value (`correctCount × teamPointsPerQuestion`), identical for every member of the team.
+
+### G2 — Supervise a team round (judge/controller)
+
+1. While Team Round 1 is active, open the judge dashboard (B2) or the controller's **Live control** students panel.
+   - **Expect:** team members show up the same way Individual-stage participants did (connected status, round state) — the same supervision surface Unit 10 built, reused here (spec Detail 6).
+2. Try the **One team** reset/rematch scope (E3) against this team mid-round.
+   - **Expect:** the team's rotation state is archived and restarted with the round's full duration, same semantics as a participant-level reset.
+
+---
+
+## H. Team stage — partition collaboration, 齐心协力 (Unit 14)
+
+Team Round 2 (the second Team-stage round) starts **automatically** once Team Round 1 finishes for every team — no extra click needed (only the Individual→Team stage transition needs a human click, as in G's intro).
+
+### H1 — Play a partition round as a team member
+
+1. Log in as a seeded team member once Team Round 2 is active.
+   - **Expect:** the **whole puzzle** is visible, but only a contiguous band of rows is yours to edit — the rest is shown read-only (not hidden), so the team can see what it's collectively solving (`showOtherBandsReadOnly()`). The header shows "Puzzle N of M" and the shared team score.
+2. Type a value into a cell **outside** your band (if you can reach one via the keyboard — otherwise inspect the read-only rows visually).
+   - **Expect:** it's not editable; a value sent outside your band from the API is rejected (422), never silently trimmed.
+3. Fill in your band's cells correctly, matching what a teammate would need for the combined grid to be fully correct.
+   - **Expect:** **no submit button** — the server checks the *combined* grid after every autosave, and the puzzle advances the instant every cell (across every member's band) is correct, with no early-finish bonus.
+4. Log in as a second member of the same team at the same time, and complete their band.
+   - **Expect:** once both bands are correct, the puzzle solves and the next one (of `partitionPuzzleCount`, default 3) loads for everyone on the team.
+5. Finish every puzzle, or let the round's duration elapse.
+   - **Expect:** "Round over" with the final shared team score (`solvedCount × partitionPointsPerPuzzle`).
+
+---
+
+## I. School ranking (Unit 15)
+
+Reached from **Live control**'s competition picker ("School ranking") or `/controller/competitions/:id/school-ranking`. Needs both Team rounds (G, H) finished — and ideally every player in a category finalized in both Individual rounds too (C4's last step) — to see a **final**, not **provisional**, row.
+
+### I1 — Read the school leaderboard
+
+1. Open the school ranking screen for the Manual QA Competition.
+   - **Expect:** one leaderboard **per category** (never mixed across categories, `EVT-002`) — rank, school name, exact total, the individual-score sum, both team-round scores, summed completion time, and counted-players.
+2. Check a school that hasn't finished every player yet (if any): its row is marked **incomplete** rather than silently included as if final.
+3. Check the status line: **provisional** until every participant and team in the category has finished, **final** afterward.
+4. If two schools land on the exact same total, look for the tie-break note — the row says whether the summed completion time actually separated them (`SCR-020`'s school-level tie-break, `schoolBreakTie()`, a separate function from the individual one).
+
+---
+
+## J. Quick coverage checklist
 
 Tick these off as you go — by the end, every built unit has been exercised at least once:
 
 - [ ] Unit 01 (Foundation) — the app loads, health check passes (step 0.2)
 - [ ] Unit 02 (Auth) — A1, A2
-- [ ] Unit 03 (Competition setup) — A3, A7
+- [ ] Unit 03 (Competition setup) — A3
+- [ ] Unit 04 (Participant import) — A7, A8
 - [ ] Unit 05 (Question import) — A4, A5
 - [ ] Unit 06 (Judges and ranges) — A6, B1
 - [ ] Unit 07 (Round runtime) — C1, C2
 - [ ] Unit 08 (Submission and scoring) — C3, C4
 - [ ] Unit 09 (Ranking and big screen) — D1
 - [ ] Unit 10 (Judge supervision) — B2, B3
+- [ ] Unit 11 (Controller live commands) — E1-E6
+- [ ] Unit 12 (Results, corrections, export) — F1-F3
+- [ ] Unit 13 (Team stage rotation relay) — G1, G2
+- [ ] Unit 14 (Team stage partition collaboration) — H1
+- [ ] Unit 15 (School ranking) — I1
 
-## What's not testable yet
+## Known limitations of this guide, as of 2026-10-14
 
-Units `11` (controller live commands — pause/resume/end round from the UI, not just the dev trigger), `12` (results, corrections, export, purge), `13`/`14` (team stages), `15` (school ranking, competition copy) are approved specs but not built. There's nothing to click yet for those — this file should grow a new section for each as it lands, following the same role-by-role, step-by-step style.
+- ~~**No real populated participant file exists.**~~ **Corrected 2026-10-15: it does — `选手信息.xlsx` has 3 real rows, already imported successfully.** A8 shows you how to hand-add a few more on top if you want a bigger sample for a fuller test run.
+- **Teams only exist because the seed script hand-creates them.** No screen or API anywhere lets a controller form, name or edit a team (Finding 11) — `U-102` (random mixed-school team formation) is still open with the stakeholder. Sections G/H/I above only work because section 0's seed script does what no application code does yet.
+- **The automated suites cover more edge cases than this guide does** (concurrency, idempotency under retries, exact error codes) — this guide is for confirming the system *behaves*, not for regression coverage; see `backend/tests/` and `frontend/tests/` for that.
