@@ -9,6 +9,14 @@
  * timer; this page only mirrors what the server pushes and what the reconnect
  * endpoint returns. There is no local round-state machine beyond "which payload
  * arrived most recently".
+ *
+ * Visuel : ambiance C « sombre, grand, lisible » (BLD-054). C'est l'écran d'une
+ * tablette posée sur une table de concours : fond `bg-gray-900`, texte blanc, un
+ * compte à rebours géant en `tabular-nums` (chiffres comparés d'un coup d'œil, §3.5).
+ * Le carton de règles de la préparation, qui était blanc, passe au panneau sombre du
+ * rapport (`bg-gray-800 rounded-lg p-4`) : le dépôt ne mélange jamais une carte
+ * blanche dans un écran sombre (§4). Aucun blanc nulle part sur cette page — les
+ * écrans de round délégués à `features/gameplay` suivent la même ambiance.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -35,14 +43,60 @@ interface PreparationTickPayload {
   roundId: string;
   stageId: string;
   competitionId: string;
+  /**
+   * Which countdown this tick belongs to — one event serves both, so the server
+   * says. Reading this instead of the local screen is what keeps a player who
+   * connects after the round went ACTIVE from being shown a countdown that has
+   * already ended.
+   */
+  status: "WAITING" | "PREPARATION" | "ACTIVE" | "PAUSED" | "FINISHED";
   remainingSeconds: number;
   totalSeconds: number;
+}
+
+/**
+ * The payload pushed on `round:timer-sync`, at each timer start. Carries `status`,
+ * so it says PREPARATION vs ACTIVE outright instead of leaving the client to infer
+ * it from its own screen.
+ */
+interface TimerSyncPayload {
+  roundId: string;
+  competitionId: string;
+  status: "WAITING" | "PREPARATION" | "ACTIVE" | "PAUSED" | "FINISHED";
+  mode: "preparation" | "round";
+  remainingSeconds: number;
+  totalSeconds: number;
+}
+
+/**
+ * What `GET /api/gameplay/current-round` returns. This is how a socket that
+ * connects after the round already started learns which round it is in: the push
+ * that names it (`round:started`, `rotation:deal`, `partition:deal`) fires once, at
+ * the transition, and the ticks cannot substitute for it because they go to the
+ * whole player namespace and therefore also carry other competitions' rounds.
+ */
+interface CurrentRoundPayload {
+  round: {
+    roundId: string;
+    competitionId: string;
+    kind: "individual" | "rotation" | "partition";
+    status: "WAITING" | "PREPARATION" | "ACTIVE" | "PAUSED" | "FINISHED";
+    timer: { remainingSeconds: number; totalSeconds: number } | null;
+  } | null;
 }
 
 interface RoundStartedPayload {
   roundId: string;
   stageId: string;
   competitionId: string;
+  /**
+   * The category this payload was built for. The server emits one payload per
+   * category, each to only that category's room, so a socket never receives one that
+   * is not its own — the field is here to keep the client's type honest about what is
+   * on the wire, not to filter with (a client-side filter would still mean another
+   * category's questions crossed the connection).
+   */
+  categoryId: string;
   durationSeconds: number;
   questions: RoundQuestionPayload[];
 }
@@ -397,6 +451,51 @@ export function PlayerPage() {
     [session, t],
   );
 
+  /**
+   * Ask the server which round this player is in, then read that round through its
+   * own reconnect endpoint. Called on connect when the local screen knows no round,
+   * and when a tick says the round is ACTIVE while this page is still showing a
+   * countdown — i.e. whenever the push that named the round was missed.
+   *
+   * The three kinds have three readers, which is why the server answers with `kind`:
+   * a team round's questions come from the category pool and carry no `roundId`
+   * (BLD-040), so `GET /:roundId/state` finds nothing for one.
+   *
+   * Guarded against overlapping calls: the tick that triggers this arrives four
+   * times a second, and one discovery read is enough.
+   */
+  const discoveryInFlightRef = useRef(false);
+  const discoverCurrentRound = useCallback(async () => {
+    if (!session || discoveryInFlightRef.current) return;
+    discoveryInFlightRef.current = true;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/gameplay/current-round`, {
+        headers: {
+          "x-session-token": session.token,
+          "x-device-id": session.deviceId,
+        },
+      });
+      if (!response.ok) return;
+      const payload = (await response.json()) as CurrentRoundPayload;
+      const round = payload.round;
+      // No round running: the waiting screen is the correct answer, not a failure.
+      if (!round) return;
+      if (round.kind === "rotation") {
+        await refreshRotationState(round.roundId);
+        return;
+      }
+      if (round.kind === "partition") {
+        await refreshPartitionState(round.roundId);
+        return;
+      }
+      await refreshState(round.roundId);
+    } catch {
+      setError(t("player.genericError"));
+    } finally {
+      discoveryInFlightRef.current = false;
+    }
+  }, [session, t, refreshState, refreshRotationState, refreshPartitionState]);
+
   useEffect(() => {
     if (!session || session.role !== "PLAYER") return;
 
@@ -407,10 +506,25 @@ export function PlayerPage() {
     socketRef.current = socket;
 
     socket.on("round:preparation-tick", (payload: PreparationTickPayload) => {
+      // One event serves both countdowns, so the payload's `status` is what says
+      // which one this is — not this page's current screen. Guessing from the local
+      // screen is exactly what stuck a late-connecting player on "the round starts in
+      // Xs" forever: it was showing `"waiting"`, an ACTIVE tick arrived, and the old
+      // handler treated any tick as preparation.
+      if (payload.status === "ACTIVE") {
+        // The round is running. If this page does not know that yet, it missed the
+        // push that named the round — go and read it.
+        const current = screenRef.current;
+        if (current.kind === "waiting" || current.kind === "preparation") {
+          void discoverCurrentRound();
+        }
+        return;
+      }
+      if (payload.status !== "PREPARATION") return;
       setScreen((current) => {
-        // Only the preparation screen consumes ticks; once the round has started
-        // we ignore them (the round timer's tick is rendered inside the active
-        // screen via its own cosmetic countdown).
+        // Only the preparation screen consumes these ticks; once the round has
+        // started we ignore them (the round timer's tick is rendered inside the
+        // active screen via its own cosmetic countdown).
         if (current.kind === "preparation" || current.kind === "waiting") {
           return {
             kind: "preparation",
@@ -420,6 +534,19 @@ export function PlayerPage() {
         }
         return current;
       });
+    });
+
+    // `round:timer-sync` carries `status` and `roundId` and is emitted at each timer
+    // start. It is not the discovery path for a late joiner — it fires once, at the
+    // transition, so a socket that connects afterwards never sees it — but a page
+    // that is up and watching gets told plainly that the round went ACTIVE, without
+    // waiting for the next tick or for the questions push.
+    socket.on("round:timer-sync", (payload: TimerSyncPayload) => {
+      if (payload.status !== "ACTIVE") return;
+      const current = screenRef.current;
+      if (current.kind === "waiting" || current.kind === "preparation") {
+        void discoverCurrentRound();
+      }
     });
 
     socket.on("round:started", (payload: RoundStartedPayload) => {
@@ -603,14 +730,29 @@ export function PlayerPage() {
             : undefined;
       if (roundId) {
         void refreshState(roundId);
+        return;
       }
+      // Every case above knew its own round. This one does not: the screen is still
+      // `"waiting"` (a first connection, a reload, or a reconnect that happened while
+      // nothing was running), so there is no `roundId` to read and no snapshot to
+      // resume from — and if the round went ACTIVE while this page was away, the push
+      // that named it is already gone. That is the case the old handler skipped
+      // entirely, which is why the player sat on "the round starts in Xs" until they
+      // reloaded at exactly the right moment. Ask the server instead: it resolves the
+      // round from the session and answers with its kind, which picks the reader.
+      //
+      // Deliberately unconditional rather than gated on a status this page cannot
+      // know. `"waiting"` is also the correct screen before the first round, and the
+      // server answers `round: null` for that — one cheap read per connect, no
+      // guessing on the client.
+      void discoverCurrentRound();
     });
 
     return () => {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [session, refreshState, refreshRotationState, refreshPartitionState]);
+  }, [session, refreshState, refreshRotationState, refreshPartitionState, discoverCurrentRound]);
 
   // After a resume's 3-2-1 has played out, return to the active screen. The
   // countdown is cosmetic; the server's timer is the authority (RND-001).
@@ -673,17 +815,17 @@ export function PlayerPage() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-red-600">{error}</p>
+      <div className="flex min-h-screen items-center justify-center bg-gray-900 p-6 text-white">
+        <p className="text-red-300">{error}</p>
       </div>
     );
   }
 
   if (screen.kind === "waiting") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6">
-        <h1 className="text-2xl font-semibold">{t("player.waitingTitle")}</h1>
-        <p className="text-gray-600">{t("player.waitingSubtitle")}</p>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-900 p-6 text-center text-white">
+        <h1 className="text-2xl font-semibold sm:text-3xl">{t("player.waitingTitle")}</h1>
+        <p className="text-base text-gray-400 sm:text-lg">{t("player.waitingSubtitle")}</p>
       </div>
     );
   }
@@ -699,8 +841,8 @@ export function PlayerPage() {
 
   if (screen.kind === "paused") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6">
-        <h1 className="text-2xl font-semibold">{t("player.paused")}</h1>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-900 p-6 text-white">
+        <h1 className="text-3xl font-bold sm:text-4xl">{t("player.paused")}</h1>
       </div>
     );
   }
@@ -776,16 +918,16 @@ function PreparationScreen({
   }, []);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-6">
-      <h1 className="text-2xl font-semibold">{t("player.preparationTitle")}</h1>
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-gray-900 p-6 text-white">
+      <h1 className="text-2xl font-semibold sm:text-3xl">{t("player.preparationTitle")}</h1>
       <div className="text-center">
-        <p className="text-gray-600">{t("player.preparationSubtitle")}</p>
-        <p className="mt-2 text-6xl font-bold tabular-nums">{displaySeconds}</p>
-        <p className="mt-1 text-sm text-gray-500">/ {totalSeconds}s</p>
+        <p className="text-base text-gray-400 sm:text-lg">{t("player.preparationSubtitle")}</p>
+        <p className="mt-2 font-mono text-7xl font-bold tabular-nums sm:text-8xl">{displaySeconds}</p>
+        <p className="mt-1 text-sm text-gray-500 sm:text-base">/ {totalSeconds}s</p>
       </div>
-      <div className="max-w-md rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-        <h2 className="mb-2 font-semibold">{t("player.preparationRules")}</h2>
-        <ul className="list-inside list-disc space-y-1 text-sm text-gray-700">
+      <div className="max-w-md rounded-lg bg-gray-800 p-4">
+        <h2 className="mb-3 text-sm font-semibold text-gray-300">{t("player.preparationRules")}</h2>
+        <ul className="list-inside list-disc space-y-1 text-sm text-gray-200">
           <li>{t("player.preparationRuleDuration")}</li>
           <li>{t("player.preparationRuleMovement")}</li>
           <li>{t("player.preparationRuleFeedback")}</li>
@@ -814,9 +956,9 @@ function ResumeCountdownScreen({
   }, [resumesAtMs]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6">
-      <p className="text-gray-600">{t("player.resumeCountdown")}</p>
-      <p className="text-6xl font-bold tabular-nums">{displaySeconds}</p>
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-900 p-6 text-white">
+      <p className="text-base text-gray-400 sm:text-lg">{t("player.resumeCountdown")}</p>
+      <p className="font-mono text-7xl font-bold tabular-nums sm:text-8xl">{displaySeconds}</p>
     </div>
   );
 }

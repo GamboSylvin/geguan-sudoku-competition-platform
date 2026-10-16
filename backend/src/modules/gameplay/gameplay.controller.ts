@@ -62,6 +62,39 @@ const partitionAutosaveSchema = z.object({
   grid: z.array(z.number().int().nullable()),
 });
 
+/**
+ * GET /api/gameplay/current-round — which round the caller is in right now,
+ * resolved from the session alone. It is deliberately **not** `:roundId`-keyed:
+ * the caller asking it is the one that does not know its round id yet. A socket
+ * connecting after the round went ACTIVE missed `round:started` (emitted once, at
+ * the transition), and `round:preparation-tick` cannot substitute for it because
+ * that push is namespace-wide and therefore also carries other competitions'
+ * countdowns. Without this route the client has no way to discover the round it is
+ * supposed to be playing, and stays on the waiting screen until someone reloads at
+ * the right moment.
+ *
+ * 200 with `{ round }`; `round` is null when nothing is running, which is an answer,
+ * not an error.
+ *
+ * Registered before the `:roundId` routes below. A single-segment path cannot match
+ * any of them (they all take two), but the order keeps "the one route with no id"
+ * readable at the top instead of buried under eight that have one.
+ */
+gameplayRouter.get(
+  "/current-round",
+  requireAuth,
+  requireParticipant,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const participantId = req.auth!.participantId!;
+      const result = await gameplayService.getCurrentRound(participantId);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
 gameplayRouter.post(
   "/:roundId/autosave",
   requireAuth,

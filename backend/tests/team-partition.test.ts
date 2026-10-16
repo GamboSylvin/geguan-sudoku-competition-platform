@@ -48,6 +48,18 @@ const app = createApp();
 const PASSWORD = "test-pass-14";
 const suffix = Math.random().toString(36).slice(2, 8);
 
+/**
+ * The shared fixture password's hash, computed once for the whole file — the same
+ * reason as `team-rotation.test.ts`: every account uses the same password and
+ * `bcrypt.hash` at cost 10 costs ~330 ms here, so seeding a 4-member team burned
+ * ~1.3 s of the 5 s Jest budget on work that produced the same string four times.
+ * The login path still runs the real `bcrypt.compare`, which is what is under test.
+ */
+let PASSWORD_HASH = "";
+beforeAll(async () => {
+  PASSWORD_HASH = await identityService.hashPassword(PASSWORD);
+});
+
 const GRID_ROWS = 9;
 const GRID_COLUMNS = 3;
 const GRID_SIZE = GRID_ROWS * GRID_COLUMNS;
@@ -105,7 +117,7 @@ async function createAccount(
       username,
       role,
       isActive: true,
-      passwordHash: await identityService.hashPassword(PASSWORD),
+      passwordHash: PASSWORD_HASH,
       participantId: participantId ?? null,
     },
   });
@@ -424,24 +436,23 @@ afterAll(async () => {
 });
 
 /**
- * Relâche les minuteurs de round dès la fin de CHAQUE test, pas seulement au
- * `afterAll` global.
+ * Release the round timers at the end of EACH test, not only in the global `afterAll`
+ * above.
  *
- * Pourquoi : chaque test appelle `startPartitionRound`, qui démarre un minuteur de
- * 4000 s dont la boucle de tick se réarme toutes les 250 ms tant qu'il n'est pas
- * relâché (`round-timer.service.ts`'s `scheduleWakeup`). Sans nettoyage par test, les
- * minuteurs de tous les tests précédents restent vivants et s'accumulent jusqu'à la
- * fin du fichier : chaque tick fait un `redis.get`, et ~25 minuteurs empilés saturent
- * la boucle d'événements et la connexion Redis. Les deux derniers tests du fichier
- * ("...against an Individual-stage round" et "...against a round that does not exist")
- * tombent alors au point de bascule et leur simple POST expire à 5000 ms. C'est le même
- * pattern de fuite de minuteur déjà corrigé au niveau *inter*-suites, qui se reproduisait
- * ici *intra*-fichier.
+ * Why: every test calls `startPartitionRound`, which starts a 4000 s timer whose tick
+ * loop re-arms itself every 250 ms until it is released (`round-timer.service.ts`'s
+ * `scheduleWakeup`). Without a per-test cleanup the timers of all the previous tests
+ * stay alive and accumulate until the end of the file: each tick does a `redis.get`,
+ * and ~25 stacked timers saturate the event loop and the Redis connection. The file's
+ * last two tests ("...against an Individual-stage round" and "...against a round that
+ * does not exist") then fall on the far side of that tipping point, and their plain
+ * POST times out at 5000 ms. This is the same timer-leak pattern already fixed at the
+ * *inter*-suite level, reproduced here *intra*-file.
  *
- * `releaseTimer` est idempotent (renvoie false quand il n'y a plus d'état Redis), donc
- * relibérer des minuteurs déjà relâchés par un test — ou par le `releaseTimer` manuel
- * d'un test — est sans effet de bord. Le `afterAll` global reste comme filet de sécurité
- * pour les minuteurs qu'un test démarrerait hors de `createdCompetitionIds`.
+ * `releaseTimer` is idempotent (returns false when no Redis state is left), so
+ * releasing timers already released by a test — or by a test's own manual
+ * `releaseTimer` — has no side effect. The global `afterAll` stays as a safety net for
+ * timers a test might start outside `createdCompetitionIds`.
  */
 afterEach(async () => {
   const rounds = await prisma.round.findMany({

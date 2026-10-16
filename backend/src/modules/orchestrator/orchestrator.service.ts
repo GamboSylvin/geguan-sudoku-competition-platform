@@ -23,7 +23,6 @@
  */
 
 import { prisma } from "../../infra";
-import { now } from "../../shared/clock";
 import { ConflictError, NotFoundError } from "../../shared/errors";
 import { translate } from "../../shared/i18n";
 import * as gameplayRepository from "../gameplay/gameplay.repository";
@@ -44,12 +43,14 @@ function roundNotRunningError(status: string): ConflictError {
 }
 
 /**
- * Archive one participant's current attempt on a round and start a fresh one.
+ * Archives a participant's current attempt on a round.
  *
- * The shared round timer is never touched — the student rejoins the round on
- * whatever time is left for everyone else. The earlier attempt's `Answer` rows
- * stay (the attempt is archived, not deleted); the player's Redis working grids
- * are cleared so the client sees a blank grid on its next read.
+ * The round's shared timer is never touched — the student resumes the round on
+ * the time everyone else has left. The previous attempt's `Answer` rows stay
+ * (the attempt is archived, not deleted); the player's Redis working grids are
+ * cleared so the client sees an empty grid on its next read. No new `Attempt` row
+ * is created here: the participant's next real submission will create it (see
+ * `archiveAndRestart`).
  */
 async function restartOneParticipant(
   input: RestartOneParticipantInput,
@@ -79,13 +80,12 @@ async function restartOneParticipant(
   }
 
   const current = await repository.findCurrentAttempt(participation.id);
-  const newAttemptNumber = await repository.nextAttemptNumber(participation.id);
 
-  const { newAttemptId, attemptCount } = await repository.archiveAndRestart({
+  // No placeholder is created: the participation stays without a current attempt
+  // until the next real submission (see `archiveAndRestart`).
+  const { attemptCount } = await repository.archiveAndRestart({
     participationId: participation.id,
     currentAttemptId: current?.id ?? null,
-    newAttemptNumber,
-    now: now(),
   });
 
   // Clear the player's Redis working grids for this round so the next
@@ -102,7 +102,6 @@ async function restartOneParticipant(
   return {
     participationId: participation.id,
     archivedAttemptId: current?.id ?? null,
-    newAttemptId,
     attemptCount,
     remainingSeconds,
     totalSeconds,

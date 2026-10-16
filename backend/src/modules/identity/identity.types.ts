@@ -34,6 +34,15 @@ export interface AuthenticatedAccount {
   /** The account's current device row, for the one-active-device check. */
   deviceId: string;
   participantId: string | null;
+  /**
+   * The participant's category, when the caller is a player. Resolved at
+   * authenticate time (the same place `participantId` is) so the realtime gateway can
+   * join the socket to a category-scoped room without a second lookup — a round's
+   * questions are per-category, and the round-started push is routed to each
+   * category's room so no player ever receives another category's content. Null for
+   * a judge or controller (they have no `participantId`).
+   */
+  categoryId: string | null;
   judgeId: string | null;
 }
 

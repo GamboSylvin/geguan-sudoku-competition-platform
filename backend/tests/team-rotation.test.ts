@@ -45,6 +45,21 @@ const app = createApp();
 const PASSWORD = "test-pass-13";
 const suffix = Math.random().toString(36).slice(2, 8);
 
+/**
+ * The shared fixture password's hash, computed once for the whole file.
+ *
+ * Every account this file creates uses the same password, and `bcrypt.hash` at cost
+ * 10 costs ~330 ms — measured in this container, not estimated. Seeding a 4-member
+ * team therefore burned ~1.3 s of the 5 s Jest budget on work that produced the same
+ * string four times over. Hashing once removes that without weakening anything the
+ * tests assert: the login path still runs the real `bcrypt.compare` (~200 ms per
+ * member), which is the part that is actually under test.
+ */
+let PASSWORD_HASH = "";
+beforeAll(async () => {
+  PASSWORD_HASH = await identityService.hashPassword(PASSWORD);
+});
+
 const GRID_SIZE = 4;
 const STARTING_GRID: (number | null)[] = [
   1, null, null, 4,
@@ -100,7 +115,7 @@ async function createAccount(
       username,
       role,
       isActive: true,
-      passwordHash: await identityService.hashPassword(PASSWORD),
+      passwordHash: PASSWORD_HASH,
       participantId: participantId ?? null,
     },
   });
@@ -427,6 +442,32 @@ afterAll(async () => {
   await prisma.account.deleteMany({ where: { username: { in: createdAccountUsernames } } });
   await disconnectRedis().catch(() => undefined);
   await disconnectPrisma().catch(() => undefined);
+});
+
+/**
+ * Release the round timers at the end of EACH test, not only in the global `afterAll`
+ * above — the same logic, applied per test.
+ *
+ * Why: every test that goes through `startTeamRound` starts a 1200 s timer whose tick
+ * loop re-arms itself every 250 ms (`round-timer.service.ts`'s `scheduleWakeup`, one
+ * `redis.get` per tick), and the application's own advance chain starts a second one
+ * for round 2's preparation phase. Without a per-test cleanup they accumulate until
+ * the end of the file and saturate the event loop: the same in-file leak fixed in
+ * `team-partition.test.ts` (2026-10-14), and the reason this file passes alone but
+ * fails intermittently in a loaded full run.
+ *
+ * `releaseTimer` is idempotent (returns false when no Redis state is left), so
+ * releasing a timer already released — by this `afterEach`, or by a test that ends its
+ * own round — has no side effect. The `afterAll` above stays as a safety net.
+ */
+afterEach(async () => {
+  const rounds = await prisma.round.findMany({
+    where: { stage: { competitionId: { in: createdCompetitionIds } } },
+    select: { id: true },
+  });
+  for (const round of rounds) {
+    await roundTimerService.releaseTimer(round.id).catch(() => undefined);
+  }
 });
 
 describe("pure rotation rules (no I/O)", () => {

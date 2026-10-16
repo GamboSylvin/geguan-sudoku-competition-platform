@@ -4,7 +4,8 @@ import { prisma, disconnectPrisma } from "../src/infra/prisma";
 import { disconnectRedis } from "../src/infra/redis";
 import { identityService } from "../src/modules/identity";
 import { competitionService } from "../src/modules/competition";
-import { roundTimerService } from "../src/modules/round";
+import { roundService, roundTimerService } from "../src/modules/round";
+import type { RoundStartedPayload } from "../src/modules/round";
 
 /**
  * Unit 07 integration tests: the dev-only internal trigger that starts stage 1
@@ -609,5 +610,254 @@ describe("RoundParticipation is created by the round itself (regression, 2026-10
 
     const round = await prisma.round.findUniqueOrThrow({ where: { id: ctx.roundId } });
     expect(round.status).toBe("FINISHED");
+  }, 25000);
+});
+
+/**
+ * A published competition with **two** categories, each with its own participant,
+ * its own question set and its own 6 questions per Individual round.
+ *
+ * This is the fixture the whole cross-category leak hid behind: every other test in
+ * this file seeds one category, and with one category a `Round` carries exactly the
+ * 6 questions its players are entitled to — so an unscoped read, an unscoped
+ * broadcast and unscoped scoring all look correct. BLD-041's real scheme has three
+ * categories, i.e. `6n` questions on one shared `roundId`.
+ *
+ * Returns the two categories' question ids so a test can assert exactly whose
+ * questions crossed a boundary.
+ */
+async function makeTwoCategoryCompetition(name: string) {
+  const competition = await competitionService.createCompetition({
+    name,
+    categories: [
+      { code: "G1-2", name: "Grades 1-2" },
+      { code: "G3-4", name: "Grades 3-4" },
+    ],
+  });
+  createdCompetitionIds.push(competition.id);
+
+  const full = await prisma.competition.findUniqueOrThrow({
+    where: { id: competition.id },
+    include: { categories: { orderBy: { sequence: "asc" } }, stages: { include: { rounds: true } } },
+  });
+  const individualStage = full.stages.find((s) => s.type === "INDIVIDUAL")!;
+  const round1 = individualStage.rounds.find((r) => r.sequence === 1)!;
+  const round2 = individualStage.rounds.find((r) => r.sequence === 2)!;
+
+  const school = await prisma.school.create({
+    data: { competitionId: competition.id, name: `School2 ${suffix}`, sequence: 1 },
+  });
+  createdSchoolIds.push(school.id);
+
+  const startingGrid: (number | null)[] = [
+    1, null, null, 4,
+    null, null, null, null,
+    null, null, null, null,
+    4, null, null, 1,
+  ];
+
+  const categories: {
+    categoryId: string;
+    code: string;
+    participantId: string;
+    questionIds: string[];
+  }[] = [];
+
+  let sequence = 1;
+  for (const category of full.categories) {
+    const participant = await prisma.participant.create({
+      data: {
+        competitionId: competition.id,
+        categoryId: category.id,
+        schoolId: school.id,
+        name: `Player ${category.code} ${suffix}`,
+        participantNumber: sequence,
+        sequence,
+      },
+    });
+    createdParticipantIds.push(participant.id);
+
+    const questionSet = await prisma.questionSet.create({
+      data: {
+        competitionId: competition.id,
+        categoryId: category.id,
+        name: `Set ${category.code} ${suffix}`,
+      },
+    });
+
+    // Six per Individual round per category — exactly what publish readiness
+    // (Unit 03) requires, and what makes `6n` questions share one `roundId`.
+    const questionIds: string[] = [];
+    for (const round of [round1, round2]) {
+      for (let q = 1; q <= 6; q += 1) {
+        const created = await prisma.question.create({
+          data: {
+            questionSetId: questionSet.id,
+            roundId: round.id,
+            sequence: q,
+            points: 10,
+            gridRows: 4,
+            gridColumns: 4,
+            regions: [[0, 1, 4, 5]],
+            startingGrid,
+            solution: startingGrid.map((v) => v ?? 1),
+          },
+        });
+        if (round.id === round1.id) questionIds.push(created.id);
+      }
+    }
+
+    categories.push({
+      categoryId: category.id,
+      code: category.code,
+      participantId: participant.id,
+      questionIds,
+    });
+    sequence += 1;
+  }
+
+  const judge = await prisma.judge.create({ data: { name: `Judge2 ${suffix}` } });
+  createdJudgeIds.push(judge.id);
+  await prisma.competitionJudgeAssignment.create({
+    data: {
+      competitionId: competition.id,
+      judgeId: judge.id,
+      fromParticipantNumber: 1,
+      toParticipantNumber: categories.length,
+    },
+  });
+
+  // One second of preparation so the countdown-zero transition happens in the test;
+  // a long round so it is still ACTIVE when the assertions run.
+  const settings = await prisma.roundSettings.findUnique({ where: { roundId: round1.id } });
+  await prisma.roundSettings.upsert({
+    where: { roundId: round1.id },
+    create: {
+      roundId: round1.id,
+      preparationSeconds: 1,
+      durationSeconds: settings?.durationSeconds ?? 4000,
+    },
+    update: { preparationSeconds: 1, durationSeconds: 4000 },
+  });
+
+  await competitionService.publishCompetition(competition.id);
+
+  return {
+    competitionId: competition.id,
+    roundId: round1.id,
+    stageId: individualStage.id,
+    categories,
+  };
+}
+
+/**
+ * The cross-category question leak (found by the project owner's manual test run,
+ * 2026-10-15). A `Round` is shared by every category of a competition, so with two
+ * categories it carries 12 questions and each player is entitled to 6. Before this
+ * fix the round-started push, the reconnect read and the scoring read all filtered
+ * by `roundId` alone, so a G1-2 player received (and was scored on) G3-4's puzzles
+ * too — reported live as "Puzzle 1 of 12".
+ */
+describe("questions never cross a category boundary (regression, 2026-10-15)", () => {
+  const startedRounds: string[] = [];
+
+  // The round timer keeps a 250 ms tick alive against Redis; release it per test so
+  // this suite does not leak timers into the next one.
+  afterEach(async () => {
+    while (startedRounds.length > 0) {
+      const roundId = startedRounds.pop();
+      if (roundId) await roundTimerService.releaseTimer(roundId).catch(() => undefined);
+    }
+    // The hook is a single slot the gateway owns in production; leave it inert rather
+    // than capturing payloads for a round a later test starts.
+    roundService.installRoundStartedHook(() => undefined);
+  });
+
+  it("pushes one round:started payload per category, each carrying only its own 6 questions", async () => {
+    const ctx = await makeTwoCategoryCompetition(`TwoCatPush ${suffix}`);
+    startedRounds.push(ctx.roundId);
+
+    // The gateway is not installed in tests (only `index.ts` does that), so the test
+    // installs its own subscriber — the same single-slot hook the gateway uses.
+    const received: RoundStartedPayload[] = [];
+    roundService.installRoundStartedHook((payload) => {
+      received.push(payload);
+    });
+
+    await authedController(request(app).post("/api/rounds/dev/start-stage1-round1")).send({
+      competitionId: ctx.competitionId,
+    });
+
+    await waitFor("both categories' round:started payloads", async () =>
+      received.length === ctx.categories.length ? received : null,
+    );
+
+    expect(received).toHaveLength(2);
+    for (const category of ctx.categories) {
+      const payload = received.find((p) => p.categoryId === category.categoryId);
+      expect(payload).toBeDefined();
+      expect(payload!.roundId).toBe(ctx.roundId);
+      expect(payload!.questions.map((q) => q.id).sort()).toEqual(
+        [...category.questionIds].sort(),
+      );
+      // The other category's questions must not appear anywhere in this payload.
+      const other = ctx.categories.find((c) => c.categoryId !== category.categoryId)!;
+      const ids = new Set(payload!.questions.map((q) => q.id));
+      for (const foreignId of other.questionIds) {
+        expect(ids.has(foreignId)).toBe(false);
+      }
+    }
+  }, 20000);
+
+  it("returns only the caller's category questions on the reconnect read, and rejects the other category's question on autosave", async () => {
+    const ctx = await makeTwoCategoryCompetition(`TwoCatState ${suffix}`);
+    startedRounds.push(ctx.roundId);
+    const mine = ctx.categories[0]!;
+    const other = ctx.categories[1]!;
+
+    const username = `it7-player-2cat-${suffix}`;
+    await createAccount(username, "PLAYER", mine.participantId);
+    const loginRes = await login("player", username);
+
+    await authedController(request(app).post("/api/rounds/dev/start-stage1-round1")).send({
+      competitionId: ctx.competitionId,
+    });
+    // No participation row is seeded: the round opens it through the real timer hook.
+    await waitFor("an ACTIVE participation row", () =>
+      prisma.roundParticipation.findUnique({
+        where: {
+          roundId_participantId: { roundId: ctx.roundId, participantId: mine.participantId },
+        },
+      }),
+    );
+
+    const state = await request(app)
+      .get(`/api/gameplay/${ctx.roundId}/state`)
+      .set("x-session-token", loginRes.body.token)
+      .set("x-device-id", loginRes.body.deviceId);
+    expect(state.status).toBe(200);
+    expect(state.body.questions).toHaveLength(6);
+    expect(state.body.questions.map((q: { id: string }) => q.id).sort()).toEqual(
+      [...mine.questionIds].sort(),
+    );
+
+    // Saving against a question the player was never shown is rejected, not accepted
+    // and then counted as one of their answers at scoring time.
+    const grid: (number | null)[] = [
+      1, 2, 3, 4, null, null, null, null, null, null, null, null, 4, 3, 2, 1,
+    ];
+    const foreign = await request(app)
+      .post(`/api/gameplay/${ctx.roundId}/autosave`)
+      .set("x-session-token", loginRes.body.token)
+      .set("x-device-id", loginRes.body.deviceId)
+      .send({ questionId: other.questionIds[0], grid });
+    expect(foreign.status).toBe(422);
+
+    const own = await request(app)
+      .post(`/api/gameplay/${ctx.roundId}/autosave`)
+      .set("x-session-token", loginRes.body.token)
+      .set("x-device-id", loginRes.body.deviceId)
+      .send({ questionId: mine.questionIds[0], grid });
+    expect(own.status).toBe(200);
   }, 25000);
 });

@@ -20,13 +20,14 @@ import { prisma, redis } from "../../infra";
 import type { RotationQuestion, RotationState } from "./team-rotation.types";
 
 const ROTATION_KEY_PREFIX = "gameplay:rotation:";
+const ROTATION_INDEX_PREFIX = "gameplay:rotation:index:";
 
 function rotationKey(roundId: string, teamId: string): string {
   return `${ROTATION_KEY_PREFIX}${roundId}:${teamId}`;
 }
 
-function rotationScanPattern(roundId: string): string {
-  return `${ROTATION_KEY_PREFIX}${roundId}:*`;
+function rotationIndexKey(roundId: string): string {
+  return `${ROTATION_INDEX_PREFIX}${roundId}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -34,6 +35,11 @@ function rotationScanPattern(roundId: string): string {
 // ---------------------------------------------------------------------------
 
 export async function saveRotationState(state: RotationState): Promise<void> {
+  // The round's team set is indexed explicitly so that reading "every team of
+  // this round" never has to scan the whole keyspace: the tick loop runs every
+  // 250 ms, and a `SCAN` is O(total keys), which made the round's timing depend
+  // on unrelated data left in Redis.
+  await redis.sadd(rotationIndexKey(state.roundId), state.teamId);
   await redis.set(rotationKey(state.roundId, state.teamId), JSON.stringify(state));
 }
 
@@ -52,21 +58,20 @@ export async function loadRotationState(
 
 /** Every team's working state for one round. Used by the tick loop and by the end check. */
 export async function listRotationStates(roundId: string): Promise<RotationState[]> {
-  const pattern = rotationScanPattern(roundId);
-  const keys: string[] = [];
-  let cursor = "0";
-  do {
-    const [next, batch] = await redis.scan(cursor, "MATCH", pattern, "COUNT", 100);
-    cursor = next;
-    keys.push(...batch);
-  } while (cursor !== "0");
+  const teamIds = await redis.smembers(rotationIndexKey(roundId));
+  if (teamIds.length === 0) return [];
 
-  if (keys.length === 0) return [];
-
+  const keys = teamIds.map((teamId) => rotationKey(roundId, teamId));
   const raws = await redis.mget(keys);
   const states: RotationState[] = [];
-  for (const raw of raws) {
-    if (!raw) continue;
+  for (let i = 0; i < raws.length; i += 1) {
+    const raw = raws[i];
+    const teamId = teamIds[i];
+    if (!raw || !teamId) {
+      // The blob is gone but the index still lists the team — drop the stale member.
+      if (teamId) await redis.srem(rotationIndexKey(roundId), teamId);
+      continue;
+    }
     try {
       states.push(JSON.parse(raw) as RotationState);
     } catch {
@@ -77,15 +82,11 @@ export async function listRotationStates(roundId: string): Promise<RotationState
 }
 
 export async function deleteRotationStates(roundId: string): Promise<void> {
-  const pattern = rotationScanPattern(roundId);
-  const keys: string[] = [];
-  let cursor = "0";
-  do {
-    const [next, batch] = await redis.scan(cursor, "MATCH", pattern, "COUNT", 100);
-    cursor = next;
-    keys.push(...batch);
-  } while (cursor !== "0");
-  if (keys.length > 0) await redis.del(...keys);
+  const teamIds = await redis.smembers(rotationIndexKey(roundId));
+  if (teamIds.length > 0) {
+    await redis.del(...teamIds.map((teamId) => rotationKey(roundId, teamId)));
+  }
+  await redis.del(rotationIndexKey(roundId));
 }
 
 // ---------------------------------------------------------------------------

@@ -97,6 +97,21 @@ export const PARTITION_EVENTS = {
 export function tabletRoom(participantId: string): string {
   return `tablet:${participantId}`;
 }
+
+/**
+ * The per-category room name. Every player socket joins the room of its own
+ * category at connect time.
+ *
+ * This exists because a `Round` is shared by every category of a competition while
+ * each category's questions are its own, so the `round:started` push — which carries
+ * the question content — cannot go to the whole player namespace without handing one
+ * category's puzzles to another's players. Routing by this room is what keeps that
+ * content server-side until the recipient is entitled to it; filtering on the client
+ * would not, because the questions would still have crossed the wire.
+ */
+export function categoryRoom(categoryId: string): string {
+  return `category:${categoryId}`;
+}
 export interface SystemConnectedPayload {
   /** ISO timestamp from the single server clock (the server owns time). */
   serverTime: string;

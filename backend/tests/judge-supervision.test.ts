@@ -335,7 +335,10 @@ describe("single-student restart (AC 3, 4, 5)", () => {
     expect(res.body.remainingSeconds).toBeGreaterThanOrEqual(timerBefore!.remainingSeconds - 2);
     expect(res.body.remainingSeconds).toBeLessThanOrEqual(timerBefore!.remainingSeconds + 1);
 
-    // The participation now points at the new active attempt; the old one is archived.
+    // No current attempt after a restart: the old one is archived and no blank row
+    // is created. The participant's next real submission will create its attempt
+    // (otherwise the round's auto-submit would take the placeholder for an already
+    // finalized submission and the participant would vanish from the ranking).
     const participation = await prisma.roundParticipation.findUniqueOrThrow({
       where: {
         roundId_participantId: {
@@ -346,18 +349,15 @@ describe("single-student restart (AC 3, 4, 5)", () => {
     });
     expect(participation.attemptCount).toBe(1);
     expect(participation.state).toBe("ACTIVE");
-    expect(participation.currentAttemptId).not.toBeNull();
+    expect(participation.currentAttemptId).toBeNull();
 
+    // The participation was created without an attempt (the Unit 04 import owns
+    // that), so this first restart leaves no row behind.
     const attempts = await prisma.attempt.findMany({
       where: { roundParticipationId: participation.id },
       orderBy: { attemptNumber: "asc" },
     });
-    // The participation was created without an attempt (Unit 04 owns the import
-    // that creates them), so the restart's first attempt is also the first row.
-    // It is the current one, not archived.
-    expect(attempts).toHaveLength(1);
-    expect(attempts[0]!.isArchived).toBe(false);
-    expect(participation.currentAttemptId).toBe(attempts[0]!.id);
+    expect(attempts).toHaveLength(0);
 
     // The shared round timer row in Redis was NOT reset: it still sits close to
     // the configured duration, not at a fresh full-duration deadline.
@@ -423,6 +423,9 @@ describe("single-student restart (AC 3, 4, 5)", () => {
     expect(second.status).toBe(200);
     expect(second.body.attemptCount).toBe(2);
 
+    // Two successive restarts with no submission in between create no `Attempt`
+    // row: only `attemptCount` advances, and the participation stays without a
+    // current attempt.
     const attempts = await prisma.attempt.findMany({
       where: {
         roundParticipation: {
@@ -432,11 +435,17 @@ describe("single-student restart (AC 3, 4, 5)", () => {
       },
       orderBy: { attemptNumber: "asc" },
     });
-    // Two attempts total: the first (created by the first restart, archived by
-    // the second) and the current one.
-    expect(attempts).toHaveLength(2);
-    expect(attempts[0]!.isArchived).toBe(true);
-    expect(attempts[1]!.isArchived).toBe(false);
+    expect(attempts).toHaveLength(0);
+
+    const participation = await prisma.roundParticipation.findUniqueOrThrow({
+      where: {
+        roundId_participantId: {
+          roundId: ctx.roundId,
+          participantId: ctx.inRangeParticipantId,
+        },
+      },
+    });
+    expect(participation.currentAttemptId).toBeNull();
   });
 
   // The controller restarts a student no judge can see, on the same code path a

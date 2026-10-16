@@ -360,27 +360,42 @@ async function startActivePhaseFromTimer(state: TimerState): Promise<void> {
       return;
     }
 
-    // The Individual stage fetches all its puzzles here, at countdown zero, and
-    // pushes them on `round:started` (BLD-006 — never preloaded).
-    const questionRows = await repository.listRoundQuestions(state.roundId);
-    const questions: RoundQuestionPayload[] = questionRows.map((q) => ({
-      id: q.id,
-      sequence: q.sequence,
-      type: q.type,
-      gridRows: q.gridRows,
-      gridColumns: q.gridColumns,
-      regions: q.regions,
-      startingGrid: q.startingGrid,
-      points: q.points,
-    }));
+    // The Individual stage fetches its puzzles here, at countdown zero, and pushes
+    // them on `round:started` (BLD-006 — never preloaded).
+    //
+    // **Once per category, never once for the round.** The `Round` row is shared by
+    // every category of the competition, so it carries `6n` questions for `n`
+    // categories and each category's players must receive only their own 6. The hook
+    // is fired once per category, each payload carrying that category's `categoryId`
+    // so the gateway routes it to that category's room alone — sending one merged
+    // payload to the whole player namespace was the cross-category leak.
+    // A category with no question assigned still gets its own payload with an empty
+    // list — that is a publish-readiness failure (Unit 03 requires exactly 6 per
+    // Individual round per category), not something to paper over here by skipping
+    // the category and leaving its players on the preparation screen forever.
+    const categories = await repository.listCompetitionCategories(state.competitionId);
+    for (const category of categories) {
+      const questionRows = await repository.listRoundQuestions(state.roundId, category.id);
+      const questions: RoundQuestionPayload[] = questionRows.map((q) => ({
+        id: q.id,
+        sequence: q.sequence,
+        type: q.type,
+        gridRows: q.gridRows,
+        gridColumns: q.gridColumns,
+        regions: q.regions,
+        startingGrid: q.startingGrid,
+        points: q.points,
+      }));
 
-    roundStartedHook?.({
-      roundId: state.roundId,
-      stageId: state.stageId,
-      competitionId: state.competitionId,
-      durationSeconds,
-      questions,
-    });
+      roundStartedHook?.({
+        roundId: state.roundId,
+        stageId: state.stageId,
+        competitionId: state.competitionId,
+        categoryId: category.id,
+        durationSeconds,
+        questions,
+      });
+    }
   } catch (error) {
     logger.error("round.startActive: failed to start the active phase", {
       roundId: state.roundId,

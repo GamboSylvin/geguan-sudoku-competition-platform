@@ -220,13 +220,31 @@ export interface RoundQuestionRow {
 
 /**
  * Read the round's questions, *without* the solution column — the solution is
- * server-side only (BLD-010). One question set per category supplies the round,
- * so a round's questions span several question sets; we only need the rows
- * themselves, scoped by roundId.
+ * server-side only (BLD-010).
+ *
+ * `categoryId` is what keeps one category's questions away from another's. A
+ * `Round` row is shared by every category of the competition (`Stage`/`Round` are
+ * per-competition, not per-category) and each category's controller assigns its
+ * own 6 questions onto that **same** `roundId`, so a competition with *n*
+ * categories has *6n* `Question` rows pointing at one `roundId`: filtering by
+ * `roundId` alone hands every category's questions to whoever asks. The filter
+ * joins `Question.questionSetId → QuestionSet.categoryId`, which is always
+ * defined (`QuestionSet.categoryId` is non-nullable — BLD-028).
+ *
+ * Passing `categoryId: null` deliberately disables the filter. No caller does that
+ * today; the parameter is optional only so the Team-round paths (which never set
+ * `Question.roundId` at all — BLD-040 — and so find nothing either way) stay
+ * unchanged.
  */
-export function listRoundQuestions(roundId: string): Promise<RoundQuestionRow[]> {
+export function listRoundQuestions(
+  roundId: string,
+  categoryId?: string | null,
+): Promise<RoundQuestionRow[]> {
   return prisma.question.findMany({
-    where: { roundId },
+    where: {
+      roundId,
+      ...(categoryId ? { questionSet: { categoryId } } : {}),
+    },
     orderBy: { sequence: "asc" },
     select: {
       id: true,
@@ -238,5 +256,24 @@ export function listRoundQuestions(roundId: string): Promise<RoundQuestionRow[]>
       startingGrid: true,
       points: true,
     },
+  });
+}
+
+/**
+ * The competition's categories, in the order the controller set them up. Needed at
+ * round start because the round-started push is built **once per category** — each
+ * category's players receive their own 6 questions and nobody else's. Read through
+ * the shared Prisma client rather than through the Competition module's barrel:
+ * this module does not own the row, and reaching for data it does not own directly
+ * is the pattern the rest of the codebase uses (it avoids an import cycle between
+ * Round and Competition).
+ */
+export function listCompetitionCategories(
+  competitionId: string,
+): Promise<{ id: string; name: string; code: string }[]> {
+  return prisma.competitionCategory.findMany({
+    where: { competitionId },
+    orderBy: { sequence: "asc" },
+    select: { id: true, name: true, code: true },
   });
 }

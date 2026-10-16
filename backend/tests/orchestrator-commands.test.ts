@@ -259,6 +259,30 @@ afterAll(async () => {
   await disconnectPrisma().catch(() => undefined);
 });
 
+/**
+ * Release the round timers at the end of EACH test — this file starts timers in three
+ * places and released **none** of them: its `afterAll` only deleted the competitions.
+ * This is the fix already applied to `team-partition.test.ts`, carried here
+ * preventively, in the same shape.
+ *
+ * Why: until a timer is released, its tick loop re-arms every 250 ms
+ * (`round-timer.service.ts`'s `scheduleWakeup`) and each tick does a `redis.get`. The
+ * timers therefore accumulate until the end of the file and saturate the event loop as
+ * well as the Redis connection, making the following tests' plain requests time out
+ * (5000 ms). Many tests already release their own via `stopRoundEarly` or
+ * `cancelPreparation`; this `afterEach` covers the rest, and since `releaseTimer` is
+ * idempotent it has no side effect on those. The `afterAll` stays as a safety net.
+ */
+afterEach(async () => {
+  const rounds = await prisma.round.findMany({
+    where: { stage: { competitionId: { in: createdCompetitionIds } } },
+    select: { id: true },
+  });
+  for (const round of rounds) {
+    await roundTimerService.releaseTimer(round.id).catch(() => undefined);
+  }
+});
+
 function ctl(req: request.Test): request.Test {
   return authed(req, controllerToken, controllerDevice);
 }
@@ -601,11 +625,13 @@ describe("reset and rematch (acceptance criterion 5)", () => {
       where: { roundParticipationId: participation.id },
       orderBy: { attemptNumber: "asc" },
     });
-    expect(attempts).toHaveLength(2);
+    // The old attempt is archived, never deleted. No blank row is created on
+    // restart: the participation stays without a current attempt until the
+    // participant's next real submission.
+    expect(attempts).toHaveLength(1);
     expect(attempts[0]!.id).toBe(priorAttempt.id);
     expect(attempts[0]!.isArchived).toBe(true); // archived, never deleted
-    expect(attempts[1]!.isArchived).toBe(false);
-    expect(participation.currentAttemptId).toBe(attempts[1]!.id);
+    expect(participation.currentAttemptId).toBeNull();
 
     // The other participant in the round was untouched.
     const others = await prisma.roundParticipation.findMany({

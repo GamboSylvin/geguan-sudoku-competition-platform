@@ -17,6 +17,7 @@ import type {
 } from "../modules/round";
 import {
   BIG_SCREEN_EVENTS,
+  categoryRoom,
   PARTITION_EVENTS,
   RANKING_EVENTS,
   REALTIME_NAMESPACES,
@@ -109,6 +110,12 @@ export function createRealtimeGateway(httpServer: HttpServer): SocketServer {
       if (namespace === REALTIME_NAMESPACES.player) {
         const participantId = socket.data.auth?.participantId as string | null | undefined;
         if (participantId) socket.join(tabletRoom(participantId));
+        // Also its category's room, which the round-started push is routed to. Resolved
+        // from the authenticated handshake like the participant id — never from the
+        // client, and read at authenticate time so no extra lookup happens here (this
+        // module holds no Prisma import: translation only).
+        const categoryId = socket.data.auth?.categoryId as string | null | undefined;
+        if (categoryId) socket.join(categoryRoom(categoryId));
       }
 
       const payload: SystemConnectedPayload = { serverTime: now().toISOString() };
@@ -128,11 +135,19 @@ export function createRealtimeGateway(httpServer: HttpServer): SocketServer {
   // Round lifecycle broadcasts (Unit 07)
   //
   // Each listener subscribes to the round service and fans out to the player
-  // namespace. Nothing here holds a domain rule; translation only. Round events
-  // go to every connected player — the per-player scoping (which grid is whose)
-  // is enforced by the gameplay HTTP routes, not by the realtime fan-out, which
-  // carries only round-wide state (the questions are identical for every player
-  // in a round, BLD-006; the timer is identical, invariant 3).
+  // namespace. Nothing here holds a domain rule; translation only.
+  //
+  // The timer events (preparation-tick, timer-sync, paused, resumed) go to every
+  // connected player: they carry only round-wide timing, which is identical for all
+  // of them (invariant 3), so there is nothing to scope and nothing to leak.
+  //
+  // `round:started` is the exception and is room-scoped, not namespace-wide. It is
+  // the one round event that carries question content, and a `Round` is shared by
+  // every category of a competition while each category has its own questions — so a
+  // namespace-wide push hands every player every category's puzzles. The round
+  // service therefore fires the hook once per category and each payload is emitted
+  // to that category's room alone. Per-player scoping of *grids* stays on the
+  // gameplay HTTP routes, as before.
   // ---------------------------------------------------------------------------
 
   const playerNamespace = io.of(REALTIME_NAMESPACES.player);
@@ -142,12 +157,12 @@ export function createRealtimeGateway(httpServer: HttpServer): SocketServer {
       roundId: state.roundId,
       stageId: state.stageId,
       competitionId: state.competitionId,
+      status: state.status,
       remainingSeconds,
       totalSeconds: state.totalSeconds,
     };
-    // Preparation and round ticks share the same event; the client tells them
-    // apart by `state.status` (PREPARATION vs ACTIVE) in the timer-sync it
-    // already holds, and by which totalSeconds the payload carries.
+    // Preparation and round ticks share the same event, so the payload carries
+    // `status` and the client reads that rather than guessing from its own screen.
     playerNamespace.emit(ROUND_EVENTS.preparationTick, payload);
   });
 
@@ -184,10 +199,11 @@ export function createRealtimeGateway(httpServer: HttpServer): SocketServer {
   });
 
   // The round-started push carries the questions (BLD-006). The Round module
-  // fires this hook once it has flipped the durable state and started the
-  // round timer; the gateway's only job is to put it on the wire.
+  // fires this hook once it has flipped the durable state and started the round
+  // timer — once per category, each payload carrying that category's own questions;
+  // the gateway's only job is to put each one on the wire to its own room.
   roundService.installRoundStartedHook((payload: RoundStartedPayload) => {
-    playerNamespace.emit(ROUND_EVENTS.started, payload);
+    playerNamespace.to(categoryRoom(payload.categoryId)).emit(ROUND_EVENTS.started, payload);
   });
 
   // ---------------------------------------------------------------------------

@@ -41,7 +41,9 @@ import { teamRotationService } from "./team-rotation.service";
 import { teamPartitionService } from "./team-partition.service";
 import type {
   AutosaveInput,
+  CurrentRoundPayload,
   GameplayStatePayload,
+  RoundKind,
   SubmitResult,
   WorkingGrid,
 } from "./gameplay.types";
@@ -105,12 +107,24 @@ async function requireActiveRound(roundId: string) {
 }
 
 /**
- * Reject when the question does not belong to this round. Autosave for a
- * question in another round is an error, not a silent no-op (spec Error Cases).
+ * Reject when the question does not belong to this round **and this participant's
+ * category**. Autosave for a question in another round is an error, not a silent
+ * no-op (spec Error Cases).
+ *
+ * The category half is what keeps the write path honest: a `Round` is shared by every
+ * category of the competition, so `{ id, roundId }` alone matches all `6n` questions
+ * and a player could save a grid against another category's puzzle — which scoring
+ * would then count as one of their own answers. Both halves reject with the same
+ * `questionNotInRound` reason: from the caller's point of view "not yours" and "not
+ * in this round" are the same wrong question.
  */
-async function requireQuestionInRound(roundId: string, questionId: string) {
+async function requireQuestionInRound(
+  roundId: string,
+  questionId: string,
+  categoryId: string,
+) {
   const question = await prisma.question.findFirst({
-    where: { id: questionId, roundId },
+    where: { id: questionId, roundId, questionSet: { categoryId } },
     select: { id: true },
   });
   if (!question) {
@@ -132,8 +146,8 @@ async function autosave(
   input: AutosaveInput,
 ): Promise<{ savedAtMs: number }> {
   await requireActiveRound(roundId);
-  await requireParticipation(roundId, participantId);
-  await requireQuestionInRound(roundId, input.questionId);
+  const participation = await requireParticipation(roundId, participantId);
+  await requireQuestionInRound(roundId, input.questionId, participation.categoryId);
 
   const savedAtMs = nowMs();
   await repository.saveGrid(roundId, participantId, input.questionId, input.grid, savedAtMs);
@@ -160,7 +174,12 @@ async function getState(
     });
   }
 
-  const questionRows = await roundRepository.listRoundQuestions(roundId);
+  // Scoped to the caller's own category. The `Round` row is shared by every category
+  // of the competition, so reading by `roundId` alone returns all `6n` questions and
+  // would hand one category's puzzles to another category's player on reconnect. The
+  // participation row already carries the participant's category (written from
+  // `Participant.categoryId` when the round opens), so no extra query is needed.
+  const questionRows = await roundRepository.listRoundQuestions(roundId, participation.categoryId);
   const questions = questionRows.map((q) => ({
     id: q.id,
     sequence: q.sequence,
@@ -191,6 +210,74 @@ async function getState(
 }
 
 /**
+ * Which round the caller is in right now, resolved from the session alone — no
+ * `roundId` argument, because the caller does not have one. That is the whole
+ * point: a socket that connects after the round went ACTIVE missed `round:started`
+ * (emitted once, at the transition) and cannot use `round:preparation-tick` to
+ * find its round either, since that push is namespace-wide and therefore also
+ * carries other competitions' countdowns. Every other read here is keyed by
+ * `:roundId`, so the client is stuck on the "waiting" screen without this.
+ *
+ * Scoping: participant → competition → the competition's live round. A `Round` is
+ * shared by every category of its competition, so the participant's competition id
+ * is enough to name the right round, and it can never name another competition's —
+ * the id comes from the database, never from the request.
+ *
+ * Returns `round: null` (not an error) when nothing is running: "you have no round
+ * yet" is a legitimate answer the client renders as the waiting screen, and an
+ * exception there would make every reconnect before the first round a visible failure.
+ */
+async function getCurrentRound(participantId: string): Promise<CurrentRoundPayload> {
+  const participant = await prisma.participant.findUnique({
+    where: { id: participantId },
+    select: { competitionId: true },
+  });
+  if (!participant) {
+    throw new ForbiddenError(translate("en", "gameplay.notAParticipant"), {
+      code: "gameplay.notAParticipant",
+    });
+  }
+
+  const roundId = await roundTimerService.getActiveRoundId(participant.competitionId);
+  if (!roundId) return { round: null };
+
+  const round = await prisma.round.findUnique({
+    where: { id: roundId },
+    select: {
+      id: true,
+      status: true,
+      sequence: true,
+      stage: { select: { competitionId: true, type: true } },
+    },
+  });
+  if (!round || round.stage.competitionId !== participant.competitionId) return { round: null };
+
+  // A round that is already settled is not a round to play: the client keeps
+  // whatever it last rendered rather than being pulled back into a finished one.
+  if (round.status === "FINISHED" || round.status === "WAITING") return { round: null };
+
+  const kind: RoundKind = teamRotationService.isRotationRound(round.stage.type, round.sequence)
+    ? "rotation"
+    : teamPartitionService.isPartitionRound(round.stage.type, round.sequence)
+      ? "partition"
+      : "individual";
+
+  const timer = await roundTimerService.remaining(roundId);
+
+  return {
+    round: {
+      roundId: round.id,
+      competitionId: round.stage.competitionId,
+      kind,
+      status: round.status,
+      timer: timer
+        ? { remainingSeconds: timer.remainingSeconds, totalSeconds: timer.totalSeconds }
+        : null,
+    },
+  };
+}
+
+/**
  * The round-start hook the realtime gateway installs. The Round module calls it
  * after the questions have been fetched and the round timer has started; this
  * module's only job at round start is to be a stable place to hang that hook.
@@ -208,14 +295,26 @@ export type { RoundStartedPayload } from "../round/round.types";
  * configuration and duration), the stage (for Individual/Team), and the
  * questions *with* their solutions (BLD-010). The solution is read here, on
  * the server, only for scoring; it is never serialised to a client payload.
+ *
+ * `categoryId` scopes the questions to the participant being scored. The `Round`
+ * row is shared by every category of the competition, so an unscoped read returns
+ * all `6n` questions; scoring then builds one `Answer` row per question, and the
+ * `6(n-1)` the participant never even saw come back as `submitted = []` →
+ * `correct = false`. Two real consequences, not just untidy data: those rows land
+ * in the export's per-question sheet, and `allCorrect` — which gates the
+ * early-finish bonus (SCR-008–SCR-011) — can never be true for anyone, so the bonus
+ * silently drops to 0 as soon as a competition has more than one category.
  */
-async function loadRoundForScoring(roundId: string) {
+async function loadRoundForScoring(roundId: string, categoryId: string) {
   const round = await prisma.round.findUnique({
     where: { id: roundId },
     include: {
       settings: true,
       stage: { select: { id: true, competitionId: true, type: true, sequence: true } },
-      questions: { orderBy: { sequence: "asc" } },
+      questions: {
+        where: { questionSet: { categoryId } },
+        orderBy: { sequence: "asc" },
+      },
     },
   });
   if (!round) {
@@ -263,7 +362,7 @@ async function finalizeParticipation(input: {
     };
   }
 
-  const round = await loadRoundForScoring(input.roundId);
+  const round = await loadRoundForScoring(input.roundId, participation.categoryId);
   const settings = round.settings;
   const durationSeconds = settings?.durationSeconds ?? 0;
   const earlyBonusRate = settings?.earlyBonusRate ?? 3;
@@ -761,6 +860,7 @@ teamPartitionService.installPartitionRoundEndedHook((event) =>
 export const gameplayService = {
   autosave,
   getState,
+  getCurrentRound,
   submit,
   handleRoundEnded,
   recordLeftAnswerPage,

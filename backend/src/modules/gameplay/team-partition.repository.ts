@@ -18,13 +18,14 @@ import { prisma, redis } from "../../infra";
 import type { PartitionQuestion, PartitionState } from "./team-partition.types";
 
 const PARTITION_KEY_PREFIX = "gameplay:partition:";
+const PARTITION_INDEX_PREFIX = "gameplay:partition:index:";
 
 function partitionKey(roundId: string, teamId: string): string {
   return `${PARTITION_KEY_PREFIX}${roundId}:${teamId}`;
 }
 
-function partitionScanPattern(roundId: string): string {
-  return `${PARTITION_KEY_PREFIX}${roundId}:*`;
+function partitionIndexKey(roundId: string): string {
+  return `${PARTITION_INDEX_PREFIX}${roundId}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -79,6 +80,9 @@ export function flattenStoredGrid(stored: unknown, rows: number, columns: number
 // ---------------------------------------------------------------------------
 
 export async function savePartitionState(state: PartitionState): Promise<void> {
+  // Same reason as the rotation round's index: the tick loop must read "every
+  // team of this round" in O(teams), not in O(total keys in Redis).
+  await redis.sadd(partitionIndexKey(state.roundId), state.teamId);
   await redis.set(partitionKey(state.roundId, state.teamId), JSON.stringify(state));
 }
 
@@ -97,21 +101,20 @@ export async function loadPartitionState(
 
 /** Every team's working state for one round. Used by the tick loop and the end check. */
 export async function listPartitionStates(roundId: string): Promise<PartitionState[]> {
-  const pattern = partitionScanPattern(roundId);
-  const keys: string[] = [];
-  let cursor = "0";
-  do {
-    const [next, batch] = await redis.scan(cursor, "MATCH", pattern, "COUNT", 100);
-    cursor = next;
-    keys.push(...batch);
-  } while (cursor !== "0");
+  const teamIds = await redis.smembers(partitionIndexKey(roundId));
+  if (teamIds.length === 0) return [];
 
-  if (keys.length === 0) return [];
-
+  const keys = teamIds.map((teamId) => partitionKey(roundId, teamId));
   const raws = await redis.mget(keys);
   const states: PartitionState[] = [];
-  for (const raw of raws) {
-    if (!raw) continue;
+  for (let i = 0; i < raws.length; i += 1) {
+    const raw = raws[i];
+    const teamId = teamIds[i];
+    if (!raw || !teamId) {
+      // The blob is gone but the index still lists the team — drop the stale member.
+      if (teamId) await redis.srem(partitionIndexKey(roundId), teamId);
+      continue;
+    }
     try {
       states.push(JSON.parse(raw) as PartitionState);
     } catch {
@@ -122,15 +125,11 @@ export async function listPartitionStates(roundId: string): Promise<PartitionSta
 }
 
 export async function deletePartitionStates(roundId: string): Promise<void> {
-  const pattern = partitionScanPattern(roundId);
-  const keys: string[] = [];
-  let cursor = "0";
-  do {
-    const [next, batch] = await redis.scan(cursor, "MATCH", pattern, "COUNT", 100);
-    cursor = next;
-    keys.push(...batch);
-  } while (cursor !== "0");
-  if (keys.length > 0) await redis.del(...keys);
+  const teamIds = await redis.smembers(partitionIndexKey(roundId));
+  if (teamIds.length > 0) {
+    await redis.del(...teamIds.map((teamId) => partitionKey(roundId, teamId)));
+  }
+  await redis.del(partitionIndexKey(roundId));
 }
 
 // ---------------------------------------------------------------------------

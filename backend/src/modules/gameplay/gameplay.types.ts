@@ -67,6 +67,41 @@ export interface GameplayStatePayload {
 }
 
 /**
+ * What `GET /api/gameplay/current-round` returns: which round — if any — the
+ * caller is in right now, and what kind it is.
+ *
+ * This exists because a socket that connects *after* the round went ACTIVE missed
+ * the one push that names it: `round:started` is emitted once, at the transition,
+ * and `round:preparation-tick` is namespace-wide so it cannot be used to discover
+ * "my" round without also accepting another competition's countdown. Everything
+ * else the client can read is keyed by `:roundId`, which is exactly the value it
+ * does not have. The session does resolve it: participant → competition → the
+ * live round.
+ *
+ * `kind` is what routes the client to the right reconnect reader, because the
+ * three round kinds have three different endpoints: a team round's questions come
+ * from the category pool and never carry a `roundId` (BLD-040), so
+ * `GET /:roundId/state` finds nothing for one.
+ */
+/** The three round kinds, named so the client can pick the right reconnect reader. */
+export type RoundKind = "individual" | "rotation" | "partition";
+
+/** A round status as the client sees it. */
+export type RoundStatusValue = "WAITING" | "PREPARATION" | "ACTIVE" | "PAUSED" | "FINISHED";
+
+export interface CurrentRoundPayload {
+  /** Null when the caller has no round running — the "waiting" screen is correct. */
+  round: {
+    roundId: string;
+    competitionId: string;
+    kind: RoundKind;
+    status: RoundStatusValue;
+    /** Server-authoritative timer; null when the round has no live timer. */
+    timer: { remainingSeconds: number; totalSeconds: number } | null;
+  } | null;
+}
+
+/**
  * What `POST /api/gameplay/:roundId/submit` returns (Unit 08, SUB-007/BLD-029).
  * The server never tells the player their score here; `accepted` is all that
  * crosses the wire.

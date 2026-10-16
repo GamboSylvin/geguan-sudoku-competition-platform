@@ -7,6 +7,7 @@ import { competitionService } from "../src/modules/competition";
 import { roundTimerService } from "../src/modules/round";
 import { gameplayService } from "../src/modules/gameplay";
 import { scoringService } from "../src/modules/scoring";
+import { orchestratorService } from "../src/modules/orchestrator";
 
 /**
  * Unit 08 integration tests: submission, answer check and scoring.
@@ -207,6 +208,32 @@ afterAll(async () => {
   await prisma.account.deleteMany({ where: { username: { in: createdAccountUsernames } } });
   await disconnectRedis().catch(() => undefined);
   await disconnectPrisma().catch(() => undefined);
+});
+
+/**
+ * Release the round timers at the end of EACH test, not only in the global `afterAll`
+ * — the same fix as `team-partition.test.ts`'s.
+ *
+ * Why: this file starts 1200 s timers in nine places (one of them 1 s, expiring on its
+ * own). Until a timer is released, its tick loop re-arms every 250 ms
+ * (`round-timer.service.ts`'s `scheduleWakeup`) and each tick does a `redis.get`.
+ * Without a per-test cleanup, the timers of all the previous tests stay alive and
+ * accumulate until the end of the file, saturating the event loop and the Redis
+ * connection — the intra-file leak already fixed at the *inter*-suite level
+ * (2026-10-12) and then in `team-partition.test.ts` (2026-10-14).
+ *
+ * `releaseTimer` is idempotent (returns false when no Redis state is left), so
+ * releasing a timer already released — by this `afterEach`, or by a test that ends its
+ * own round — has no side effect. The `afterAll` stays as a safety net.
+ */
+afterEach(async () => {
+  const rounds = await prisma.round.findMany({
+    where: { stage: { competitionId: { in: createdCompetitionIds } } },
+    select: { id: true },
+  });
+  for (const round of rounds) {
+    await roundTimerService.releaseTimer(round.id).catch(() => undefined);
+  }
 });
 
 function authedController(req: request.Test): request.Test {
@@ -658,5 +685,363 @@ describe("round-ended auto-submit (acceptance criteria 3, 4, 6)", () => {
     });
     expect(attempt.submissionType).toBe("TIMEOUT");
     expect(attempt.bonus).toBe(0);
+  }, 15000);
+});
+
+/**
+ * Regression for the "restart + placeholder attempt" bug (the Finding of the
+ * `RoundParticipation` fix): a participant restarted mid-round by a judge or by the
+ * controller must NOT disappear from the ranking when the round ends without them
+ * resubmitting.
+ *
+ * Before the fix, `archiveAndRestart` created a blank, non-archived `Attempt` row as a
+ * placeholder. At the round's auto-submit sweep, `scoring.repository.ts`'s
+ * `findCurrentAttempt` (`{ roundParticipationId, isArchived: false }`) found that
+ * placeholder, `finalizeAttempt` took it for an already finalized submission (the PL-009
+ * no-op) and returned `individualRoundResultId: ""` — so `gameplay.service.ts` never
+ * triggered the ranking-refresh hook and no `IndividualRoundResult` row was ever
+ * written.
+ */
+describe("a restarted participant still gets a real result at round end (regression)", () => {
+  it("restart with no prior attempt, then round ends → an IndividualRoundResult exists", async () => {
+    const ctx = await seedCompetition(`RestartBlank ${suffix}`);
+
+    await authedController(request(app).post("/api/rounds/dev/start-stage1-round1")).send({
+      competitionId: ctx.competitionId,
+    });
+    await prisma.round.update({
+      where: { id: ctx.roundId },
+      data: { status: "ACTIVE", startedAt: new Date() },
+    });
+    await roundTimerService.startRoundTimer(ctx.roundId, ctx.competitionId, ctx.stageId, 1200);
+
+    // Le juge relance le participant ; il ne resoumettra jamais.
+    const restarted = await orchestratorService.restartOneParticipant({
+      roundId: ctx.roundId,
+      participantId: ctx.participantId,
+    });
+    expect(restarted.attemptCount).toBe(1);
+
+    const afterRestart = await prisma.roundParticipation.findFirstOrThrow({
+      where: { roundId: ctx.roundId, participantId: ctx.participantId },
+    });
+    expect(afterRestart.state).toBe("ACTIVE");
+    // Aucun placeholder : pas de tentative courante tant qu'il n'a pas soumis.
+    expect(afterRestart.currentAttemptId).toBeNull();
+    expect(
+      await prisma.attempt.count({
+        where: { roundParticipationId: afterRestart.id, isArchived: false },
+      }),
+    ).toBe(0);
+
+    await gameplayService.handleRoundEnded({
+      roundId: ctx.roundId,
+      stageId: ctx.stageId,
+      competitionId: ctx.competitionId,
+      endedAtMs: Date.now(),
+    });
+
+    const participation = await prisma.roundParticipation.findFirstOrThrow({
+      where: { roundId: ctx.roundId, participantId: ctx.participantId },
+    });
+    expect(participation.state).toBe("AUTO_SUBMITTED");
+    expect(participation.currentAttemptId).not.toBeNull();
+
+    const attempt = await prisma.attempt.findUniqueOrThrow({
+      where: { id: participation.currentAttemptId! },
+      include: { answers: true },
+    });
+    expect(attempt.isArchived).toBe(false);
+    expect(attempt.submissionType).toBe("TIMEOUT");
+    // Real values (zero here: no grid), not a placeholder.
+    expect(attempt.score).toBe(0);
+    expect(attempt.bonus).toBe(0);
+    expect(attempt.totalScore).toBe(0);
+    expect(attempt.answers).toHaveLength(6);
+
+    // The participant does not fall out of the ranking: the result row exists.
+    const result = await prisma.individualRoundResult.findFirst({
+      where: { roundId: ctx.roundId, participantId: ctx.participantId },
+    });
+    expect(result).not.toBeNull();
+    expect(result!.attemptId).toBe(attempt.id);
+    expect(result!.totalScore).toBe(0);
+    expect(result!.submissionType).toBe("TIMEOUT");
+  }, 20000);
+
+  it("restart after a real submit archives it and the round end still writes a result", async () => {
+    const ctx = await seedCompetition(`RestartAfterSubmit ${suffix}`);
+    const playerLogin = await loginPlayer(`${users.playerB}-rs`, ctx.participantId);
+
+    await authedController(request(app).post("/api/rounds/dev/start-stage1-round1")).send({
+      competitionId: ctx.competitionId,
+    });
+    await prisma.round.update({
+      where: { id: ctx.roundId },
+      data: { status: "ACTIVE", startedAt: new Date() },
+    });
+    await roundTimerService.startRoundTimer(ctx.roundId, ctx.competitionId, ctx.stageId, 1200);
+
+    // A first real submission creates a scored attempt.
+    await request(app)
+      .post(`/api/gameplay/${ctx.roundId}/autosave`)
+      .set("x-session-token", playerLogin.body.token)
+      .set("x-device-id", playerLogin.body.deviceId)
+      .send({ questionId: ctx.questionId, grid: SOLUTION });
+    const firstSubmit = await request(app)
+      .post(`/api/gameplay/${ctx.roundId}/submit`)
+      .set("x-session-token", playerLogin.body.token)
+      .set("x-device-id", playerLogin.body.deviceId);
+    expect(firstSubmit.status).toBe(200);
+
+    // The judge then restarts the participant: their attempt is archived and none
+    // is recreated.
+    const restarted = await orchestratorService.restartOneParticipant({
+      roundId: ctx.roundId,
+      participantId: ctx.participantId,
+    });
+    expect(restarted.archivedAttemptId).not.toBeNull();
+
+    const participation = await prisma.roundParticipation.findFirstOrThrow({
+      where: { roundId: ctx.roundId, participantId: ctx.participantId },
+    });
+    expect(participation.state).toBe("ACTIVE");
+    expect(participation.currentAttemptId).toBeNull();
+    expect(
+      await prisma.attempt.count({
+        where: { roundParticipationId: participation.id, isArchived: false },
+      }),
+    ).toBe(0);
+
+    // The round ends without a resubmission: the auto-submit must write a new
+    // attempt (numbered 2, no gap left by a placeholder) and its
+    // `IndividualRoundResult`.
+    await gameplayService.handleRoundEnded({
+      roundId: ctx.roundId,
+      stageId: ctx.stageId,
+      competitionId: ctx.competitionId,
+      endedAtMs: Date.now(),
+    });
+
+    const after = await prisma.roundParticipation.findFirstOrThrow({
+      where: { roundId: ctx.roundId, participantId: ctx.participantId },
+    });
+    expect(after.state).toBe("AUTO_SUBMITTED");
+
+    const attempts = await prisma.attempt.findMany({
+      where: { roundParticipationId: after.id },
+      orderBy: { attemptNumber: "asc" },
+    });
+    expect(attempts).toHaveLength(2);
+    expect(attempts[0]!.isArchived).toBe(true);
+    expect(attempts[0]!.attemptNumber).toBe(1);
+    expect(attempts[1]!.isArchived).toBe(false);
+    expect(attempts[1]!.attemptNumber).toBe(2);
+    expect(attempts[1]!.submissionType).toBe("TIMEOUT");
+    expect(after.currentAttemptId).toBe(attempts[1]!.id);
+
+    const results = await prisma.individualRoundResult.findMany({
+      where: { roundId: ctx.roundId, participantId: ctx.participantId },
+    });
+    expect(results).toHaveLength(2);
+    const timeoutResult = results.find((r) => r.attemptId === attempts[1]!.id);
+    expect(timeoutResult).toBeDefined();
+    expect(timeoutResult!.submissionType).toBe("TIMEOUT");
+    expect(timeoutResult!.bonus).toBe(0);
+    expect(timeoutResult!.totalScore).toBe(0);
+  }, 20000);
+});
+
+/**
+ * Cross-category question leakage at scoring time (regression, 2026-10-15, found
+ * during the project owner's manual test run — reported live as "Puzzle 1 of 12").
+ *
+ * `round.repository.ts`'s `listRoundQuestions` and `gameplay.service.ts`'s
+ * `loadRoundForScoring` both used to read a round's questions by `roundId` alone.
+ * A `Round` is shared by every category of the competition (`Stage`/`Round` are
+ * per-competition, not per-category — Unit 11's own build note), so with two
+ * categories sharing one round, `loadRoundForScoring` returned **12** questions —
+ * the caller's own 6 plus the other category's 6, which the caller never saw and
+ * has no saved grid for. Two silent consequences, neither a changed total score
+ * but both real: (a) `finalizeAttempt` wrote an `Answer` row for all 12, not 6,
+ * six of them `correct: false` with an empty submitted grid, for questions the
+ * player was never shown — polluting the export's per-question sheet (Unit 12);
+ * (b) `allCorrect = answers.every(a => a.correct)` could then never be true for
+ * anyone, because the six foreign, unanswered questions always failed it — so the
+ * early-finish bonus (SCR-008–SCR-011) silently dropped to 0 for every manual
+ * submit, the instant a competition had more than one category. `round.test.ts`'s
+ * "questions never cross a category boundary" regression covers the round-started
+ * push and the reconnect/autosave paths; this covers the scoring path those two
+ * don't reach.
+ */
+describe("cross-category question leakage does not poison scoring (regression, 2026-10-15)", () => {
+  async function seedTwoCategoryCompetition(name: string): Promise<{
+    competitionId: string;
+    stageId: string;
+    roundId: string;
+    participantId: string;
+    ownQuestionIds: string[];
+    foreignQuestionIds: string[];
+  }> {
+    const competition = await competitionService.createCompetition({
+      name,
+      categories: [
+        { code: "SA", name: "Scoring A" },
+        { code: "SB", name: "Scoring B" },
+      ],
+    });
+    createdCompetitionIds.push(competition.id);
+
+    const full = await prisma.competition.findUniqueOrThrow({
+      where: { id: competition.id },
+      include: { categories: { orderBy: { sequence: "asc" } }, stages: { include: { rounds: true } } },
+    });
+    const [categoryA, categoryB] = full.categories;
+    const individualStage = full.stages.find((s) => s.type === "INDIVIDUAL")!;
+    const round1 = individualStage.rounds.find((r) => r.sequence === 1)!;
+    const round2 = individualStage.rounds.find((r) => r.sequence === 2)!;
+
+    const school = await prisma.school.create({
+      data: { competitionId: competition.id, name: `ScoringSchool ${suffix}`, sequence: 1 },
+    });
+
+    const participant = await prisma.participant.create({
+      data: {
+        competitionId: competition.id,
+        categoryId: categoryA!.id,
+        schoolId: school.id,
+        name: `ScoringPlayer ${suffix}`,
+        participantNumber: 1,
+        sequence: 1,
+      },
+    });
+    // Publish readiness requires every category to have at least one participant
+    // (`competition.readiness.participantsRequired`) — this one is never logged in or
+    // scored, it exists only so category B satisfies that condition.
+    await prisma.participant.create({
+      data: {
+        competitionId: competition.id,
+        categoryId: categoryB!.id,
+        schoolId: school.id,
+        name: `ScoringPlayerB ${suffix}`,
+        participantNumber: 2,
+        sequence: 2,
+      },
+    });
+
+    const ownQuestionIds: string[] = [];
+    const foreignQuestionIds: string[] = [];
+    for (const category of [categoryA!, categoryB!]) {
+      const questionSet = await prisma.questionSet.create({
+        data: { competitionId: competition.id, categoryId: category.id, name: `ScoringSet ${category.code} ${suffix}` },
+      });
+      for (const round of [round1, round2]) {
+        for (let sequence = 1; sequence <= 6; sequence += 1) {
+          const q = await prisma.question.create({
+            data: {
+              questionSetId: questionSet.id,
+              roundId: round.id,
+              sequence,
+              points: 10,
+              gridRows: GRID_SIZE,
+              gridColumns: GRID_SIZE,
+              regions: [[0, 1, 4, 5]],
+              startingGrid: STARTING_GRID,
+              solution: SOLUTION,
+            },
+          });
+          if (round.id === round1.id) {
+            if (category.id === categoryA!.id) ownQuestionIds.push(q.id);
+            else foreignQuestionIds.push(q.id);
+          }
+        }
+      }
+    }
+
+    const judge = await prisma.judge.create({ data: { name: `ScoringJudge ${suffix}` } });
+    createdJudgeIds.push(judge.id);
+    await prisma.competitionJudgeAssignment.create({
+      data: {
+        competitionId: competition.id,
+        judgeId: judge.id,
+        fromParticipantNumber: 1,
+        toParticipantNumber: 2,
+      },
+    });
+
+    await competitionService.publishCompetition(competition.id);
+
+    await prisma.roundParticipation.create({
+      data: {
+        roundId: round1.id,
+        participantId: participant.id,
+        categoryId: categoryA!.id,
+        state: "ACTIVE",
+      },
+    });
+
+    return {
+      competitionId: competition.id,
+      stageId: individualStage.id,
+      roundId: round1.id,
+      participantId: participant.id,
+      ownQuestionIds,
+      foreignQuestionIds,
+    };
+  }
+
+  it("scores only the player's own 6 questions, and the early-finish bonus still pays", async () => {
+    const ctx = await seedTwoCategoryCompetition(`ScoringTwoCat ${suffix}`);
+    const playerLogin = await loginPlayer(`it8-player-2cat-${suffix}`, ctx.participantId);
+
+    await authedController(request(app).post("/api/rounds/dev/start-stage1-round1")).send({
+      competitionId: ctx.competitionId,
+    });
+    await prisma.round.update({
+      where: { id: ctx.roundId },
+      data: { status: "ACTIVE", startedAt: new Date() },
+    });
+    await roundTimerService.startRoundTimer(ctx.roundId, ctx.competitionId, ctx.stageId, 1200);
+
+    // Autosave only the player's own 6 — exactly what the fixed autosave path
+    // accepts (the foreign 6 would now be rejected, covered separately in
+    // round.test.ts). Before the fix, `loadRoundForScoring` would still have
+    // pulled in the foreign 6 as unanswered-and-wrong at finalize time, even
+    // though autosave never touched them.
+    for (const questionId of ctx.ownQuestionIds) {
+      await request(app)
+        .post(`/api/gameplay/${ctx.roundId}/autosave`)
+        .set("x-session-token", playerLogin.body.token)
+        .set("x-device-id", playerLogin.body.deviceId)
+        .send({ questionId, grid: SOLUTION });
+    }
+
+    const submitRes = await request(app)
+      .post(`/api/gameplay/${ctx.roundId}/submit`)
+      .set("x-session-token", playerLogin.body.token)
+      .set("x-device-id", playerLogin.body.deviceId);
+    expect(submitRes.status).toBe(200);
+
+    const participation = await prisma.roundParticipation.findFirstOrThrow({
+      where: { roundId: ctx.roundId, participantId: ctx.participantId },
+    });
+    const attempt = await prisma.attempt.findUniqueOrThrow({
+      where: { id: participation.currentAttemptId! },
+      include: { answers: true },
+    });
+
+    // The bug's signature: 12 `Answer` rows instead of 6, six of them for
+    // questions the player never saw.
+    expect(attempt.answers).toHaveLength(6);
+    expect(attempt.answers.map((a) => a.questionId).sort()).toEqual([...ctx.ownQuestionIds].sort());
+    for (const foreignId of ctx.foreignQuestionIds) {
+      expect(attempt.answers.some((a) => a.questionId === foreignId)).toBe(false);
+    }
+
+    // The bug's other consequence: `allCorrect` poisoned by the foreign
+    // category's always-wrong rows, so the early-finish bonus always paid 0.
+    expect(attempt.score).toBe(60);
+    expect(attempt.bonus).toBeGreaterThan(0);
+    expect(attempt.totalScore).toBe(attempt.score + attempt.bonus);
   }, 15000);
 });

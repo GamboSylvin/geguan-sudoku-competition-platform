@@ -184,6 +184,7 @@ export async function authenticate(
     role: account.role,
     deviceId: resolvedDeviceId,
     participantId: account.participantId,
+    categoryId: account.categoryId,
     judgeId: account.judgeId,
   };
 }

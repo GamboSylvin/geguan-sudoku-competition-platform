@@ -117,9 +117,14 @@ judgeRouter.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (req.auth?.role !== "JUDGE" || !req.auth.judgeId) {
+        // Not `judge.forbidden`: that code means "you are not a controller" and is what
+        // the management endpoints return. This route is the judge's own landing, so the
+        // rejection is the mirror image of it — reusing the management message told a
+        // controller "only a controller can manage judges" on a route that is not a
+        // management route, which reads as nonsense to whoever is debugging it.
         next(
-          new ForbiddenError(translate("en", "judge.forbidden"), {
-            code: "judge.forbidden",
+          new ForbiddenError(translate("en", "judge.meRequiresJudgeRole"), {
+            code: "judge.meRequiresJudgeRole",
           }),
         );
         return;

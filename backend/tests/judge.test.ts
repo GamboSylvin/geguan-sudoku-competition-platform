@@ -319,4 +319,14 @@ describe("controller-only access (AC 5)", () => {
     const res = await request(app).get("/api/judges");
     expect(res.status).toBe(401);
   });
+
+  it("refuses a controller session on /me with its own code, not the management guard's", async () => {
+    // `/api/judges/me` is the judge's own landing. It used to reject a non-judge with
+    // `judge.forbidden` — "Only a controller can manage judges." — which tells a
+    // controller the opposite of what is wrong on a route that is not a management
+    // route. It has its own code now; the management endpoints keep `judge.forbidden`.
+    const res = await authed(request(app).get("/api/judges/me"));
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe("judge.meRequiresJudgeRole");
+  });
 });

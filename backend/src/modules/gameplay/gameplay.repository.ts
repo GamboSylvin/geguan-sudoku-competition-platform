@@ -11,13 +11,14 @@ import { redis } from "../../infra";
 import type { SavedGridEntry, WorkingGrid } from "./gameplay.types";
 
 const GRID_KEY_PREFIX = "gameplay:grid:";
+const GRID_INDEX_PREFIX = "gameplay:grid:index:";
 
 function gridKey(roundId: string, participantId: string, questionId: string): string {
   return `${GRID_KEY_PREFIX}${roundId}:${participantId}:${questionId}`;
 }
 
-function gridScanPattern(roundId: string, participantId: string): string {
-  return `${GRID_KEY_PREFIX}${roundId}:${participantId}:*`;
+function gridIndexKey(roundId: string, participantId: string): string {
+  return `${GRID_INDEX_PREFIX}${roundId}:${participantId}`;
 }
 
 interface StoredGridBlob {
@@ -37,6 +38,11 @@ export async function saveGrid(
   savedAtMs: number,
 ): Promise<void> {
   const blob: StoredGridBlob = { grid, savedAtMs };
+  // The player's question set for one round is indexed explicitly. A `SCAN`
+  // would otherwise be O(total keys in Redis) — and this path is read back on
+  // every reconnect and every scoring, so its cost must not depend on unrelated
+  // data accumulated in the same database.
+  await redis.sadd(gridIndexKey(roundId, participantId), questionId);
   await redis.set(gridKey(roundId, participantId, questionId), JSON.stringify(blob));
 }
 
@@ -57,33 +63,30 @@ export async function loadGrid(
 }
 
 /**
- * Every saved grid the player has for a round. Used by the reconnect path. The
- * per-round per-participant keyspace is small (≤ 6 entries for an Individual
- * round), so a SCAN followed by a pipelined GET is cheap and stays within a
- * single Redis round-trip for the reads.
+ * Every saved grid the player has for a round. Used by the reconnect path and by
+ * scoring. The per-round per-participant keyspace is small (≤ 6 entries for an
+ * Individual round), so it is read through an explicit index Set: an index read
+ * plus one `MGET`, both O(entries).
  */
 export async function listGridsForRound(
   roundId: string,
   participantId: string,
 ): Promise<SavedGridEntry[]> {
-  const pattern = gridScanPattern(roundId, participantId);
-  const keys: string[] = [];
-  let cursor = "0";
-  do {
-    const [next, batch] = await redis.scan(cursor, "MATCH", pattern, "COUNT", 100);
-    cursor = next;
-    keys.push(...batch);
-  } while (cursor !== "0");
+  const indexKey = gridIndexKey(roundId, participantId);
+  const questionIds = await redis.smembers(indexKey);
+  if (questionIds.length === 0) return [];
 
-  if (keys.length === 0) return [];
-
+  const keys = questionIds.map((questionId) => gridKey(roundId, participantId, questionId));
   const raws = await redis.mget(keys);
   const entries: SavedGridEntry[] = [];
   for (let i = 0; i < keys.length; i += 1) {
     const raw = raws[i];
-    const key = keys[i];
-    if (!raw || !key) continue;
-    const questionId = key.slice(gridKey(roundId, participantId, "").length);
+    const questionId = questionIds[i];
+    if (!raw || !questionId) {
+      // The blob is gone but the index still lists the question — drop the stale member.
+      if (questionId) await redis.srem(indexKey, questionId);
+      continue;
+    }
     try {
       const blob = JSON.parse(raw) as StoredGridBlob;
       entries.push({ questionId, grid: blob.grid, savedAtMs: blob.savedAtMs });
@@ -97,22 +100,22 @@ export async function listGridsForRound(
 /**
  * Delete every saved grid the player has for a round. Called by the Orchestrator
  * module's restart operation (Unit 10) so the student comes back to a blank
- * grid. The keyspace is the same one `listGridsForRound` scans, so this is the
+ * grid. The keyspace is the same one `listGridsForRound` reads, so this is the
  * same shape, just `DEL` instead of `GET`.
  */
 export async function clearGridsForRound(
   roundId: string,
   participantId: string,
 ): Promise<number> {
-  const pattern = gridScanPattern(roundId, participantId);
-  const keys: string[] = [];
-  let cursor = "0";
-  do {
-    const [next, batch] = await redis.scan(cursor, "MATCH", pattern, "COUNT", 100);
-    cursor = next;
-    keys.push(...batch);
-  } while (cursor !== "0");
-
-  if (keys.length === 0) return 0;
-  return redis.del(...keys);
+  const indexKey = gridIndexKey(roundId, participantId);
+  const questionIds = await redis.smembers(indexKey);
+  if (questionIds.length === 0) {
+    await redis.del(indexKey);
+    return 0;
+  }
+  const deleted = await redis.del(
+    ...questionIds.map((questionId) => gridKey(roundId, participantId, questionId)),
+  );
+  await redis.del(indexKey);
+  return deleted;
 }

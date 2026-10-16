@@ -62,11 +62,22 @@ export interface TimerState {
   pausedRemainingSeconds: number | null;
 }
 
-/** The payload pushed on `round:preparation-tick`. */
+/**
+ * The payload pushed on `round:preparation-tick`.
+ *
+ * One event serves both countdowns — preparation and the round itself — so it
+ * carries the `status` that says which one it is. Without it the client's only way
+ * to tell them apart is to compare `totalSeconds` against what it expects, or to
+ * trust its own current screen; both are guesses, and the second is what left a
+ * late-connecting player stuck on the countdown after the round had already gone
+ * ACTIVE. The server owns the round state (invariant 3), so the server says it.
+ */
 export interface PreparationTickPayload {
   roundId: string;
   stageId: string;
   competitionId: string;
+  /** `"PREPARATION"` or `"ACTIVE"` — which countdown this tick belongs to. */
+  status: RoundStatus;
   remainingSeconds: number;
   totalSeconds: number;
 }
@@ -83,11 +94,22 @@ export interface RoundQuestionPayload {
   points: number;
 }
 
-/** The payload pushed on `round:started` (carries the round's questions — BLD-006). */
+/**
+ * The payload pushed on `round:started` (carries the round's questions — BLD-006).
+ *
+ * One payload per **category**, not one per round: a `Round` is shared by every
+ * category but each category has its own 6 questions, so the round-start push is
+ * built once per category and each carries only that category's questions. `categoryId`
+ * is what the realtime gateway routes on — it emits each payload to only that
+ * category's player room, so no category ever receives another's question content
+ * (the leak this closes: a shared `roundId` with `6n` questions used to be pushed
+ * whole to every connected player).
+ */
 export interface RoundStartedPayload {
   roundId: string;
   stageId: string;
   competitionId: string;
+  categoryId: string;
   durationSeconds: number;
   questions: RoundQuestionPayload[];
 }

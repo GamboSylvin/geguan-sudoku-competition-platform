@@ -18,9 +18,24 @@ export function findAccountById(id: string): Promise<Account | null> {
   return prisma.account.findUnique({ where: { id } });
 }
 
-/** The account currently bound to a session token, or null if none/expired. */
-export function findSessionAccount(token: string): Promise<Account | null> {
-  return prisma.account.findFirst({ where: { sessionToken: token } });
+/**
+ * The account currently bound to a session token, plus the participant's category
+ * (null for a judge/controller account, which has no participant). The category is
+ * read in the same query as the account so `authenticate` can hand it to the realtime
+ * gateway for its category-scoped room without a second lookup. The nested
+ * `participant` relation is flattened into a single `categoryId` field and dropped,
+ * so callers see `Account & { categoryId }`.
+ */
+export type SessionAccountRow = Account & { categoryId: string | null };
+
+export async function findSessionAccount(token: string): Promise<SessionAccountRow | null> {
+  const row = await prisma.account.findFirst({
+    where: { sessionToken: token },
+    include: { participant: { select: { categoryId: true } } },
+  });
+  if (row === null) return null;
+  const { participant, ...account } = row;
+  return { ...account, categoryId: participant?.categoryId ?? null };
 }
 
 export interface CreateDeviceInput {

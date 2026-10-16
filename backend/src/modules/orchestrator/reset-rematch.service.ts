@@ -177,13 +177,15 @@ export async function resetRematch(input: {
     const participations = await repository.listParticipations(round.id, participantIds ?? undefined);
 
     for (const participation of participations) {
-      // Unit 10's operation, unchanged: archive the current attempt, create a
-      // fresh blank one, clear the player's Redis working grids.
-      const restarted = await orchestratorService.restartOneParticipant({
+      // The Unit 10 operation, unchanged on the caller side: archive the current
+      // attempt and clear the player's Redis grids. (It no longer creates a new
+      // attempt — the next real submission will.)
+      await orchestratorService.restartOneParticipant({
         roundId: round.id,
         participantId: participation.participantId,
       });
-      if (restarted.newAttemptId) restartedCount += 1;
+      // A restart that succeeded threw no exception: count it.
+      restartedCount += 1;
     }
 
     // The key difference from a judge's restart: full round time, not remaining.

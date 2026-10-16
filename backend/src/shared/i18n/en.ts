@@ -41,10 +41,24 @@ export const en = {
         "Judge ranges must cover every participant number.",
     },
   },
+  school: {
+    // BLD-052. The school CRUD surface is controller-only, and a school cannot be
+    // removed while anything still points at it — the guard names which.
+    forbidden: "Only a controller can manage schools.",
+    notFound: "School not found.",
+    nameTaken: "A school with this name already exists in this competition.",
+    hasParticipants: "This school still has participants. Remove them first.",
+    hasTeam: "This school still has a team. Remove it first.",
+  },
   judge: {
     // Unit 06. Judge list management and range assignment are controller-only
     // (ROL-002); the removal guard names the unfinished competition (ROL-010).
     forbidden: "Only a controller can manage judges.",
+    // Distinct from `forbidden` because it says the opposite thing: `forbidden` is
+    // "you are not a controller", this one is "you are not a judge". `/api/judges/me`
+    // is the judge's own landing, so a controller session hitting it gets this, not
+    // the management guard's message.
+    meRequiresJudgeRole: "Only a judge can view their own assignments.",
     notFound: "Judge not found.",
     assignmentNotFound: "Judge assignment not found.",
     hasActiveAssignment:

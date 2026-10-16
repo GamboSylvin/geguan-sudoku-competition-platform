@@ -45,26 +45,29 @@ export interface ArchiveAndRestartInput {
   participationId: string;
   /** The attempt to mark archived; null when no attempt existed yet. */
   currentAttemptId: string | null;
-  /** The new attempt's number (the caller already computed it). */
-  newAttemptNumber: number;
-  /** Submitted-at timestamp for the archived attempt's replacement row. */
-  now: Date;
 }
 
 /**
- * The durable half of the restart: mark the current attempt archived (when one
- * exists), create a fresh blank attempt, point the participation at it and bump
- * the restart-visible `attemptCount`. All in one transaction so a crash never
- * leaves a participation with two current attempts or none.
+ * The durable half of a restart: mark the current attempt as archived (if there is
+ * one) and increment the `attemptCount` the restart side reads. All of it in a
+ * single transaction.
  *
- * The fresh attempt is `isArchived: false` with no answers — the player sees a
- * blank grid (their working grids in Redis are cleared separately by the
- * Gameplay module). Submission fields are placeholder values until the player
- * actually submits (the scoring module overwrites them at finalize).
+ * No new `Attempt` row is created here. The participant stays without a current
+ * attempt (`currentAttemptId: null`) until they actually submit — exactly like a
+ * participant who was never restarted has no `Attempt` row before their first
+ * submission. Creating a blank, non-archived row here was a bug:
+ * `scoring.repository.ts`'s `findCurrentAttempt` (which looks for
+ * `{ roundParticipationId, isArchived: false }`) found it at the round's
+ * auto-submit sweep, `finalizeAttempt` took it for an already finalized
+ * submission (the PL-009 no-op) and returned `individualRoundResultId: ""` — so
+ * `gameplay.service.ts` never triggered the ranking refresh and the restarted
+ * participant silently disappeared from the ranking. The attempt number stays
+ * correct without a placeholder: `scoring.repository.ts`'s own `nextAttemptNumber`
+ * recomputes it at finalization from the latest *archived* attempt.
  */
 export async function archiveAndRestart(
   input: ArchiveAndRestartInput,
-): Promise<{ newAttemptId: string; attemptCount: number }> {
+): Promise<{ attemptCount: number }> {
   return prisma.$transaction(async (tx) => {
     if (input.currentAttemptId) {
       await tx.attempt.update({
@@ -73,28 +76,19 @@ export async function archiveAndRestart(
       });
     }
 
-    const newAttempt = await tx.attempt.create({
-      data: {
-        roundParticipationId: input.participationId,
-        attemptNumber: input.newAttemptNumber,
-        // Placeholder until the player submits; the scoring finalize overwrites.
-        submissionType: "MANUAL",
-        submittedAt: input.now,
-      },
-      select: { id: true },
-    });
-
+    // No placeholder row: `currentAttemptId` goes back to null until the
+    // participant's next real submission.
     const updated = await tx.roundParticipation.update({
       where: { id: input.participationId },
       data: {
         state: "ACTIVE",
-        currentAttemptId: newAttempt.id,
+        currentAttemptId: null,
         attemptCount: { increment: 1 },
       },
       select: { attemptCount: true },
     });
 
-    return { newAttemptId: newAttempt.id, attemptCount: updated.attemptCount };
+    return { attemptCount: updated.attemptCount };
   });
 }
 

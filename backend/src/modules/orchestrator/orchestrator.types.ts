@@ -139,8 +139,6 @@ export interface RestartOneParticipantResult {
   participationId: string;
   /** The attempt id that was archived (the "before" state). */
   archivedAttemptId: string | null;
-  /** The fresh attempt id the participant is now working on. */
-  newAttemptId: string;
   /** The visible restart count after this restart. */
   attemptCount: number;
   /** The server-authoritative remaining seconds on the round's shared timer. */
