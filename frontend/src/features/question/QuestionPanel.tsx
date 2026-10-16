@@ -20,6 +20,14 @@ import {
  * runtime. The selection stays changeable until that round's preparation begins, at
  * which point the backend refuses with `question.selection.locked` and the panel shows
  * that refusal instead of silently keeping a stale choice.
+ *
+ * Visuel : ambiance B « clair, sobre, cartes blanches » (BLD-054, révise U-66).
+ * Même carte blanche que les autres panneaux de la page hôte (`CompetitionSetupPage`) —
+ * un seul style par rôle visuel (§6/6). Chaque groupe du pool est un sous-panneau
+ * `bg-gray-50` dans la carte, la même recette que le formulaire d'ajout du panneau
+ * des participants. Le compteur « x / 6 » et les numéros de grille portent
+ * `tabular-nums` (§3.5). Boutons désactivés : `disabled:opacity-50`, la convention
+ * unique du rapport.
  */
 export interface QuestionPanelCategory {
   id: string;
@@ -154,14 +162,14 @@ export function QuestionPanel({
   }
 
   return (
-    <section className="flex flex-col gap-4 rounded-md border border-slate-200 bg-white p-4">
-      <h3 className="text-sm font-medium">{t("question.title")}</h3>
+    <section className="flex flex-col gap-4 rounded-xl bg-white p-4 shadow sm:p-6">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 sm:text-sm">{t("question.title")}</h3>
 
       <div className="flex flex-wrap gap-3">
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 sm:text-sm">
           {t("question.category")}
           <select
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className="rounded border border-gray-300 px-3 py-2 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
             value={categoryId}
             onChange={(e) => {
               setCategoryId(e.target.value);
@@ -178,10 +186,10 @@ export function QuestionPanel({
           </select>
         </label>
 
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 sm:text-sm">
           {t("question.round")}
           <select
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className="rounded border border-gray-300 px-3 py-2 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
             value={roundId}
             onChange={(e) => setRoundId(e.target.value)}
           >
@@ -195,11 +203,11 @@ export function QuestionPanel({
       </div>
 
       <form className="flex flex-col gap-2" onSubmit={onImport}>
-        <p className="text-xs text-slate-600">{t("question.importHint")}</p>
+        <p className="text-xs text-gray-500 sm:text-sm">{t("question.importHint")}</p>
         <input
           type="file"
           accept=".xlsx"
-          className="text-sm"
+          className="text-xs text-gray-700 sm:text-sm"
           aria-label={t("question.chooseFile")}
           onChange={(e) => {
             setFile(e.target.files?.[0] ?? null);
@@ -210,18 +218,22 @@ export function QuestionPanel({
         <button
           type="submit"
           disabled={busy || !file || !categoryId}
-          className="self-start rounded-md bg-slate-800 px-4 py-2 text-white disabled:opacity-60"
+          className="self-start rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
         >
           {t("question.importFile")}
         </button>
       </form>
 
-      {imported && <p className="text-sm text-green-700">{imported}</p>}
+      {imported && (
+        <p className="rounded-xl border border-green-200 bg-green-50 p-3 text-xs font-medium text-green-700 sm:text-sm">
+          {imported}
+        </p>
+      )}
 
       {failures && (
         <div
           role="alert"
-          className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700"
+          className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 sm:text-sm"
         >
           <p className="font-medium">{t("question.rejected")}</p>
           <ul className="mt-1 list-disc pl-5">
@@ -236,31 +248,31 @@ export function QuestionPanel({
       )}
 
       {error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-700 sm:text-sm">
           {error}
         </p>
       )}
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
-          <h4 className="text-sm font-medium">{t("question.pool")}</h4>
-          <p className="text-xs text-slate-600">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 sm:text-sm">{t("question.pool")}</h4>
+          <p className="text-xs tabular-nums text-gray-500">
             {t("question.selectedCount")}: {selected.length} / {REQUIRED_COUNT}
           </p>
         </div>
 
         {pool && pool.groups.length === 0 && (
-          <p className="text-sm text-slate-600">{t("question.poolEmpty")}</p>
+          <p className="text-xs text-gray-500 sm:text-sm">{t("question.poolEmpty")}</p>
         )}
 
         {pool?.groups.map((group) => (
-          <div key={group.questionSet.id} className="rounded-md border border-slate-200 p-3">
-            <p className="text-sm font-medium">
+          <div key={group.questionSet.id} className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+            <p className="text-xs font-semibold text-gray-900 sm:text-sm">
               {group.questionSet.name} · {group.questionSet.questionCount}
             </p>
             <ul className="mt-2 flex flex-col gap-1">
               {group.questions.map((question) => (
-                <li key={question.id} className="flex items-center gap-2 text-sm">
+                <li key={question.id} className="flex items-center gap-2 text-xs text-gray-700 sm:text-sm">
                   <input
                     type="checkbox"
                     checked={selected.includes(question.id)}
@@ -268,12 +280,12 @@ export function QuestionPanel({
                     aria-label={`${group.questionSet.name} #${question.sequence}`}
                     onChange={() => toggle(question.id)}
                   />
-                  <span>
+                  <span className="tabular-nums">
                     #{question.sequence} · {question.gridRows}×{question.gridColumns} ·{" "}
                     {question.points} {t("question.points")}
                   </span>
                   {question.roundId && (
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-gray-500">
                       {individualRounds.find((round) => round.id === question.roundId)?.name ??
                         question.roundId}
                     </span>
@@ -287,13 +299,17 @@ export function QuestionPanel({
         <button
           type="button"
           disabled={busy || !roundId || selected.length !== REQUIRED_COUNT}
-          className="self-start rounded-md bg-slate-800 px-4 py-2 text-white disabled:opacity-60"
+          className="self-start rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
           onClick={() => void onAssign()}
         >
           {t("question.assign")}
         </button>
 
-        {saved && <p className="text-sm text-green-700">{saved}</p>}
+        {saved && (
+          <p className="rounded-xl border border-green-200 bg-green-50 p-3 text-xs font-medium text-green-700 sm:text-sm">
+            {saved}
+          </p>
+        )}
       </div>
     </section>
   );

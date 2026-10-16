@@ -16,6 +16,15 @@
  * one itself. Only `RANKING`, `PAUSED` and `FINAL` have a screen — the schema's
  * `PLAYER_CLOSEUP` and `TEAM_SPLIT` have no data behind them yet and fall through to
  * the ranking view so a mode the controller can set is never a blank screen.
+ *
+ * Visuel : ambiance C « sombre, grand, lisible du fond de la salle » (BLD-054).
+ * C'est exactement le rôle de cet écran — projeté dans la salle, lu de loin, sans
+ * souris : le dégradé géant du rapport (§3.2/3, `from-gray-900 via-slate-900
+ * to-gray-800`), les séparateurs `border-white/10` en en-tête et `border-white/5`
+ * entre les lignes, et des corps de tableau en `text-2xl sm:text-3xl`. Rang, score
+ * et temps portent `tabular-nums`, le temps `font-mono` : ce sont des chiffres
+ * comparés d'une ligne à l'autre (§3.5). Aucune carte blanche ici — le dépôt ne
+ * mélange jamais une carte blanche dans un écran sombre (§4).
  */
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -123,7 +132,7 @@ export function BigScreenPage() {
 
   if (status === "invalid") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-950 text-white">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800 text-white">
         <p className="text-2xl">{t("bigScreen.invalidLink")}</p>
       </div>
     );
@@ -133,7 +142,7 @@ export function BigScreenPage() {
   // is a deliberate full-screen state, not a waiting message (BSC-002).
   if (mode === "PAUSED") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-950 text-white">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800 text-white">
         <p className="text-7xl font-bold">{t("bigScreen.pausedScreen")}</p>
       </div>
     );
@@ -141,7 +150,7 @@ export function BigScreenPage() {
 
   if (status === "connecting" || !ranking) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-950 text-white">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800 text-white">
         <p className="text-2xl">
           {status === "connecting" ? t("bigScreen.connecting") : t("bigScreen.waiting")}
         </p>
@@ -150,19 +159,19 @@ export function BigScreenPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-950 px-10 py-8 text-white">
-      <header className="mb-6 flex items-baseline justify-between">
-        <h1 className="text-4xl font-bold">
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800 px-6 py-6 text-white sm:px-10 sm:py-8">
+      <header className="mb-6 flex items-baseline justify-between border-b border-white/10 pb-4">
+        <h1 className="text-2xl font-bold sm:text-4xl">
           {t("bigScreen.title")} · {ranking.categoryName}
         </h1>
-        <div className="flex items-baseline gap-4 text-xl text-gray-300">
+        <div className="flex items-baseline gap-4 text-base text-gray-300 sm:text-xl">
           <span>
             {ranking.isFinal || mode === "FINAL"
               ? t("bigScreen.final")
               : t("bigScreen.provisional")}
           </span>
           {ranking.pageCount > 1 && (
-            <span>
+            <span className="tabular-nums">
               {ranking.pageIndex + 1} {t("bigScreen.pageOf")} {ranking.pageCount}
             </span>
           )}
@@ -170,27 +179,27 @@ export function BigScreenPage() {
       </header>
 
       {visibleRows.length === 0 ? (
-        <p className="text-2xl text-gray-400">{t("bigScreen.empty")}</p>
+        <p className="py-20 text-center text-2xl font-semibold text-gray-300">{t("bigScreen.empty")}</p>
       ) : (
         <table className="w-full table-fixed border-collapse">
           <thead>
-            <tr className="border-b border-gray-700 text-left text-xl text-gray-400">
-              <th className="w-24 py-3">{t("bigScreen.colRank")}</th>
-              <th className="py-3">{t("bigScreen.colPlayer")}</th>
-              <th className="w-40 py-3 text-right">{t("bigScreen.colScore")}</th>
-              <th className="w-40 py-3 text-right">{t("bigScreen.colTime")}</th>
+            <tr className="border-b border-white/10 text-left text-base text-gray-400 sm:text-xl">
+              <th className="w-24 py-3 font-semibold">{t("bigScreen.colRank")}</th>
+              <th className="py-3 font-semibold">{t("bigScreen.colPlayer")}</th>
+              <th className="w-40 py-3 text-right font-semibold">{t("bigScreen.colScore")}</th>
+              <th className="w-40 py-3 text-right font-semibold">{t("bigScreen.colTime")}</th>
             </tr>
           </thead>
           <tbody>
             {visibleRows.map((row) => (
               <tr
                 key={row.participantId}
-                className="border-b border-gray-800 text-3xl font-semibold"
+                className="border-b border-white/5 text-xl font-semibold transition-colors hover:bg-white/5 sm:text-3xl"
               >
                 <td className="py-4 tabular-nums">{row.rank}</td>
                 <td className="py-4">{row.participantName}</td>
                 <td className="py-4 text-right tabular-nums">{row.score}</td>
-                <td className="py-4 text-right tabular-nums text-gray-300">
+                <td className="py-4 text-right font-mono tabular-nums text-gray-300">
                   {formatTime(row.completionTimeSeconds)}
                 </td>
               </tr>

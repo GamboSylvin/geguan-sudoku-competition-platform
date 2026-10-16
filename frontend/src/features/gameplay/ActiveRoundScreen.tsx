@@ -8,6 +8,19 @@
  *
  * There is deliberately no live correctness feedback (spec Free movement): the
  * grid shows what the player typed, nothing more.
+ *
+ * Visuel : ambiance C « sombre, grand, lisible » (BLD-054) — c'est l'écran posé sur
+ * une tablette en pleine salle, la lumière doit venir de la grille et non du fond.
+ * La grille suit la recette du rapport (§4.C « SudokuGrid ») en ne reprenant que les
+ * états qui existent réellement ici : `given` (`bg-gray-800 text-white`), `selected`
+ * (`bg-indigo-600 text-white`) et libre (`bg-gray-700 text-gray-200
+ * hover:bg-gray-600`). Les états « validated » et « proposed » du rapport n'ont
+ * aucun équivalent dans ce code (aucun retour de correction en direct, cf. ci-dessus)
+ * et ne sont donc pas inventés. Les filets entre cellules sont rendus par le
+ * `gap-px` sur `bg-gray-600`, l'équivalent fonctionnel du `border-gray-600` du
+ * rapport. Le minuteur porte `font-mono tabular-nums` (§3.5 : un compte à rebours
+ * comparé d'un coup d'œil), la modale de confirmation passe en `z-50` (§3.10) et
+ * toutes les désactivations en `disabled:opacity-50`, la convention unique.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { API_BASE_URL } from "@/config/env";
@@ -326,9 +339,9 @@ export function ActiveRoundScreen({
 
   if (!isLandscape) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6">
-        <h1 className="text-2xl font-semibold">{t("player.rotateDevice")}</h1>
-        <p className="text-gray-600">{t("player.rotateDeviceHint")}</p>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-900 p-6 text-center text-white">
+        <h1 className="text-2xl font-semibold sm:text-3xl">{t("player.rotateDevice")}</h1>
+        <p className="text-base text-gray-400 sm:text-lg">{t("player.rotateDeviceHint")}</p>
       </div>
     );
   }
@@ -339,23 +352,23 @@ export function ActiveRoundScreen({
   // between puzzles to review their work while they wait for the next round.
   if (submitted) {
     return (
-      <div className="flex h-screen flex-col p-4">
-        <div className="mb-4 flex items-center justify-between">
+      <div className="flex h-screen flex-col bg-gray-900 p-4 text-white">
+        <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="rounded border border-gray-300 px-3 py-1 disabled:opacity-40"
+              className="rounded-lg border border-gray-600 px-3 py-1 text-sm font-medium text-gray-200 transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
               disabled={currentIndex === 0}
             >
               {t("gameplay.previous")}
             </button>
-            <span className="text-sm text-gray-700">
+            <span className="text-sm tabular-nums text-gray-300">
               {t("gameplay.puzzle")} {currentIndex + 1} {t("gameplay.of")} {questions.length}
             </span>
             <button
               type="button"
-              className="rounded border border-gray-300 px-3 py-1 disabled:opacity-40"
+              className="rounded-lg border border-gray-600 px-3 py-1 text-sm font-medium text-gray-200 transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))}
               disabled={currentIndex === questions.length - 1}
             >
@@ -363,7 +376,7 @@ export function ActiveRoundScreen({
             </button>
           </div>
           <div className="text-right">
-            <p className="text-sm font-medium text-green-700">
+            <p className="text-sm font-medium text-green-300">
               {t("gameplay.submitAcceptedTitle")}
             </p>
           </div>
@@ -382,11 +395,11 @@ export function ActiveRoundScreen({
             ) : null}
           </div>
           <div className="flex w-64 flex-col justify-center">
-            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-              <h2 className="mb-2 font-semibold text-green-900">
+            <div className="rounded-lg border border-green-900/50 bg-green-900/50 p-4">
+              <h2 className="mb-2 font-semibold text-green-300">
                 {t("gameplay.submitAcceptedTitle")}
               </h2>
-              <p className="text-sm text-green-800">
+              <p className="text-sm text-green-300">
                 {t("gameplay.submitAcceptedBody")}
               </p>
             </div>
@@ -410,26 +423,26 @@ export function ActiveRoundScreen({
   const seconds = timeLeft % 60;
 
   return (
-    <div className="flex h-screen flex-col p-4">
+    <div className="flex h-screen flex-col bg-gray-900 p-4 text-white">
       {/* Header: puzzle navigation + timer */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="rounded border border-gray-300 px-3 py-1 disabled:opacity-40"
+            className="rounded-lg border border-gray-600 px-3 py-1 text-sm font-medium text-gray-200 transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
             disabled={currentIndex === 0}
           >
             {t("gameplay.previous")}
           </button>
-          <span className="text-sm text-gray-700">
+          <span className="text-sm tabular-nums text-gray-300">
             {t("gameplay.puzzle")} {currentIndex + 1} {t("gameplay.of")} {questions.length}
             {" · "}
             {currentQuestion.points} {t("gameplay.points")}
           </span>
           <button
             type="button"
-            className="rounded border border-gray-300 px-3 py-1 disabled:opacity-40"
+            className="rounded-lg border border-gray-600 px-3 py-1 text-sm font-medium text-gray-200 transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))}
             disabled={currentIndex === questions.length - 1}
           >
@@ -437,8 +450,13 @@ export function ActiveRoundScreen({
           </button>
         </div>
         <div className="text-right">
-          <p className="text-xs text-gray-500">{t("gameplay.timeLeft")}</p>
-          <p className="text-2xl font-bold tabular-nums">
+          <p className="text-xs text-gray-400">{t("gameplay.timeLeft")}</p>
+          <p
+            className={[
+              "text-2xl font-bold font-mono tabular-nums",
+              timeLeft <= 30 ? "text-red-500" : timeLeft <= 120 ? "text-amber-500" : "text-green-500",
+            ].join(" ")}
+          >
             {minutes}:{seconds.toString().padStart(2, "0")}
           </p>
         </div>
@@ -448,7 +466,7 @@ export function ActiveRoundScreen({
       <div className="flex flex-1 gap-6">
         <div className="flex-1">
           <div
-            className="grid h-full w-full gap-px bg-gray-400"
+            className="grid h-full w-full gap-px bg-gray-600"
             style={{
               gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
             }}
@@ -462,9 +480,12 @@ export function ActiveRoundScreen({
                   type="button"
                   onClick={() => setSelectedCell(index)}
                   className={[
-                    "flex items-center justify-center bg-white text-xl font-semibold",
-                    isGiven ? "text-gray-900" : "text-blue-700",
-                    isSelected ? "outline outline-2 outline-blue-500" : "",
+                    "flex items-center justify-center text-base font-medium transition-colors md:text-lg",
+                    isGiven
+                      ? "cursor-default bg-gray-800 text-white"
+                      : isSelected
+                        ? "bg-indigo-600 text-white"
+                        : "bg-gray-700 text-gray-200 hover:bg-gray-600",
                   ].join(" ")}
                 >
                   {value ?? ""}
@@ -480,7 +501,7 @@ export function ActiveRoundScreen({
               <button
                 key={value}
                 type="button"
-                className="rounded border border-gray-300 bg-white py-2 text-xl font-semibold disabled:opacity-40"
+                className="rounded-lg bg-gray-700 py-2 text-xl font-bold text-white transition-colors hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={selectedCell == null}
                 onClick={() => selectedCell != null && setCell(selectedCell, value)}
               >
@@ -490,7 +511,7 @@ export function ActiveRoundScreen({
           </div>
           <button
             type="button"
-            className="rounded border border-gray-300 bg-white py-2 disabled:opacity-40"
+            className="rounded-lg bg-red-800 py-2 text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={selectedCell == null}
             onClick={onDelete}
           >
@@ -498,14 +519,14 @@ export function ActiveRoundScreen({
           </button>
           <button
             type="button"
-            className="rounded border border-red-300 bg-red-50 py-2 text-red-700"
+            className="rounded-lg bg-gray-700 py-2 text-white transition-colors hover:bg-gray-600"
             onClick={onClearAll}
           >
             {t("gameplay.clearAll")}
           </button>
           <button
             type="button"
-            className="rounded border border-green-600 bg-green-600 py-2 font-semibold text-white disabled:opacity-40"
+            className="rounded-lg bg-green-600 py-2 font-semibold text-white transition-colors hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50"
             onClick={onSubmitClick}
             disabled={submitting}
           >
@@ -516,15 +537,15 @@ export function ActiveRoundScreen({
 
       {/* Submit confirmation dialog (Unit 08). Names the blank-puzzle count. */}
       {showSubmitConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <h2 className="mb-2 text-xl font-semibold">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6">
+          <div className="w-full max-w-md rounded-lg bg-gray-800 p-6 shadow-xl">
+            <h2 className="mb-2 text-xl font-semibold text-white">
               {t("gameplay.submitConfirmTitle")}
             </h2>
-            <p className="mb-3 text-sm text-gray-700">
+            <p className="mb-3 text-sm text-gray-300">
               {t("gameplay.submitConfirmBody")}
             </p>
-            <p className="mb-4 text-sm font-medium text-gray-900">
+            <p className="mb-4 text-sm font-medium text-white">
               {blankPuzzleCount > 0 ? (
                 <>
                   {t("gameplay.submitConfirmBlanks")}
@@ -537,7 +558,7 @@ export function ActiveRoundScreen({
             <div className="flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded border border-gray-300 px-4 py-2 disabled:opacity-40"
+                className="rounded-lg bg-gray-700 px-4 py-2 text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={onSubmitCancel}
                 disabled={submitting}
               >
@@ -545,7 +566,7 @@ export function ActiveRoundScreen({
               </button>
               <button
                 type="button"
-                className="rounded bg-green-600 px-4 py-2 font-semibold text-white disabled:opacity-40"
+                className="rounded-lg bg-green-600 px-4 py-2 font-semibold text-white transition-colors hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={() => void onSubmitConfirm()}
                 disabled={submitting}
               >
@@ -561,9 +582,9 @@ export function ActiveRoundScreen({
 
 /**
  * A read-only Sudoku grid used by the "submission accepted" view (Unit 08).
- * Renders the player's locked-in answers with givens in dark text and entries
- * in blue — same colour language as the editable grid, but with no click
- * targets, no selection outline, and no number pad.
+ * Renders the player's locked-in answers with givens and entries kept apart by
+ * text colour — same colour language as the editable grid, but with no click
+ * targets, no selection state, and no number pad.
  */
 function ReadOnlyGrid({
   question,
@@ -578,7 +599,7 @@ function ReadOnlyGrid({
   const gridSize = question.gridRows;
   return (
     <div
-      className="grid h-full w-full gap-px bg-gray-400"
+      className="grid h-full w-full gap-px bg-gray-600"
       style={{
         gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
       }}
@@ -589,8 +610,8 @@ function ReadOnlyGrid({
           <div
             key={index}
             className={[
-              "flex items-center justify-center bg-white text-xl font-semibold",
-              isGiven ? "text-gray-900" : "text-blue-700",
+              "flex items-center justify-center text-base font-medium md:text-lg",
+              isGiven ? "bg-gray-800 text-white" : "bg-gray-700 text-green-300",
             ].join(" ")}
           >
             {value ?? ""}

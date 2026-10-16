@@ -35,7 +35,13 @@ import {
  * plaintext password is never stored, so closing this panel is the end of the only
  * on-screen chance to read it. The slips download is the retrieval path afterwards.
  *
- * No visual polish beyond the existing panels' Tailwind defaults (UI-008).
+ * Visuel : ambiance B « clair, sobre, cartes blanches » (BLD-054, révise U-66).
+ * Même carte blanche que les autres panneaux de la page hôte (`CompetitionSetupPage`) —
+ * un seul style par rôle visuel (§6/6). Le bloc des identifiants émis reprend la recette
+ * ambre de `JudgeManagementPage`, parce que c'est le même rôle visuel : une information
+ * à lire une seule fois. Numéros d'élève et compteurs portent `tabular-nums`, les
+ * identifiants `font-mono` (§3.5). Tous les boutons désactivés passent à
+ * `disabled:opacity-50`, la convention unique du rapport.
  */
 export interface ParticipantPanelCategory {
   id: string;
@@ -249,15 +255,15 @@ export function ParticipantPanel({
   const counts = roster?.counts;
 
   return (
-    <section className="flex flex-col gap-4 rounded-md border border-slate-200 bg-white p-4">
+    <section className="flex flex-col gap-4 rounded-xl bg-white p-4 shadow sm:p-6">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-medium">{t("participant.title")}</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 sm:text-sm">{t("participant.title")}</h3>
         <div className="flex gap-2">
           <button
             type="button"
             disabled={busy}
             onClick={() => void onDownloadSlips()}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-60"
+            className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
           >
             {t("participant.downloadSlips")}
           </button>
@@ -265,7 +271,7 @@ export function ParticipantPanel({
             type="button"
             disabled={busy}
             onClick={() => setAddOpen((open) => !open)}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-60"
+            className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
           >
             {t("participant.addOne")}
           </button>
@@ -273,11 +279,11 @@ export function ParticipantPanel({
       </div>
 
       <form className="flex flex-col gap-2" onSubmit={onImport}>
-        <p className="text-xs text-slate-600">{t("participant.importHint")}</p>
+        <p className="text-xs text-gray-500 sm:text-sm">{t("participant.importHint")}</p>
         <input
           type="file"
           accept=".xlsx"
-          className="text-sm"
+          className="text-xs text-gray-700 sm:text-sm"
           aria-label={t("participant.chooseFile")}
           onChange={(e) => {
             setFile(e.target.files?.[0] ?? null);
@@ -290,18 +296,22 @@ export function ParticipantPanel({
         <button
           type="submit"
           disabled={busy || !file}
-          className="self-start rounded-md bg-slate-800 px-4 py-2 text-white disabled:opacity-60"
+          className="self-start rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
         >
           {t("participant.importFile")}
         </button>
       </form>
 
-      {imported && <p className="text-sm text-green-700">{imported}</p>}
+      {imported && (
+        <p className="rounded-xl border border-green-200 bg-green-50 p-3 text-xs font-medium text-green-700 sm:text-sm">
+          {imported}
+        </p>
+      )}
 
       {failures && (
         <div
           role="alert"
-          className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700"
+          className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 sm:text-sm"
         >
           <p className="font-medium">{t("participant.rejected")}</p>
           <ul className="mt-1 list-disc pl-5">
@@ -316,7 +326,7 @@ export function ParticipantPanel({
       )}
 
       {warnings && (
-        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 sm:text-sm">
           <ul className="list-disc pl-5">
             {warnings.map((warning, index) => (
               <li key={`${warning.row}-${warning.code}-${index}`}>
@@ -328,15 +338,15 @@ export function ParticipantPanel({
       )}
 
       {credentials && credentials.length > 0 && (
-        <div className="rounded-md border border-slate-300 bg-slate-50 p-3 text-sm">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 sm:text-sm">
           <p className="font-medium">{t("participant.credentialsTitle")}</p>
-          <p className="mt-1 text-xs text-slate-600">{t("participant.credentialsOnce")}</p>
+          <p className="mt-1 text-xs text-amber-800">{t("participant.credentialsOnce")}</p>
           <ul className="mt-2 flex flex-col gap-1">
             {credentials.map((credential) => (
               <li key={credential.participantId || credential.username}>
                 #{credential.participantNumber} {credential.name} ({credential.schoolName} ·{" "}
                 {credential.categoryName}) — <strong>{credential.username}</strong> /{" "}
-                <code>{credential.password}</code>
+                <code className="rounded bg-white px-1 font-mono text-gray-900">{credential.password}</code>
               </li>
             ))}
           </ul>
@@ -344,39 +354,43 @@ export function ParticipantPanel({
       )}
 
       {error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-700 sm:text-sm">
           {error}
         </p>
       )}
-      {saved && <p className="text-sm text-green-700">{saved}</p>}
+      {saved && (
+        <p className="rounded-xl border border-green-200 bg-green-50 p-3 text-xs font-medium text-green-700 sm:text-sm">
+          {saved}
+        </p>
+      )}
 
       {addOpen && (
         <form
-          className="flex flex-col gap-2 rounded-md border border-slate-200 p-3"
+          className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3"
           onSubmit={onAdd}
         >
-          <p className="text-sm font-medium">{t("participant.addOne")}</p>
+          <p className="text-xs font-semibold text-gray-900 sm:text-sm">{t("participant.addOne")}</p>
           <div className="flex flex-wrap gap-3">
-            <label className="flex flex-col gap-1 text-sm">
+            <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 sm:text-sm">
               {t("participant.nameColumn")}
               <input
-                className="rounded-md border border-slate-300 px-3 py-2"
+                className="rounded border border-gray-300 px-3 py-2 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
                 value={addName}
                 onChange={(e) => setAddName(e.target.value)}
               />
             </label>
-            <label className="flex flex-col gap-1 text-sm">
+            <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 sm:text-sm">
               {t("participant.schoolColumn")}
               <input
-                className="rounded-md border border-slate-300 px-3 py-2"
+                className="rounded border border-gray-300 px-3 py-2 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
                 value={addSchool}
                 onChange={(e) => setAddSchool(e.target.value)}
               />
             </label>
-            <label className="flex flex-col gap-1 text-sm">
+            <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 sm:text-sm">
               {t("participant.categoryColumn")}
               <select
-                className="rounded-md border border-slate-300 px-3 py-2"
+                className="rounded border border-gray-300 px-3 py-2 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
                 value={addCategory}
                 onChange={(e) => setAddCategory(e.target.value)}
               >
@@ -388,7 +402,7 @@ export function ParticipantPanel({
               </select>
             </label>
           </div>
-          <div className="flex flex-wrap gap-4 text-sm">
+          <div className="flex flex-wrap gap-4 text-xs text-gray-700 sm:text-sm">
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -410,7 +424,7 @@ export function ParticipantPanel({
             <button
               type="submit"
               disabled={busy || !addName.trim() || !addCategory}
-              className="rounded-md bg-slate-800 px-4 py-2 text-white disabled:opacity-60"
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
             >
               {t("participant.save")}
             </button>
@@ -418,7 +432,7 @@ export function ParticipantPanel({
               type="button"
               disabled={busy}
               onClick={() => setAddOpen(false)}
-              className="rounded-md border border-slate-300 px-4 py-2 disabled:opacity-60"
+              className="rounded border border-gray-300 px-4 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
             >
               {t("participant.cancel")}
             </button>
@@ -428,8 +442,8 @@ export function ParticipantPanel({
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
-          <h4 className="text-sm font-medium">{t("participant.roster")}</h4>
-          <label className="flex items-center gap-2 text-xs text-slate-600">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 sm:text-sm">{t("participant.roster")}</h4>
+          <label className="flex items-center gap-2 text-xs text-gray-500 sm:text-sm">
             <input
               type="checkbox"
               checked={showInactive}
@@ -440,7 +454,7 @@ export function ParticipantPanel({
         </div>
 
         {counts && (
-          <p className="text-xs text-slate-600">
+          <p className="text-xs tabular-nums text-gray-500">
             {t("participant.totalCount")} {counts.total} · {t("participant.activeCount")}{" "}
             {counts.active} · {t("participant.individualEvent")} {counts.individualEvent} ·{" "}
             {t("participant.teamEvent")} {counts.teamEvent}
@@ -448,46 +462,46 @@ export function ParticipantPanel({
         )}
 
         {participants.length === 0 ? (
-          <p className="text-sm text-slate-600">{t("participant.rosterEmpty")}</p>
+          <p className="text-xs text-gray-500 sm:text-sm">{t("participant.rosterEmpty")}</p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 text-xs text-slate-600">
+          <table className="w-full text-left text-xs sm:text-sm">
+            <thead className="border-b border-gray-200 text-xs font-semibold text-gray-500">
               <tr>
-                <th className="py-1 pr-2">{t("participant.numberColumn")}</th>
-                <th className="py-1 pr-2">{t("participant.nameColumn")}</th>
-                <th className="py-1 pr-2">{t("participant.schoolColumn")}</th>
-                <th className="py-1 pr-2">{t("participant.categoryColumn")}</th>
-                <th className="py-1 pr-2">{t("participant.eventsColumn")}</th>
-                <th className="py-1 pr-2">{t("participant.usernameColumn")}</th>
-                <th className="py-1" />
+                <th className="py-2 pr-2 text-left font-semibold">{t("participant.numberColumn")}</th>
+                <th className="py-2 pr-2 text-left font-semibold">{t("participant.nameColumn")}</th>
+                <th className="py-2 pr-2 text-left font-semibold">{t("participant.schoolColumn")}</th>
+                <th className="py-2 pr-2 text-left font-semibold">{t("participant.categoryColumn")}</th>
+                <th className="py-2 pr-2 text-left font-semibold">{t("participant.eventsColumn")}</th>
+                <th className="py-2 pr-2 text-left font-semibold">{t("participant.usernameColumn")}</th>
+                <th className="py-2" />
               </tr>
             </thead>
             <tbody>
               {participants.map((participant) => (
                 <tr
                   key={participant.id}
-                  className={`border-b border-slate-100 ${participant.active ? "" : "text-slate-400"}`}
+                  className={`border-b border-gray-100 text-gray-700 transition-colors hover:bg-gray-50 ${participant.active ? "" : "text-gray-400"}`}
                 >
                   {editingId === participant.id ? (
                     <>
-                      <td className="py-1 pr-2">{participant.participantNumber}</td>
-                      <td className="py-1 pr-2">
+                      <td className="py-2 pr-2 tabular-nums">{participant.participantNumber}</td>
+                      <td className="py-2 pr-2">
                         <input
-                          className="w-32 rounded border border-slate-300 px-2 py-1"
+                          className="w-32 rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400"
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
                         />
                       </td>
-                      <td className="py-1 pr-2">
+                      <td className="py-2 pr-2">
                         <input
-                          className="w-32 rounded border border-slate-300 px-2 py-1"
+                          className="w-32 rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400"
                           value={editSchool}
                           onChange={(e) => setEditSchool(e.target.value)}
                         />
                       </td>
-                      <td className="py-1 pr-2">
+                      <td className="py-2 pr-2">
                         <select
-                          className="rounded border border-slate-300 px-2 py-1"
+                          className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400"
                           value={editCategory}
                           onChange={(e) => setEditCategory(e.target.value)}
                         >
@@ -498,7 +512,7 @@ export function ParticipantPanel({
                           ))}
                         </select>
                       </td>
-                      <td className="py-1 pr-2">
+                      <td className="py-2 pr-2">
                         <label className="mr-2 inline-flex items-center gap-1">
                           <input
                             type="checkbox"
@@ -516,14 +530,14 @@ export function ParticipantPanel({
                           {t("participant.teamShort")}
                         </label>
                       </td>
-                      <td className="py-1 pr-2">{participant.username ?? "—"}</td>
-                      <td className="py-1">
+                      <td className="py-2 pr-2 font-mono">{participant.username ?? "—"}</td>
+                      <td className="py-2">
                         <div className="flex gap-1">
                           <button
                             type="button"
                             disabled={busy || !editName.trim()}
                             onClick={() => void onSaveEdit(participant.id)}
-                            className="rounded bg-slate-800 px-2 py-1 text-xs text-white disabled:opacity-60"
+                            className="rounded bg-indigo-600 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {t("participant.save")}
                           </button>
@@ -531,7 +545,7 @@ export function ParticipantPanel({
                             type="button"
                             disabled={busy}
                             onClick={() => setEditingId(null)}
-                            className="rounded border border-slate-300 px-2 py-1 text-xs disabled:opacity-60"
+                            className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {t("participant.cancel")}
                           </button>
@@ -540,24 +554,24 @@ export function ParticipantPanel({
                     </>
                   ) : (
                     <>
-                      <td className="py-1 pr-2">{participant.participantNumber}</td>
-                      <td className="py-1 pr-2">{participant.name}</td>
-                      <td className="py-1 pr-2">{participant.schoolName}</td>
-                      <td className="py-1 pr-2">{categoryName(participant.categoryId)}</td>
-                      <td className="py-1 pr-2">
+                      <td className="py-2 pr-2 tabular-nums">{participant.participantNumber}</td>
+                      <td className="py-2 pr-2">{participant.name}</td>
+                      <td className="py-2 pr-2">{participant.schoolName}</td>
+                      <td className="py-2 pr-2">{categoryName(participant.categoryId)}</td>
+                      <td className="py-2 pr-2">
                         {participant.individualEvent ? t("participant.individualShort") : ""}
                         {participant.individualEvent && participant.teamEvent ? " · " : ""}
                         {participant.teamEvent ? t("participant.teamShort") : ""}
                         {!participant.individualEvent && !participant.teamEvent ? "—" : ""}
                       </td>
-                      <td className="py-1 pr-2">{participant.username ?? "—"}</td>
-                      <td className="py-1">
+                      <td className="py-2 pr-2 font-mono">{participant.username ?? "—"}</td>
+                      <td className="py-2">
                         <div className="flex gap-1">
                           <button
                             type="button"
                             disabled={busy}
                             onClick={() => openEdit(participant)}
-                            className="rounded border border-slate-300 px-2 py-1 text-xs disabled:opacity-60"
+                            className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {t("participant.editAction")}
                           </button>
@@ -566,7 +580,7 @@ export function ParticipantPanel({
                               type="button"
                               disabled={busy}
                               onClick={() => void onDeactivate(participant.id)}
-                              className="rounded border border-slate-300 px-2 py-1 text-xs disabled:opacity-60"
+                              className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               {t("participant.deactivate")}
                             </button>

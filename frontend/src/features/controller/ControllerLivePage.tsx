@@ -40,6 +40,10 @@ import {
  * Polling, not realtime: the dashboard reads the competition structure and the
  * big-screen mode every few seconds. The screen is one client on one desk, so this
  * is far cheaper than a push channel and needs no new event contract.
+ *
+ * Visuel : ambiance B « clair, sobre, cartes blanches » (BLD-054, révise U-66).
+ * Recette : RAPPORT-CSS-sudoku_arena.md §4.B. Les boutons désactivés utilisent
+ * `disabled:opacity-50` (la convention unique du rapport) et non plus `opacity-40`.
  */
 const POLL_INTERVAL_MS = 3000;
 
@@ -293,40 +297,42 @@ export function ControllerLivePage() {
 
   if (!competitionId) {
     return (
-      <main className="flex min-h-screen flex-col bg-slate-50 p-6 text-slate-800">
-        <p className="text-sm text-red-600">{t("controller.noCompetition")}</p>
+      <main className="flex min-h-screen flex-col bg-gray-50 p-4 text-gray-900 sm:p-6">
+        <p className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700 sm:text-sm">{t("controller.noCompetition")}</p>
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-screen flex-col gap-6 bg-slate-50 p-6 text-slate-800">
-      <header className="flex items-start justify-between">
+    <main className="flex min-h-screen flex-col gap-6 bg-gray-50 p-4 text-gray-900 sm:p-6">
+      {/* Bandeau d'en-tête de l'ambiance B : dégradé indigo→violet (§3.2/2), boutons
+          « verre » de §3.6. Le `header` existait déjà ; seul son habillage change. */}
+      <header className="-mx-4 -mt-4 flex flex-col gap-3 bg-gradient-to-r from-indigo-700 to-purple-700 px-4 py-4 text-white shadow-lg sm:-mx-6 sm:-mt-6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div>
-          <h1 className="text-2xl font-semibold">{t("controller.title")}</h1>
-          <p className="text-sm text-slate-600">
+          <h1 className="text-lg font-bold sm:text-xl">{t("controller.title")}</h1>
+          <p className="text-xs text-purple-200 sm:text-sm">
             {competition ? competition.name : t("common.loading")}
             {status ? ` · ${t(`controller.status.${status}`)}` : ""}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {/* Unit 12: the results screen is the dashboard's sibling, reached from here. */}
           <Link
             to={`/controller/competitions/${encodeURIComponent(id ?? "")}/results`}
-            className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100"
+            className="rounded-lg bg-white/10 px-3 py-2 text-xs text-white transition-colors hover:bg-white/20 sm:text-sm"
           >
             {t("controller.results")}
           </Link>
           <button
             type="button"
-            className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100"
+            className="rounded-lg bg-white/10 px-3 py-2 text-xs text-white transition-colors hover:bg-white/20 sm:text-sm"
             onClick={() => void refresh()}
           >
             {t("controller.refresh")}
           </button>
           <button
             type="button"
-            className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100"
+            className="rounded-lg bg-white/10 px-3 py-2 text-xs text-white transition-colors hover:bg-white/20 sm:text-sm"
             onClick={onLogout}
           >
             {t("auth.logout")}
@@ -335,31 +341,31 @@ export function ControllerLivePage() {
       </header>
 
       {loadError && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700 sm:text-sm">
           {loadError}
         </p>
       )}
       {actionError && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700 sm:text-sm">
           {actionError}
         </p>
       )}
       {actionNotice && (
-        <p role="status" className="text-sm text-green-700">
+        <p role="status" className="rounded-xl border border-green-200 bg-green-50 p-4 text-xs font-medium text-green-700 sm:text-sm">
           {actionNotice}
         </p>
       )}
 
       {/* Sequence control: start a stage, pause/resume the shared timer. */}
-      <section className="rounded-md border border-slate-200 bg-white p-4">
-        <h2 className="mb-3 text-lg font-semibold">{t("controller.sequenceTitle")}</h2>
+      <section className="rounded-xl bg-white p-4 shadow sm:p-6">
+        <h2 className="mb-3 text-base font-bold text-gray-900 sm:text-lg">{t("controller.sequenceTitle")}</h2>
         <div className="mb-3 flex flex-wrap gap-2">
           {stages.map((stage) => (
             <button
               key={stage.id}
               type="button"
               disabled={!canStartStage(stage) || busy}
-              className="rounded-md bg-slate-800 px-3 py-1 text-sm text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
               onClick={() => void onStartStage(stage)}
             >
               {t("controller.startStage")} · {t(`controller.stageType.${stage.type}`)} {stage.sequence}
@@ -368,7 +374,7 @@ export function ControllerLivePage() {
           <button
             type="button"
             disabled={!canPauseNow || busy}
-            className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
             onClick={() => void onPauseResume()}
           >
             {pausedNow ? t("controller.resume") : t("controller.pause")}
@@ -381,33 +387,33 @@ export function ControllerLivePage() {
           in the supervision panel below, which the server re-computes on each read.
         */}
         {timer && (
-          <p className="text-sm text-slate-600">
+          <p className="font-mono text-xs tabular-nums text-gray-700 sm:text-sm">
             {t("controller.timeLeft")}: {formatSeconds(timer.remainingSeconds)} /{" "}
             {formatSeconds(timer.totalSeconds)}
           </p>
         )}
         {!timer && runningRound && (
-          <p className="text-sm text-slate-500">{t("controller.timerHint")}</p>
+          <p className="text-xs text-gray-500 sm:text-sm">{t("controller.timerHint")}</p>
         )}
       </section>
 
       {/* Per-round actions. */}
-      <section className="rounded-md border border-slate-200 bg-white p-4">
-        <h2 className="mb-3 text-lg font-semibold">{t("controller.roundsTitle")}</h2>
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50">
+      <section className="rounded-xl bg-white p-4 shadow sm:p-6">
+        <h2 className="mb-3 text-base font-bold text-gray-900 sm:text-lg">{t("controller.roundsTitle")}</h2>
+        <table className="min-w-full divide-y divide-gray-200 text-xs sm:text-sm">
+          <thead className="bg-gray-50">
             <tr>
-              <th className="px-3 py-2 text-left font-medium">{t("controller.columnStage")}</th>
-              <th className="px-3 py-2 text-left font-medium">{t("controller.columnRound")}</th>
-              <th className="px-3 py-2 text-left font-medium">{t("controller.columnStatus")}</th>
-              <th className="px-3 py-2 text-left font-medium">{t("controller.columnDuration")}</th>
-              <th className="px-3 py-2 text-left font-medium">{t("judge.supervision.columnActions")}</th>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 sm:text-sm">{t("controller.columnStage")}</th>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 sm:text-sm">{t("controller.columnRound")}</th>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 sm:text-sm">{t("controller.columnStatus")}</th>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 sm:text-sm">{t("controller.columnDuration")}</th>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 sm:text-sm">{t("judge.supervision.columnActions")}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-gray-100">
             {stages.flatMap((stage) =>
               stage.rounds.map((round) => (
-                <tr key={round.id}>
+                <tr key={round.id} className="text-gray-700 transition-colors hover:bg-gray-50">
                   <td className="px-3 py-2">
                     {t(`controller.stageType.${stage.type}`)} {stage.sequence}
                   </td>
@@ -420,7 +426,7 @@ export function ControllerLivePage() {
                     <button
                       type="button"
                       disabled={!canEndRound(round) || busy}
-                      className="rounded-md border border-slate-300 px-2 py-1 text-xs hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                       onClick={() => setPending({ kind: "endRoundEarly", round, stage })}
                     >
                       {t("controller.endEarly")}
@@ -434,16 +440,16 @@ export function ControllerLivePage() {
       </section>
 
       {/* Reset / rematch (ROL-005) with its scope picker. */}
-      <section className="rounded-md border border-slate-200 bg-white p-4">
-        <h2 className="mb-1 text-lg font-semibold">{t("controller.resetTitle")}</h2>
-        <p className="mb-3 text-sm text-slate-600">{t("controller.resetHint")}</p>
+      <section className="rounded-xl bg-white p-4 shadow sm:p-6">
+        <h2 className="mb-1 text-base font-bold text-gray-900 sm:text-lg">{t("controller.resetTitle")}</h2>
+        <p className="mb-3 text-xs text-gray-500 sm:text-sm">{t("controller.resetHint")}</p>
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <label className="text-sm" htmlFor="reset-scope">
+          <label className="text-xs font-medium text-gray-700 sm:text-sm" htmlFor="reset-scope">
             {t("controller.resetScope")}
           </label>
           <select
             id="reset-scope"
-            className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+            className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
             value={scope}
             disabled={closed || busy}
             onChange={(e) => setScope(e.target.value as ResetRematchScope)}
@@ -457,7 +463,7 @@ export function ControllerLivePage() {
           {scope === "ROUND" && (
             <select
               aria-label={t("controller.resetTargetRound")}
-              className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+              className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
               value={targetRoundId}
               disabled={closed || busy}
               onChange={(e) => setTargetRoundId(e.target.value)}
@@ -476,7 +482,7 @@ export function ControllerLivePage() {
           {scope === "PARTICIPANT" && (
             <input
               aria-label={t("controller.resetTargetParticipant")}
-              className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+              className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
               placeholder={t("controller.resetTargetParticipant")}
               value={targetParticipantId}
               disabled={closed || busy}
@@ -487,7 +493,7 @@ export function ControllerLivePage() {
           {scope === "TEAM" && (
             <input
               aria-label={t("controller.resetTargetTeam")}
-              className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+              className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
               placeholder={t("controller.resetTargetTeam")}
               value={targetTeamId}
               disabled={closed || busy}
@@ -498,7 +504,7 @@ export function ControllerLivePage() {
           <button
             type="button"
             disabled={closed || busy}
-            className="rounded-md bg-slate-800 px-3 py-1 text-sm text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
             onClick={() => setPending({ kind: "resetRematch" })}
           >
             {t("controller.resetGo")}
@@ -507,9 +513,9 @@ export function ControllerLivePage() {
       </section>
 
       {/* Big-screen display control (BSC-002). */}
-      <section className="rounded-md border border-slate-200 bg-white p-4">
-        <h2 className="mb-1 text-lg font-semibold">{t("controller.bigScreenTitle")}</h2>
-        <p className="mb-3 text-sm text-slate-600">
+      <section className="rounded-xl bg-white p-4 shadow sm:p-6">
+        <h2 className="mb-1 text-base font-bold text-gray-900 sm:text-lg">{t("controller.bigScreenTitle")}</h2>
+        <p className="mb-3 text-xs text-gray-500 sm:text-sm">
           {bigScreen
             ? `${t("controller.bigScreenMode")}: ${t(`controller.bigScreenModeName.${bigScreen.mode}`)} · ${
                 bigScreen.rotationEnabled
@@ -522,7 +528,7 @@ export function ControllerLivePage() {
           <button
             type="button"
             disabled={closed || busy || bigScreen?.mode === "RANKING"}
-            className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
             onClick={() => void onSetBigScreenMode("RANKING")}
           >
             {t("controller.bigScreenModeName.RANKING")}
@@ -530,7 +536,7 @@ export function ControllerLivePage() {
           <button
             type="button"
             disabled={closed || busy || bigScreen?.mode === "PAUSED"}
-            className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
             onClick={() => void onSetBigScreenMode("PAUSED")}
           >
             {t("controller.bigScreenModeName.PAUSED")}
@@ -538,7 +544,7 @@ export function ControllerLivePage() {
           <button
             type="button"
             disabled={closed || busy || bigScreen?.mode === "FINAL"}
-            className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
             onClick={() => void onSetBigScreenMode("FINAL")}
           >
             {t("controller.bigScreenModeName.FINAL")}
@@ -546,7 +552,7 @@ export function ControllerLivePage() {
           <button
             type="button"
             disabled={closed || busy || !bigScreen}
-            className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
             onClick={() => void onToggleRotation()}
           >
             {bigScreen?.rotationEnabled
@@ -557,20 +563,20 @@ export function ControllerLivePage() {
       </section>
 
       {/* Judge-equivalent student status and restart (spec Detail 6). */}
-      <section className="rounded-md border border-slate-200 bg-white p-4">
+      <section className="rounded-xl bg-white p-4 shadow sm:p-6">
         <StudentsSupervisionPanel competitionId={competitionId} />
       </section>
 
       {/* Destructive, terminal actions. */}
-      <section className="rounded-md border border-red-200 bg-white p-4">
-        <h2 className="mb-3 text-lg font-semibold text-red-700">
+      <section className="rounded-xl border border-red-200 bg-white p-4 shadow sm:p-6">
+        <h2 className="mb-3 text-base font-bold text-red-700 sm:text-lg">
           {t("controller.dangerTitle")}
         </h2>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             disabled={closed || busy}
-            className="rounded-md border border-amber-400 px-3 py-1 text-sm text-amber-700 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
             onClick={() => setPending({ kind: "finishEarly" })}
           >
             {t("controller.finishEarly")}
@@ -578,33 +584,33 @@ export function ControllerLivePage() {
           <button
             type="button"
             disabled={closed || busy}
-            className="rounded-md border border-red-400 px-3 py-1 text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
             onClick={() => setPending({ kind: "cancel" })}
           >
             {t("controller.cancel")}
           </button>
         </div>
-        {closed && <p className="mt-2 text-sm text-slate-500">{t("controller.closedNote")}</p>}
+        {closed && <p className="mt-2 text-xs text-gray-500 sm:text-sm">{t("controller.closedNote")}</p>}
       </section>
 
       {pending && (
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-10 flex items-center justify-center bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onClick={() => (busy ? undefined : setPending(null))}
         >
           <div
-            className="w-full max-w-md rounded-md bg-white p-4 shadow-lg"
+            className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="mb-2 text-lg font-semibold">
+            <h2 className="mb-2 text-lg font-semibold text-gray-900">
               {pending.kind === "finishEarly" && t("controller.finishEarlyTitle")}
               {pending.kind === "cancel" && t("controller.cancelTitle")}
               {pending.kind === "endRoundEarly" && t("controller.endEarlyTitle")}
               {pending.kind === "resetRematch" && t("controller.resetConfirmTitle")}
             </h2>
-            <p className="mb-4 text-sm text-slate-600">
+            <p className="mb-4 text-xs text-gray-700 sm:text-sm">
               {pending.kind === "finishEarly" && t("controller.finishEarlyBody")}
               {pending.kind === "cancel" && t("controller.cancelBody")}
               {pending.kind === "endRoundEarly" &&
@@ -614,7 +620,7 @@ export function ControllerLivePage() {
             <div className="flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100"
+                className="rounded bg-gray-200 px-4 py-2 text-xs text-gray-700 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
                 onClick={() => setPending(null)}
                 disabled={busy}
               >
@@ -622,7 +628,7 @@ export function ControllerLivePage() {
               </button>
               <button
                 type="button"
-                className="rounded-md bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+                className="rounded bg-red-600 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
                 disabled={busy}
                 onClick={() => {
                   if (pending.kind === "finishEarly") void onFinishEarly();

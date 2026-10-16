@@ -16,6 +16,11 @@ import {
  * Unit 03; this panel only writes. The publish readiness check on the backend uses
  * the same CompetitionJudgeAssignment rows, so a saved range immediately counts
  * toward publish readiness.
+ *
+ * Visuel : ambiance B « clair, sobre, cartes blanches » (BLD-054, révise U-66).
+ * Carte blanche exactement identique à celle des autres panneaux de la page hôte
+ * (`CompetitionSetupPage`) : un seul style par rôle visuel (§6/6). Les plages de
+ * numéros portent `tabular-nums` — ce sont des nombres alignés (§3.5).
  */
 export function JudgeRangeAssignmentPanel({ competitionId }: { competitionId: string }) {
   const { t } = useLocale();
@@ -78,14 +83,14 @@ export function JudgeRangeAssignmentPanel({ competitionId }: { competitionId: st
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded-md border border-slate-200 bg-white p-4">
-      <h3 className="text-sm font-medium">{t("judge.assignTo")}</h3>
+    <section className="flex flex-col gap-3 rounded-xl bg-white p-4 shadow sm:p-6">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 sm:text-sm">{t("judge.assignTo")}</h3>
 
       <form className="flex flex-col gap-3" onSubmit={onAssign}>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 sm:text-sm">
           {t("judge.name")}
           <select
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className="rounded border border-gray-300 px-3 py-2 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
             value={judgeId}
             onChange={(e) => setJudgeId(e.target.value)}
             required
@@ -100,23 +105,23 @@ export function JudgeRangeAssignmentPanel({ competitionId }: { competitionId: st
         </label>
 
         <div className="flex gap-3">
-          <label className="flex flex-col gap-1 text-sm">
+          <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 sm:text-sm">
             {t("judge.from")}
             <input
               type="number"
               min={1}
-              className="w-24 rounded-md border border-slate-300 px-3 py-2"
+              className="w-24 rounded border border-gray-300 px-3 py-2 text-xs tabular-nums text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
               required
             />
           </label>
-          <label className="flex flex-col gap-1 text-sm">
+          <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 sm:text-sm">
             {t("judge.to")}
             <input
               type="number"
               min={1}
-              className="w-24 rounded-md border border-slate-300 px-3 py-2"
+              className="w-24 rounded border border-gray-300 px-3 py-2 text-xs tabular-nums text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
               value={to}
               onChange={(e) => setTo(e.target.value)}
               required
@@ -127,18 +132,18 @@ export function JudgeRangeAssignmentPanel({ competitionId }: { competitionId: st
         <button
           type="submit"
           disabled={busy || !judgeId}
-          className="self-start rounded-md bg-slate-800 px-4 py-2 text-white disabled:opacity-60"
+          className="self-start rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
         >
           {t("judge.saveAssignment")}
         </button>
       </form>
 
       {saved && (
-        <p className="flex items-center gap-2 text-sm text-green-700">
+        <p className="flex items-center gap-2 text-xs font-medium text-green-700 sm:text-sm">
           {t("competition.saved")}
           <button
             type="button"
-            className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+            className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => onUnassign(saved)}
             disabled={busy}
           >
@@ -148,7 +153,7 @@ export function JudgeRangeAssignmentPanel({ competitionId }: { competitionId: st
       )}
 
       {error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-700 sm:text-sm">
           {error}
         </p>
       )}

@@ -14,7 +14,9 @@ import {
  * one-time credentials for the slip export, list every judge, remove a judge (with
  * the ROL-010 removal-guard error naming the blocking competition).
  *
- * Functional and minimally styled — the finished visual design is deferred (U-66).
+ * Visuel : ambiance B « clair, sobre, cartes blanches » (BLD-054, révise U-66).
+ * Recette : RAPPORT-CSS-sudoku_arena.md §4.B, mapping dans context/ui-context.md
+ * « Visual design system ».
  */
 export function JudgeManagementPage() {
   const { t } = useLocale();
@@ -86,14 +88,14 @@ export function JudgeManagementPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 bg-slate-50 p-6 text-slate-800">
-      <h1 className="text-2xl font-semibold">{t("judge.title")}</h1>
+    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 bg-gray-50 p-4 text-gray-900 sm:p-6">
+      <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">{t("judge.title")}</h1>
 
-      <form className="flex flex-col gap-3 rounded-md border border-slate-200 bg-white p-4" onSubmit={onCreate}>
-        <label className="flex flex-col gap-1 text-sm">
+      <form className="flex flex-col gap-4 rounded-xl bg-white p-4 shadow sm:p-6" onSubmit={onCreate}>
+        <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 sm:text-sm">
           {t("judge.name")}
           <input
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className="rounded border border-gray-300 px-3 py-2 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -102,22 +104,22 @@ export function JudgeManagementPage() {
         <button
           type="submit"
           disabled={busy}
-          className="self-start rounded-md bg-slate-800 px-4 py-2 text-white disabled:opacity-60"
+          className="self-start rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
         >
           {t("judge.create")}
         </button>
       </form>
 
       {created && (
-        <section className="flex flex-col gap-2 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm">
+        <section className="flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs sm:p-6 sm:text-sm">
           <p className="font-medium text-amber-900">{t("judge.created")}</p>
-          <p>
+          <p className="text-gray-700">
             <span className="font-medium">{t("judge.username")}:</span>{" "}
-            <code className="rounded bg-white px-1 py-0.5">{created.username}</code>
+            <code className="rounded bg-white px-1 font-mono text-gray-900">{created.username}</code>
           </p>
-          <p>
+          <p className="text-gray-700">
             <span className="font-medium">{t("judge.password")}:</span>{" "}
-            <code className="rounded bg-white px-1 py-0.5">{created.password}</code>
+            <code className="rounded bg-white px-1 font-mono text-gray-900">{created.password}</code>
           </p>
           <p className="text-amber-800">{t("judge.credentialNote")}</p>
         </section>
@@ -126,7 +128,7 @@ export function JudgeManagementPage() {
       {blockedBy && (
         <div
           role="alert"
-          className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700"
+          className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-700 sm:text-sm"
         >
           <p className="font-medium">{t("judge.blocked")}</p>
           <ul className="mt-1 list-disc pl-5">
@@ -138,34 +140,34 @@ export function JudgeManagementPage() {
       )}
 
       {error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700 sm:text-sm">
           {error}
         </p>
       )}
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium">{t("judge.list")}</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 sm:text-sm">{t("judge.list")}</h2>
         {!judges ? (
-          <p className="text-sm text-slate-600">{t("common.loading")}</p>
+          <p className="text-xs text-gray-500 sm:text-sm">{t("common.loading")}</p>
         ) : judges.length === 0 ? (
-          <p className="text-sm text-slate-600">—</p>
+          <p className="text-xs text-gray-500 sm:text-sm">—</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {judges.map((judge) => (
               <li
                 key={judge.id}
-                className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+                className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 text-xs shadow transition-colors hover:border-gray-300 hover:shadow-sm sm:text-sm"
               >
-                <span>
+                <span className="font-medium text-gray-900">
                   {judge.name}{" "}
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-gray-500">
                     ({judge.active ? t("judge.active") : t("judge.inactive")})
                   </span>
                 </span>
                 {judge.active && (
                   <button
                     type="button"
-                    className="rounded-md border border-slate-300 px-2 py-1 hover:bg-slate-100 disabled:opacity-60"
+                    className="rounded border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
                     onClick={() => onRemove(judge.id)}
                     disabled={busy}
                   >

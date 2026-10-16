@@ -206,15 +206,15 @@ export function RotationRoundScreen({
 
   if (!isLandscape) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6">
-        <h1 className="text-2xl font-semibold">{t("player.rotateDevice")}</h1>
-        <p className="text-gray-600">{t("player.rotateDeviceHint")}</p>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-900 p-6 text-center text-white">
+        <h1 className="text-2xl font-semibold sm:text-3xl">{t("player.rotateDevice")}</h1>
+        <p className="text-base text-gray-400 sm:text-lg">{t("player.rotateDeviceHint")}</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen flex-col p-4">
+    <div className="flex h-screen flex-col bg-gray-900 p-4 text-white">
       <RotationHeader state={state} />
 
       <div className="flex flex-1 gap-6">
@@ -240,7 +240,7 @@ export function RotationRoundScreen({
               <button
                 key={value}
                 type="button"
-                className="rounded border border-gray-300 bg-white py-2 text-xl font-semibold disabled:opacity-40"
+                className="rounded-lg bg-gray-700 py-2 text-xl font-bold text-white transition-colors hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={!question || selectedCell == null || Boolean(state.ended)}
                 onClick={() => selectedCell != null && setCell(selectedCell, value)}
               >
@@ -250,7 +250,7 @@ export function RotationRoundScreen({
           </div>
           <button
             type="button"
-            className="rounded border border-gray-300 bg-white py-2 disabled:opacity-40"
+            className="rounded-lg bg-red-800 py-2 text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!question || selectedCell == null || Boolean(state.ended)}
             onClick={onDelete}
           >
@@ -258,7 +258,7 @@ export function RotationRoundScreen({
           </button>
           <button
             type="button"
-            className="rounded border border-gray-300 bg-white py-2 disabled:opacity-40"
+            className="rounded-lg bg-gray-700 py-2 text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!question || Boolean(state.ended)}
             onClick={onClearAll}
           >
@@ -266,7 +266,7 @@ export function RotationRoundScreen({
           </button>
           <button
             type="button"
-            className="rounded border border-green-600 bg-green-600 py-2 font-semibold text-white disabled:opacity-40"
+            className="rounded-lg bg-green-600 py-2 font-semibold text-white transition-colors hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!question || submitting || Boolean(state.ended)}
             onClick={() => void onSubmit()}
           >
@@ -274,22 +274,22 @@ export function RotationRoundScreen({
           </button>
 
           {feedback === "correct" && (
-            <p className="rounded border border-green-200 bg-green-50 p-2 text-sm text-green-800">
+            <p className="animate-slide-in rounded-lg bg-green-900/50 p-2 text-center text-sm text-green-300">
               {t("rotation.correct")}
             </p>
           )}
           {feedback === "incorrect" && (
-            <p className="rounded border border-amber-200 bg-amber-50 p-2 text-sm text-amber-800">
+            <p className="animate-slide-in rounded-lg bg-yellow-900/50 p-2 text-center text-sm text-yellow-300">
               {t("rotation.incorrect")}
             </p>
           )}
           {error && (
-            <p className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">
+            <p className="animate-slide-in rounded-lg bg-red-900/50 p-2 text-center text-sm text-red-300">
               {error}
             </p>
           )}
           {state.rotatedReason === "STALE_HOLD" && !error && (
-            <p className="rounded border border-gray-200 bg-gray-50 p-2 text-sm text-gray-700">
+            <p className="animate-slide-in rounded-lg bg-blue-900/50 p-2 text-center text-sm text-blue-300">
               {t("rotation.staleHold")}
             </p>
           )}
@@ -324,20 +324,20 @@ function RotationHeader({ state }: { state: RotationViewState }) {
   const seconds = Math.ceil(remainingMs / 1000);
 
   return (
-    <div className="mb-4 flex items-center justify-between">
-      <div className="text-sm text-gray-700">
-        <span className="font-semibold text-green-700">
+    <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
+      <div className="text-sm text-gray-300">
+        <span className="font-semibold text-green-500">
           {t("rotation.teamScore")}: {state.teamScore}
         </span>
-        <span className="mx-2 text-gray-400">·</span>
-        <span>
+        <span className="mx-2 text-gray-500">·</span>
+        <span className="tabular-nums">
           {t("rotation.progress")}: {state.correctCount} / {state.totalQuestionCount}
         </span>
       </div>
       {!state.ended && state.nextRotationAtMs > 0 && (
         <div className="text-right">
-          <p className="text-xs text-gray-500">{t("rotation.nextRotation")}</p>
-          <p className="text-2xl font-bold tabular-nums">{seconds}s</p>
+          <p className="text-xs text-gray-400">{t("rotation.nextRotation")}</p>
+          <p className="text-2xl font-bold font-mono tabular-nums text-white">{seconds}s</p>
         </div>
       )}
     </div>
@@ -359,7 +359,7 @@ function EditableGrid({
 }) {
   return (
     <div
-      className="grid h-full w-full gap-px bg-gray-400"
+      className="grid h-full w-full gap-px bg-gray-600"
       style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
     >
       {grid.map((value, index) => {
@@ -371,9 +371,12 @@ function EditableGrid({
             type="button"
             onClick={() => onSelectCell(index)}
             className={[
-              "flex items-center justify-center bg-white text-xl font-semibold",
-              isGiven ? "text-gray-900" : "text-blue-700",
-              isSelected ? "outline outline-2 outline-blue-500" : "",
+              "flex items-center justify-center text-base font-medium transition-colors md:text-lg",
+              isGiven
+                ? "cursor-default bg-gray-800 text-white"
+                : isSelected
+                  ? "bg-indigo-600 text-white"
+                  : "bg-gray-700 text-gray-200 hover:bg-gray-600",
             ].join(" ")}
           >
             {value ?? ""}
@@ -388,9 +391,10 @@ function EditableGrid({
 function NothingToWorkOnPanel() {
   const { t } = useLocale();
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-6 text-center">
-      <h2 className="text-xl font-semibold text-gray-800">{t("rotation.nothingToWorkOn")}</h2>
-      <p className="max-w-md text-sm text-gray-600">{t("rotation.nothingToWorkOnHint")}</p>
+    <div className="flex h-full flex-col items-center justify-center gap-4 rounded-xl border border-white/10 bg-white/5 p-6 text-center">
+      <span className="text-6xl">📋</span>
+      <h2 className="text-2xl font-semibold text-gray-300">{t("rotation.nothingToWorkOn")}</h2>
+      <p className="max-w-md text-sm text-gray-500">{t("rotation.nothingToWorkOnHint")}</p>
     </div>
   );
 }
@@ -405,15 +409,18 @@ function RoundEndedPanel({ state }: { state: RotationViewState }) {
   const ended = state.ended;
   if (!ended) return null;
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-green-200 bg-green-50 p-6 text-center">
-      <h2 className="text-2xl font-semibold text-green-900">{t("rotation.roundEnded")}</h2>
-      <p className="text-sm text-green-800">
+    <div className="flex h-full flex-col items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 p-6 text-center">
+      <span className="text-6xl">🏆</span>
+      <h2 className="text-2xl font-semibold text-gray-300">{t("rotation.roundEnded")}</h2>
+      <p className="text-sm text-gray-400">
         {ended.reason === "ALL_CORRECT"
           ? t("rotation.roundEndedAllCorrect")
           : t("rotation.roundEndedTimeLimit")}
       </p>
-      <p className="text-5xl font-bold tabular-nums text-green-900">{ended.score}</p>
-      <p className="text-sm text-green-800">
+      <p className="text-4xl font-bold tabular-nums text-green-500 sm:text-5xl">
+        {ended.score}
+      </p>
+      <p className="text-sm tabular-nums text-gray-400">
         {t("rotation.progress")}: {ended.correctCount} / {state.totalQuestionCount}
       </p>
     </div>

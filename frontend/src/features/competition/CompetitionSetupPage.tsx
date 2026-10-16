@@ -19,13 +19,16 @@ import {
   type RoundView,
   type StageView,
 } from "./competitionApi";
+import { SchoolPanel } from "./SchoolPanel";
 
 /**
  * The competition-creation and publish screen (Unit 03, frontend `competition`
- * feature). Functional and minimally styled — the finished visual design is deferred
- * (U-66). It shows the venue Wi-Fi advisory note (U-56, UI copy only), the
- * auto-generated structure with its editable round durations, and the publish action
- * with its readiness-failure / success display.
+ * feature). Ambiance B « clair, sobre, cartes blanches » (BLD-054) : coquille
+ * `bg-gray-50`, cartes `bg-white rounded-xl shadow p-4 sm:p-6`, boutons primaires
+ * indigo-600, champs `border-gray-300` + focus en anneau indigo. It shows the venue
+ * Wi-Fi advisory note (U-56, UI copy only), the auto-generated structure with its
+ * editable round durations, and the publish action with its readiness-failure /
+ * success display.
  *
  * Unit 15 gives it a second mode: `/controller/competitions/:id/setup` opens an
  * **existing** competition instead of the create form. That is where a copy lands,
@@ -161,13 +164,15 @@ export function CompetitionSetupPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 bg-slate-50 p-6 text-slate-800">
+    <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 bg-gray-50 p-4 text-gray-900 sm:p-6">
       <div className="flex items-start justify-between gap-4">
-        <h1 className="text-2xl font-semibold">{t("competition.title")}</h1>
+        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">
+          {t("competition.title")}
+        </h1>
         {id && (
           <Link
             to="/controller"
-            className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100"
+            className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 sm:text-sm"
           >
             {t("competition.backToList")}
           </Link>
@@ -176,7 +181,7 @@ export function CompetitionSetupPage() {
 
       <p
         role="note"
-        className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800"
+        className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-700 sm:p-6 sm:text-sm"
       >
         {t("competition.wifiNote")}
       </p>
@@ -184,30 +189,30 @@ export function CompetitionSetupPage() {
       {/* While an existing competition is still loading, show neither the blank
           create form nor the structure — just the loading line. */}
       {id && !competition && !error && (
-        <p className="text-sm text-slate-600">{t("common.loading")}</p>
+        <p className="text-xs text-gray-500 sm:text-sm">{t("common.loading")}</p>
       )}
       {error && !competition && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700 sm:text-sm">
           {error}
         </p>
       )}
 
       {!competition && !id && (
-        <form className="flex flex-col gap-4" onSubmit={onCreate}>
-          <label className="flex flex-col gap-1 text-sm">
+        <form className="flex flex-col gap-4 rounded-xl bg-white p-4 shadow sm:p-6" onSubmit={onCreate}>
+          <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 sm:text-sm">
             {t("competition.name")}
             <input
-              className="rounded-md border border-slate-300 px-3 py-2"
+              className="rounded border border-gray-300 px-3 py-2 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
             />
           </label>
 
-          <label className="flex flex-col gap-1 text-sm">
+          <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 sm:text-sm">
             {t("competition.description")}
             <textarea
-              className="rounded-md border border-slate-300 px-3 py-2"
+              className="rounded border border-gray-300 px-3 py-2 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
@@ -215,18 +220,20 @@ export function CompetitionSetupPage() {
           </label>
 
           <fieldset className="flex flex-col gap-2">
-            <legend className="text-sm font-medium">{t("competition.categories")}</legend>
+            <legend className="text-xs font-semibold text-gray-700 sm:text-sm">
+              {t("competition.categories")}
+            </legend>
             {categories.map((category, index) => (
               <div key={index} className="flex gap-2">
                 <input
-                  className="w-28 rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="w-28 rounded border border-gray-300 px-3 py-2 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
                   aria-label={t("competition.categoryCode")}
                   placeholder={t("competition.categoryCode")}
                   value={category.code}
                   onChange={(e) => updateCategory(index, { code: e.target.value })}
                 />
                 <input
-                  className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="flex-1 rounded border border-gray-300 px-3 py-2 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
                   aria-label={t("competition.categoryName")}
                   placeholder={t("competition.categoryName")}
                   value={category.name}
@@ -235,7 +242,7 @@ export function CompetitionSetupPage() {
                 {categories.length > 1 && (
                   <button
                     type="button"
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-100"
+                    className="rounded border border-gray-300 px-3 py-2 text-xs text-gray-700 transition-colors hover:bg-gray-100 sm:text-sm"
                     onClick={() =>
                       setCategories((current) => current.filter((_, i) => i !== index))
                     }
@@ -247,7 +254,7 @@ export function CompetitionSetupPage() {
             ))}
             <button
               type="button"
-              className="self-start rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100"
+              className="self-start rounded border border-gray-300 px-3 py-1.5 text-xs text-gray-700 transition-colors hover:bg-gray-100 sm:text-sm"
               onClick={() => setCategories((current) => [...current, { code: "", name: "" }])}
             >
               {t("competition.addCategory")}
@@ -257,7 +264,7 @@ export function CompetitionSetupPage() {
           <button
             type="submit"
             disabled={busy}
-            className="self-start rounded-md bg-slate-800 px-4 py-2 text-white disabled:opacity-60"
+            className="self-start rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
           >
             {t("competition.create")}
           </button>
@@ -266,27 +273,32 @@ export function CompetitionSetupPage() {
 
       {competition && (
         <section className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-lg font-medium">{competition.name}</h2>
-            <p className="text-sm text-slate-600">
+          <div className="rounded-xl bg-white p-4 shadow sm:p-6">
+            <h2 className="text-base font-bold text-gray-900 sm:text-lg">{competition.name}</h2>
+            <p className="mt-1 text-xs text-gray-500 sm:text-sm">
               {t("competition.created")} · {competition.status}
             </p>
           </div>
 
-          <h3 className="text-sm font-medium">{t("competition.structure")}</h3>
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 sm:text-sm">
+            {t("competition.structure")}
+          </h3>
           {competition.stages.map((stage) => (
-            <div key={stage.id} className="rounded-md border border-slate-200 bg-white p-3">
-              <p className="text-sm font-medium">{stage.type}</p>
+            <div
+              key={stage.id}
+              className="rounded-xl bg-white p-4 shadow sm:p-6"
+            >
+              <p className="text-xs font-semibold text-gray-700 sm:text-sm">{stage.type}</p>
               <ul className="mt-2 flex flex-col gap-2">
                 {stage.rounds.map((round) => (
-                  <li key={round.id} className="flex items-center gap-3 text-sm">
+                  <li key={round.id} className="flex items-center gap-3 text-xs text-gray-700 sm:text-sm">
                     <span className="w-40">{stageRoundLabel(t, stage, round)}</span>
                     <label className="flex items-center gap-2">
                       {t("competition.roundDuration")}
                       <input
                         type="number"
                         min={1}
-                        className="w-24 rounded-md border border-slate-300 px-2 py-1"
+                        className="w-24 rounded border border-gray-300 px-2 py-1 tabular-nums text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         aria-label={t("competition.roundDuration")}
                         value={durationEdits[round.id] ?? round.settings?.durationSeconds ?? 0}
                         onChange={(e) =>
@@ -299,13 +311,15 @@ export function CompetitionSetupPage() {
                     </label>
                     <button
                       type="button"
-                      className="rounded-md border border-slate-300 px-2 py-1 hover:bg-slate-100"
+                      className="rounded bg-indigo-600 px-3 py-1.5 text-xs text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
                       onClick={() => onSaveRound(round.id)}
                     >
                       {t("competition.saveRound")}
                     </button>
                     {savedRound === round.id && (
-                      <span className="text-green-700">{t("competition.saved")}</span>
+                      <span className="rounded bg-green-100 px-2 py-0.5 font-medium text-green-800">
+                        {t("competition.saved")}
+                      </span>
                     )}
                   </li>
                 ))}
@@ -316,7 +330,7 @@ export function CompetitionSetupPage() {
           {unmet && (
             <div
               role="alert"
-              className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700"
+              className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-700 sm:p-6 sm:text-sm"
             >
               <p className="font-medium">{t("competition.notReady")}</p>
               <ul className="mt-1 list-disc pl-5">
@@ -328,13 +342,18 @@ export function CompetitionSetupPage() {
           )}
 
           {error && (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700 sm:text-sm">
               {error}
             </p>
           )}
 
           {/* Judge range assignment (Unit 06) — changeable any time during the event. */}
           <JudgeRangeAssignmentPanel competitionId={competition.id} />
+
+          {/* BLD-052: the school CRUD panel. It sits right before the participant panel
+              because a participant is attached to a school — the organizer creates the
+              schools first, then imports the roster that points at them. */}
+          <SchoolPanel competitionId={competition.id} />
 
           {/* Participant import, roster and credential slips (Unit 04). It sits before the
               question panel because the publish readiness check needs both a participant
@@ -371,19 +390,25 @@ export function CompetitionSetupPage() {
             <button
               type="button"
               disabled={busy}
-              className="self-start rounded-md bg-slate-800 px-4 py-2 text-white disabled:opacity-60"
+              className="self-start rounded-lg bg-indigo-600 px-4 sm:px-6 py-2 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
               onClick={onPublish}
             >
               {t("competition.publish")}
             </button>
           ) : (
-            <div className="flex flex-col gap-2 rounded-md border border-green-300 bg-green-50 p-3 text-sm">
-              <p className="font-medium text-green-800">{t("competition.published")}</p>
-              <p>
-                {t("competition.entryLink")}: <code>{published.entryLinkToken}</code>
+            <div className="flex flex-col gap-2 rounded-xl border border-green-200 bg-green-50 p-4 text-xs sm:p-6 sm:text-sm">
+              <p className="font-medium text-green-700">{t("competition.published")}</p>
+              <p className="text-gray-700">
+                {t("competition.entryLink")}:{" "}
+                <code className="rounded bg-white px-1 font-mono text-gray-900">
+                  {published.entryLinkToken}
+                </code>
               </p>
-              <p>
-                {t("competition.bigScreenLink")}: <code>{published.bigScreenLinkToken}</code>
+              <p className="text-gray-700">
+                {t("competition.bigScreenLink")}:{" "}
+                <code className="rounded bg-white px-1 font-mono text-gray-900">
+                  {published.bigScreenLinkToken}
+                </code>
               </p>
             </div>
           )}

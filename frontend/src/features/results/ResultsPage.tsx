@@ -26,6 +26,12 @@ import {
  * comes from the server, which owns it). A rejection is shown as its own
  * localizable message, and a cancelled competition's gate surfaces here as the
  * `results_competitionCancelled` message instead of any numbers.
+ *
+ * Visuel : ambiance B « clair, sobre, cartes blanches » (BLD-054, révise U-66).
+ * Écran de lecture uniquement côté pilotage, donc tout est en cartes blanches sur
+ * `bg-gray-50`, avec le bandeau dégradé indigo→violet (§3.2/2) pour l'en-tête.
+ * Les colonnes de rang, de score et de temps portent `tabular-nums` : ce sont des
+ * chiffres comparés d'une ligne à l'autre (§3.5).
  */
 
 /** The correction target the form was opened for, if any. */
@@ -199,14 +205,17 @@ export function ResultsPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col gap-6 bg-slate-50 p-6 text-slate-800">
-      <div className="flex items-center justify-between">
+    <main className="flex min-h-screen flex-col gap-6 bg-gray-50 p-4 text-gray-900 sm:p-6">
+      {/* Bandeau d'en-tête de l'ambiance B (§3.2/2) : le div existait déjà, il porte
+          maintenant le dégradé et les trois actions deviennent des boutons « verre »
+          (§3.6), exactement comme sur le poste de pilotage — un seul style par rôle. */}
+      <div className="-mx-4 -mt-4 flex flex-col gap-3 bg-gradient-to-r from-indigo-700 to-purple-700 px-4 py-4 text-white shadow-lg sm:-mx-6 sm:-mt-6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div>
-          <h1 className="text-2xl font-semibold">
+          <h1 className="text-lg font-bold sm:text-xl">
             {results ? results.name : t("results.title")}
           </h1>
           {results && (
-            <p className="text-sm text-slate-600">
+            <p className="text-xs text-purple-200 sm:text-sm">
               {t(`controller.status.${results.status}`)}
               {results.finishedEarly && ` — ${t("results.finishedEarly")}`}
             </p>
@@ -215,20 +224,20 @@ export function ResultsPage() {
         <div className="flex gap-2">
           <Link
             to={`/controller/competitions/${encodeURIComponent(competitionId ?? "")}/live`}
-            className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100"
+            className="rounded-lg bg-white/10 px-3 py-2 text-xs text-white transition-colors hover:bg-white/20 sm:text-sm"
           >
             {t("results.backToLive")}
           </Link>
           <button
             type="button"
-            className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100"
+            className="rounded-lg bg-white/10 px-3 py-2 text-xs text-white transition-colors hover:bg-white/20 sm:text-sm"
             onClick={() => void refresh()}
           >
             {t("results.refresh")}
           </button>
           <button
             type="button"
-            className="rounded-md bg-slate-800 px-3 py-1 text-sm text-white hover:bg-slate-700 disabled:opacity-50"
+            className="rounded-lg bg-white/10 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
             disabled={busy || !results || cancelled}
             onClick={() => void onExport()}
           >
@@ -238,29 +247,29 @@ export function ResultsPage() {
       </div>
 
       {actionError && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700 sm:text-sm">
           {actionError}
         </p>
       )}
       {actionNotice && (
-        <p role="status" className="text-sm text-green-700">
+        <p role="status" className="rounded-xl border border-green-200 bg-green-50 p-4 text-xs font-medium text-green-700 sm:text-sm">
           {actionNotice}
         </p>
       )}
       {loadError && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700 sm:text-sm">
           {loadError}
         </p>
       )}
 
       {!results && !loadError && (
-        <p className="text-sm text-slate-600">{t("common.loading")}</p>
+        <p className="text-xs text-gray-500 sm:text-sm">{t("common.loading")}</p>
       )}
 
       {/* The purge notice (spec Detail 5): informational only — the purge runs on
           the server's schedule and has no control here. */}
       {results?.purge && (
-        <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900 sm:text-sm">
           {results.purge.status === "EXECUTED"
             ? `${t("results.purgeExecuted")} ${formatDate(results.purge.executedAt ?? results.purge.purgeAt)}`
             : `${t("results.purgeNotice")} ${formatDate(results.purge.purgeAt)}`}
@@ -271,36 +280,36 @@ export function ResultsPage() {
         results.categories.map((category) => (
           <section
             key={category.categoryId}
-            className="rounded-md border border-slate-200 bg-white p-4"
+            className="rounded-xl bg-white p-4 shadow sm:p-6"
           >
-            <h2 className="mb-3 text-lg font-semibold">
+            <h2 className="mb-3 text-base font-bold text-gray-900 sm:text-lg">
               {category.code} — {category.name}
             </h2>
 
             {/* The category leaderboard: Unit 09's ranking, shown beside the detail
                 so the two never disagree — both come from the same read. */}
-            <h3 className="mb-1 text-sm font-medium text-slate-700">
+            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 sm:text-sm">
               {t("results.rankingTitle")}
             </h3>
             {rankingOf(category.categoryId).length === 0 ? (
-              <p className="mb-4 text-sm text-slate-500">{t("results.rankingEmpty")}</p>
+              <p className="mb-4 text-xs text-gray-500 sm:text-sm">{t("results.rankingEmpty")}</p>
             ) : (
-              <table className="mb-4 min-w-full divide-y divide-slate-200 text-sm">
-                <thead className="bg-slate-50">
+              <table className="mb-4 min-w-full divide-y divide-gray-200 text-xs sm:text-sm">
+                <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-2 py-1 text-left font-medium">{t("results.colRank")}</th>
-                    <th className="px-2 py-1 text-left font-medium">{t("results.colName")}</th>
-                    <th className="px-2 py-1 text-right font-medium">{t("results.colScore")}</th>
-                    <th className="px-2 py-1 text-right font-medium">{t("results.colTime")}</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 sm:text-sm">{t("results.colRank")}</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 sm:text-sm">{t("results.colName")}</th>
+                    <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700 sm:text-sm">{t("results.colScore")}</th>
+                    <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700 sm:text-sm">{t("results.colTime")}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-gray-100">
                   {rankingOf(category.categoryId).map((row) => (
-                    <tr key={row.participantId}>
-                      <td className="px-2 py-1">{row.rank}</td>
-                      <td className="px-2 py-1">{row.participantName}</td>
-                      <td className="px-2 py-1 text-right">{row.score}</td>
-                      <td className="px-2 py-1 text-right">
+                    <tr key={row.participantId} className="text-gray-700 transition-colors hover:bg-gray-50">
+                      <td className="px-3 py-2 tabular-nums">{row.rank}</td>
+                      <td className="px-3 py-2">{row.participantName}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{row.score}</td>
+                      <td className="px-3 py-2 text-right font-mono tabular-nums">
                         {formatSeconds(row.completionTimeSeconds)}
                       </td>
                     </tr>
@@ -311,60 +320,60 @@ export function ResultsPage() {
 
             {category.stages.map((stage) => (
               <div key={stage.stageId} className="mb-4">
-                <h3 className="mb-1 text-sm font-medium text-slate-700">
+                <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 sm:text-sm">
                   {t(`controller.stageType.${stage.type}`)} — {stage.name}
                 </h3>
                 {stage.rounds.map((round) => (
                   <div key={round.roundId} className="mb-3">
-                    <p className="mb-1 text-xs text-slate-500">
+                    <p className="mb-1 text-xs text-gray-500">
                       {round.name} ({t(`controller.roundStatus.${round.status}`)})
                     </p>
                     {round.rows.length === 0 ? (
-                      <p className="text-sm text-slate-500">{t("results.rowsEmpty")}</p>
+                      <p className="text-xs text-gray-500 sm:text-sm">{t("results.rowsEmpty")}</p>
                     ) : (
-                      <table className="min-w-full divide-y divide-slate-200 text-sm">
-                        <thead className="bg-slate-50">
+                      <table className="min-w-full divide-y divide-gray-200 text-xs sm:text-sm">
+                        <thead className="bg-gray-50">
                           <tr>
-                            <th className="px-2 py-1 text-left font-medium">{t("results.colNumber")}</th>
-                            <th className="px-2 py-1 text-left font-medium">{t("results.colName")}</th>
-                            <th className="px-2 py-1 text-right font-medium">{t("results.colRank")}</th>
-                            <th className="px-2 py-1 text-right font-medium">{t("results.colRawScore")}</th>
-                            <th className="px-2 py-1 text-right font-medium">{t("results.colBonus")}</th>
-                            <th className="px-2 py-1 text-right font-medium">{t("results.colTotal")}</th>
-                            <th className="px-2 py-1 text-right font-medium">{t("results.colTime")}</th>
-                            <th className="px-2 py-1 text-left font-medium">{t("results.colSubmission")}</th>
-                            <th className="px-2 py-1 text-right font-medium">{t("results.colActions")}</th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 sm:text-sm">{t("results.colNumber")}</th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 sm:text-sm">{t("results.colName")}</th>
+                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700 sm:text-sm">{t("results.colRank")}</th>
+                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700 sm:text-sm">{t("results.colRawScore")}</th>
+                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700 sm:text-sm">{t("results.colBonus")}</th>
+                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700 sm:text-sm">{t("results.colTotal")}</th>
+                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700 sm:text-sm">{t("results.colTime")}</th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 sm:text-sm">{t("results.colSubmission")}</th>
+                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700 sm:text-sm">{t("results.colActions")}</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-gray-100">
                           {round.rows.map((row) => (
-                            <tr key={`${round.roundId}:${row.participantId}`}>
-                              <td className="px-2 py-1">{row.participantNumber}</td>
-                              <td className="px-2 py-1">{row.participantName}</td>
-                              <td className="px-2 py-1 text-right">
+                            <tr key={`${round.roundId}:${row.participantId}`} className="text-gray-700 transition-colors hover:bg-gray-50">
+                              <td className="px-3 py-2 tabular-nums">{row.participantNumber}</td>
+                              <td className="px-3 py-2">{row.participantName}</td>
+                              <td className="px-3 py-2 text-right tabular-nums">
                                 {row.rank === null ? "—" : row.rank}
                               </td>
-                              <td className="px-2 py-1 text-right">
+                              <td className="px-3 py-2 text-right tabular-nums">
                                 {row.score === null ? "—" : row.score}
                               </td>
-                              <td className="px-2 py-1 text-right">
+                              <td className="px-3 py-2 text-right tabular-nums">
                                 {row.bonus === null ? "—" : row.bonus}
                               </td>
-                              <td className="px-2 py-1 text-right">
+                              <td className="px-3 py-2 text-right font-medium tabular-nums text-gray-900">
                                 {row.totalScore === null ? "—" : row.totalScore}
                               </td>
-                              <td className="px-2 py-1 text-right">
+                              <td className="px-3 py-2 text-right font-mono tabular-nums">
                                 {formatSeconds(row.completionTimeSeconds)}
                               </td>
-                              <td className="px-2 py-1">
+                              <td className="px-3 py-2">
                                 {row.submissionType
                                   ? t(`results.submissionType.${row.submissionType}`)
                                   : "—"}
                               </td>
-                              <td className="px-2 py-1 text-right">
+                              <td className="px-3 py-2 text-right">
                                 <button
                                   type="button"
-                                  className="rounded-md border border-slate-300 px-2 py-0.5 text-xs hover:bg-slate-100 disabled:opacity-50"
+                                  className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                                   disabled={busy || cancelled}
                                   onClick={() => openCorrection(row, round.name)}
                                 >
@@ -385,27 +394,27 @@ export function ResultsPage() {
 
       {/* The correction history (RES-003's change log), newest first. */}
       {results && !cancelled && (
-        <section className="rounded-md border border-slate-200 bg-white p-4">
-          <h2 className="mb-2 text-lg font-semibold">{t("results.historyTitle")}</h2>
+        <section className="rounded-xl bg-white p-4 shadow sm:p-6">
+          <h2 className="mb-2 text-base font-bold text-gray-900 sm:text-lg">{t("results.historyTitle")}</h2>
           {corrections.length === 0 ? (
-            <p className="text-sm text-slate-500">{t("results.historyEmpty")}</p>
+            <p className="text-xs text-gray-500 sm:text-sm">{t("results.historyEmpty")}</p>
           ) : (
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-slate-50">
+            <table className="min-w-full divide-y divide-gray-200 text-xs sm:text-sm">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-2 py-1 text-left font-medium">{t("results.historyWhen")}</th>
-                  <th className="px-2 py-1 text-left font-medium">{t("results.historyChange")}</th>
-                  <th className="px-2 py-1 text-left font-medium">{t("results.historyReason")}</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 sm:text-sm">{t("results.historyWhen")}</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 sm:text-sm">{t("results.historyChange")}</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 sm:text-sm">{t("results.historyReason")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-gray-100">
                 {corrections.map((c) => (
-                  <tr key={c.id}>
-                    <td className="px-2 py-1">{formatDate(c.correctedAt)}</td>
-                    <td className="px-2 py-1">
+                  <tr key={c.id} className="text-gray-700 transition-colors hover:bg-gray-50">
+                    <td className="px-3 py-2">{formatDate(c.correctedAt)}</td>
+                    <td className="px-3 py-2 font-mono tabular-nums">
                       {c.oldScore} → {c.newScore}
                     </td>
-                    <td className="px-2 py-1">{c.reason}</td>
+                    <td className="px-3 py-2">{c.reason}</td>
                   </tr>
                 ))}
               </tbody>
@@ -420,22 +429,24 @@ export function ResultsPage() {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-10 flex items-center justify-center bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onClick={() => (busy ? undefined : setTarget(null))}
         >
           <div
-            className="w-full max-w-md rounded-md bg-white p-4 shadow-lg"
+            className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="mb-2 text-lg font-semibold">{t("results.correctTitle")}</h2>
-            <p className="mb-3 text-sm text-slate-600">
+            <h2 className="mb-2 text-lg font-semibold text-gray-900">{t("results.correctTitle")}</h2>
+            <p className="mb-3 text-xs font-medium text-gray-900 sm:text-sm">
               {target.participantName} (#{target.participantNumber}) — {target.roundName}
             </p>
-            <p className="mb-3 text-sm text-slate-600">
+            <p className="mb-3 text-xs text-gray-700 sm:text-sm">
               {t("results.correctCurrent")}:{" "}
-              {target.currentScore === null ? "—" : target.currentScore}
+              <span className="font-mono tabular-nums">
+                {target.currentScore === null ? "—" : target.currentScore}
+              </span>
             </p>
-            <label className="mb-1 block text-sm font-medium" htmlFor="correction-score">
+            <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm" htmlFor="correction-score">
               {t("results.correctNewScore")}
             </label>
             <input
@@ -443,25 +454,25 @@ export function ResultsPage() {
               type="number"
               min={0}
               step={1}
-              className="mb-3 w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+              className="mb-3 w-full rounded border border-gray-300 px-3 py-2 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
               value={newScore}
               onChange={(e) => setNewScore(e.target.value)}
             />
-            <label className="mb-1 block text-sm font-medium" htmlFor="correction-reason">
+            <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm" htmlFor="correction-reason">
               {t("results.correctReason")}
             </label>
             <textarea
               id="correction-reason"
               rows={3}
-              className="mb-3 w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+              className="mb-3 w-full rounded border border-gray-300 px-3 py-2 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />
-            <p className="mb-3 text-xs text-slate-500">{t("results.correctReasonHint")}</p>
+            <p className="mb-3 text-xs text-gray-500">{t("results.correctReasonHint")}</p>
             <div className="flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100"
+                className="rounded bg-gray-200 px-4 py-2 text-xs text-gray-700 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
                 disabled={busy}
                 onClick={() => setTarget(null)}
               >
@@ -469,7 +480,7 @@ export function ResultsPage() {
               </button>
               <button
                 type="button"
-                className="rounded-md bg-slate-800 px-3 py-1 text-sm text-white hover:bg-slate-700 disabled:opacity-50"
+                className="rounded bg-indigo-600 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
                 disabled={busy}
                 onClick={() => void onSubmitCorrection()}
               >
