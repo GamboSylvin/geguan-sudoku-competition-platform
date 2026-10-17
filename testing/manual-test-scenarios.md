@@ -4,9 +4,11 @@
 
 **Coverage.** All 15 originally-planned units have at least one scenario below: `01` Foundation, `02` Authentication, `03` Competition setup, `04` Participant import, `05` Question import, `06` Judges and ranges, `07` Round runtime, `08` Submission and scoring, `09` Ranking and big screen, `10` Judge supervision, `11` Controller live commands, `12` Results/corrections/export, `13` Team stage rotation relay, `14` Team stage partition collaboration, `15` School ranking — **plus the 5 post-build additions decided 2026-10-15/16 (BLD-050 through BLD-054): school CRUD (K), scoring configuration (L), competition deletion (M), the language switcher (N), and the visual design pass (O).**
 
-**Last verified against the system: 2026-10-16.** If a step's wording, button label or URL has visibly changed since, that's a sign this file needs a refresh, not that you're doing something wrong.
+**Last verified against the system: 2026-10-17.** If a step's wording, button label or URL has visibly changed since, that's a sign this file needs a refresh, not that you're doing something wrong.
 
 **Three bugs found by manual testing on 2026-10-15/16 are now fixed and committed** (commit `e688495`): the cross-category question/scoring leak (C2/G/H now behave correctly even with 2+ categories), a player stuck forever on "the round starts in Xs" after connecting/reconnecting/reloading post-ACTIVE (C2/G1/H1 all specifically re-test this), and the misleading `/judges/me` error message. The sections below assume these fixes are in place — if any of the three symptoms reappears, that's a regression, not a known issue.
+
+**Correction, 2026-10-17: this guide itself had four gaps, found by actually walking it from a cold start as a brand-new reader would** (not just re-reading it) — fixed, no application bug involved in any of them: (1) section 0 never said what to do if `.env` doesn't exist, which blocks `docker compose up` entirely on a fresh checkout — added as step 1; (2) sections A1/B1 say "click Controller"/"click Judge", but the UI defaults to **Chinese** (BLD-053), so those English labels are never on screen until you switch — added as step 5; (3) G1/H1 said "a different browser/tab", which reads as if a second tab works — it doesn't (session storage is shared across tabs of one browser window, confirmed live), fixed in both places and in a new step 6; (4) A8 told you to expect a `noteRowSkipped` warning that the real `选手信息.xlsx` file does not actually produce (its instruction text sits inside 张三's own row, not on a separate row), and never mentioned that the file's `组别` value is `G12` — which does not match A3's own example category and would make a first-time reader hit an unexplained rejection. All four fixed in place below.
 
 **Correction, 2026-10-15: `context/samples/选手信息.xlsx` is NOT the empty template this section used to describe.** Every check from 2026-10-13/14 onward (including the one this section originally cited) compared the file's unchanged size/date to an earlier check and wrongly concluded "still empty," without ever re-unzipping it. It actually holds 3 real rows (张三/李四/刘一), and the project owner ran the first real import through Unit 04 manually, correctly — see `context/progress-tracker.md`'s Unit 04 row for the full account. Section A8 below still works as a hand-add exercise on a *copy* of the file if you want extra synthetic rows, but you no longer need to invent data to see a real import succeed — the file already has some. Team rows are in a different position: no application code anywhere creates a `Team` row (Finding 11, `U-102` stays open with the stakeholder on *random* team formation) — the seed script below hand-creates one team per school per category so Units 13/14/15 have something to run against, exactly the way the backend's own `team-rotation.test.ts`/`team-partition.test.ts` do it.
 
@@ -14,10 +16,19 @@
 
 ## 0. One-time setup
 
-1. Start the stack: `docker compose up -d` from the project root.
-2. Wait until it's healthy: open `http://localhost:3001/api/health` — it should return `{"status":"ok", ...}`. (Port may differ if you changed `BACKEND_PORT` in `.env`; check with `docker compose ps`.)
-3. Open the frontend at `http://localhost:5173`.
-4. Create the test data (accounts, a published competition, players, teams, a judge) by running, in a terminal:
+**Prerequisites:** Docker Desktop installed and running, and this repository already on your machine (cloned or copied). Nothing else needs to be installed by hand — the stack itself runs entirely inside Docker.
+
+1. **If there is no `.env` file at the project root yet** (a fresh clone never has one — it's git-ignored on purpose, see `code-standards.md`'s "Forbidden practices"), create it from the template before anything else:
+   ```bash
+   cp .env.example .env
+   ```
+   The defaults work as-is. One thing to know: `.env.example`'s own default `BACKEND_PORT` is `3000`, but every URL in this guide assumes **`3001`** (the value this project's own working `.env` actually uses). After starting the stack (step 3 below), check which port you actually got — `http://localhost:3000/api/health` or `http://localhost:3001/api/health`, whichever answers — and mentally substitute that port everywhere this guide says `3001`.
+2. Start the stack: `docker compose up -d` from the project root.
+3. Wait until it's healthy: open `http://localhost:3001/api/health` (see the port note above) — it should return `{"status":"ok", ...}`.
+4. Open the frontend at `http://localhost:5173`.
+5. **Switch the UI to English before you start testing**, unless you read Chinese: the login page defaults to **Chinese** (BLD-053's confirmed default), so the role buttons read 选手/裁判/管理员, not "Player/Judge/Controller" as this guide writes them. Click the language switcher (bottom-left on any controller/judge screen — it reads "English" / "中文") once; the choice is saved in your browser and every step below will then match what's on screen (see section N for the switcher itself, tested properly later).
+6. **If a scenario ever needs two people logged in at the same time** (a judge watching a player, two teammates playing together, testing the one-device rule in A2): use **two separate browsers, or one normal window plus one private/incognito window — never two tabs of the same ordinary browser window.** This app keeps your session in `localStorage`, which every tab of the same browser window shares, so logging into a second account in a second tab silently logs the first one out — it looks like a crash or a permissions bug, but it's actually working as designed (A2 is the scenario that tests this on purpose; don't let it catch you by surprise elsewhere).
+7. Create the test data (accounts, a published competition, players, teams, a judge) by running, in a terminal:
    ```bash
    docker compose exec backend npx tsx prisma/seed-manual-qa.ts
    ```
@@ -127,14 +138,15 @@ Unit 04 built a real participant-import panel ("Participants", mounted above the
 
 This tests the importer itself, in isolation — it does not need to feed the rest of your test run, since (per A7) a real competition for B–J should come from the seed script instead.
 
-1. Make a working copy of `context/samples/选手信息.xlsx`. It has the 12 real columns (`比赛名称`, `选手编号`, `姓名`, `年龄`, `省`, `市`, `区（县）`, `学校名称`, `组别`, `个人赛`, `团队赛`, `备注`) and **3 real data rows already** (张三/李四/刘一, plus column L2's note explaining the flag rule attached to the first row) — add 2-3 more by hand if you want a bigger sample (any plausible name/school/category; set `个人赛`/`团队赛` to `1` for a couple of them and leave one blank to test the "not taking part" default).
-2. On a competition you created in A3 (still in draft, not published), find the **Participants** panel and click **Import file**. Upload your copy.
-   - **Expect:** success — "Imported: N" where N is your data-row count; the note row itself is skipped and reported as a warning (`participant.import.noteRowSkipped`), not counted as data and not an error.
-3. Open the roster list.
+1. Make a working copy of `context/samples/选手信息.xlsx`. It has the 12 real columns (`比赛名称`, `选手编号`, `姓名`, `年龄`, `省`, `市`, `区（县）`, `学校名称`, `组别`, `个人赛`, `团队赛`, `备注`) and **3 real data rows already** (张三/李四/刘一 — the flag-rule instruction text lives inside 张三's own `备注` cell, not on a separate row, so there is nothing to skip on this particular file) — add 2-3 more by hand if you want a bigger sample (any plausible name/school/category; set `个人赛`/`团队赛` to `1` for a couple of them and leave one blank to test the "not taking part" default).
+2. **Before importing, make sure this competition's category matches the file.** The real file's `组别` column reads **`G12`**, verbatim — the importer matches a row's `组别` text exactly against a category's `code` **or** `name`, nothing else. A3's own example category (`G1-2` / "Grades 1-2") will **not** match and the import will be cleanly rejected (`422`, `participant.import.unknownCategory`, naming the exact rows) — not a bug, just a mismatch. Either create your A3 competition with a category coded or named `G12`, or edit an existing one's category to `G12` first.
+3. On a competition you created in A3 (with a matching category), still in draft, find the **Participants** panel and click **Import file**. Upload your copy.
+   - **Expect:** success — "Imported · added 3 · unchanged 0 · removed 0". You'll also see a warning for every row, `participant.import.competitionNameMismatch` ("The competition name (比赛名称) in this file doesn't match this competition") — harmless and expected, since the file's own `比赛名称` cell literally says "test2"; it does not block the import.
+4. Open the roster list.
    - **Expect:** your rows appear with the right name/school/category, and the `个人赛`/`团队赛` flags match what you typed (a blank cell → not participating in that event).
-4. **Negative test (Finding 10):** re-upload the same file after changing only one row's `团队赛` from `1` to blank (same name + school + category as before).
+5. **Negative test (Finding 10):** re-upload the same file after changing only one row's `团队赛` from `1` to blank (same name + school + category as before).
    - **Expect:** the roster still shows the **same number of participants** — the existing row's flag is updated in place, not replaced by a new row (this is the asked-not-guessed resolution in `participant.service.ts`'s `flagChangeIsAnUpdateNotAReplacement()`; the question itself, whether this is the right call, is still open and tracked as `I-41`).
-5. **Note what you will *not* see:** no team is created and no participant gets a `teamId`, however many students have `团队赛 = 1` (Finding 11) — this is expected, not a bug, and it's why section A7 tells you to use the seeded competition for everything downstream.
+6. **Note what you will *not* see:** no team is created and no participant gets a `teamId`, however many students have `团队赛 = 1` (Finding 11) — this is expected, not a bug, and it's why section A7 tells you to use the seeded competition for everything downstream.
 
 ---
 
@@ -337,7 +349,7 @@ Needs Stage 1 (Individual) **fully finished** for the Manual QA Competition firs
    - **Expect:** an "incorrect" message; the question **stays in circulation** and will rotate to a teammate rather than disappearing (`keepIncorrectSubmitInCirculation()` — Finding 7, not a bug).
 3. Submit a correct answer.
    - **Expect:** a "Correct!" message and the next question rotates in (either immediately, if the queue had one waiting, or after the configured rotation period — the seed script shortens this to 20s so you don't have to wait long).
-4. Log in as a **second** member of the **same team** (e.g. `qa-player-2`, if they share a school) in a different browser/tab at the same time.
+4. Log in as a **second** member of the **same team** (e.g. `qa-player-2`, if they share a school) **in a separate browser or a private/incognito window** (not a second tab of the same window — see section 0's note on simultaneous logins) at the same time.
    - **Expect:** they hold a **different** question (or the same one if it already rotated to them) — never literally the same held question as another member at once.
 5. Let the round run until every pool question is answered correctly, or the round's duration elapses.
    - **Expect:** a "Round over" screen with the final shared team score; this is one flat value (`correctCount × teamPointsPerQuestion`), identical for every member of the team.
@@ -365,7 +377,7 @@ Team Round 2 (the second Team-stage round) starts **automatically** once Team Ro
    - **Expect:** it's not editable; a value sent outside your band from the API is rejected (422), never silently trimmed.
 3. Fill in your band's cells correctly, matching what a teammate would need for the combined grid to be fully correct.
    - **Expect:** **no submit button** — the server checks the *combined* grid after every autosave, and the puzzle advances the instant every cell (across every member's band) is correct, with no early-finish bonus.
-4. Log in as a second member of the same team at the same time, and complete their band.
+4. Log in as a second member of the same team, **in a separate browser or a private/incognito window** (see section 0's note on simultaneous logins), at the same time, and complete their band.
    - **Expect:** once both bands are correct, the puzzle solves and the next one (of `partitionPuzzleCount`, default 3) loads for everyone on the team.
 5. Finish every puzzle, or let the round's duration elapse.
    - **Expect:** "Round over" with the final shared team score (`solvedCount × partitionPointsPerPuzzle`).
@@ -480,7 +492,7 @@ This was a pure CSS/styling pass (classes and inline styles only — the decisio
 
 Tick these off as you go — by the end, every built unit has been exercised at least once:
 
-- [ ] Unit 01 (Foundation) — the app loads, health check passes (step 0.2)
+- [ ] Unit 01 (Foundation) — the app loads, health check passes (section 0, step 3)
 - [ ] Unit 02 (Auth) — A1, A2
 - [ ] Unit 03 (Competition setup) — A3
 - [ ] Unit 04 (Participant import) — A7, A8
@@ -501,7 +513,7 @@ Tick these off as you go — by the end, every built unit has been exercised at 
 - [ ] BLD-053 (Language switcher) — N1
 - [ ] BLD-054 (Visual design pass) — O1
 
-## Known limitations of this guide, as of 2026-10-16
+## Known limitations of this guide, as of 2026-10-17
 
 - ~~**No real populated participant file exists.**~~ **Corrected 2026-10-15: it does — `选手信息.xlsx` has 3 real rows, already imported successfully.** A8 shows you how to hand-add a few more on top if you want a bigger sample for a fuller test run.
 - **Teams only exist because the seed script hand-creates them.** No screen or API anywhere lets a controller form, name or edit a team (Finding 11) — `U-102` (random mixed-school team formation) is still open with the stakeholder. Sections G/H/I above only work because section 0's seed script does what no application code does yet.
