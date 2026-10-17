@@ -1,10 +1,12 @@
 # Manual Test Scenarios — Sudoku Arena
 
-**Purpose.** A step-by-step, click-by-click script for a human to manually verify every feature that has been built so far — no coding knowledge required beyond following the steps. This is separate from, and does not replace, the project's automated tests (**242 backend tests across 17 suites, 55 frontend tests across 10 suites** — see `backend/tests/` and `frontend/tests/`). Automated tests catch regressions fast; this guide is for a human to confirm the whole system actually behaves as intended when used for real, and to sign off before the event.
+**Purpose.** A step-by-step, click-by-click script for a human to manually verify every feature that has been built so far — no coding knowledge required beyond following the steps. This is separate from, and does not replace, the project's automated tests (**267 backend tests across 19 suites, 81 frontend tests across 12 suites** — see `backend/tests/` and `frontend/tests/`). Automated tests catch regressions fast; this guide is for a human to confirm the whole system actually behaves as intended when used for real, and to sign off before the event.
 
-**Coverage.** All 15 built units have at least one scenario below: `01` Foundation, `02` Authentication, `03` Competition setup, `04` Participant import, `05` Question import, `06` Judges and ranges, `07` Round runtime, `08` Submission and scoring, `09` Ranking and big screen, `10` Judge supervision, `11` Controller live commands, `12` Results/corrections/export, `13` Team stage rotation relay, `14` Team stage partition collaboration, `15` School ranking. Nothing is "not built yet" any more.
+**Coverage.** All 15 originally-planned units have at least one scenario below: `01` Foundation, `02` Authentication, `03` Competition setup, `04` Participant import, `05` Question import, `06` Judges and ranges, `07` Round runtime, `08` Submission and scoring, `09` Ranking and big screen, `10` Judge supervision, `11` Controller live commands, `12` Results/corrections/export, `13` Team stage rotation relay, `14` Team stage partition collaboration, `15` School ranking — **plus the 5 post-build additions decided 2026-10-15/16 (BLD-050 through BLD-054): school CRUD (K), scoring configuration (L), competition deletion (M), the language switcher (N), and the visual design pass (O).**
 
-**Last verified against the system: 2026-10-14.** If a step's wording, button label or URL has visibly changed since, that's a sign this file needs a refresh, not that you're doing something wrong.
+**Last verified against the system: 2026-10-16.** If a step's wording, button label or URL has visibly changed since, that's a sign this file needs a refresh, not that you're doing something wrong.
+
+**Three bugs found by manual testing on 2026-10-15/16 are now fixed and committed** (commit `e688495`): the cross-category question/scoring leak (C2/G/H now behave correctly even with 2+ categories), a player stuck forever on "the round starts in Xs" after connecting/reconnecting/reloading post-ACTIVE (C2/G1/H1 all specifically re-test this), and the misleading `/judges/me` error message. The sections below assume these fixes are in place — if any of the three symptoms reappears, that's a regression, not a known issue.
 
 **Correction, 2026-10-15: `context/samples/选手信息.xlsx` is NOT the empty template this section used to describe.** Every check from 2026-10-13/14 onward (including the one this section originally cited) compared the file's unchanged size/date to an earlier check and wrongly concluded "still empty," without ever re-unzipping it. It actually holds 3 real rows (张三/李四/刘一), and the project owner ran the first real import through Unit 04 manually, correctly — see `context/progress-tracker.md`'s Unit 04 row for the full account. Section A8 below still works as a hand-add exercise on a *copy* of the file if you want extra synthetic rows, but you no longer need to invent data to see a real import succeed — the file already has some. Team rows are in a different position: no application code anywhere creates a `Team` row (Finding 11, `U-102` stays open with the stakeholder on *random* team formation) — the seed script below hand-creates one team per school per category so Units 13/14/15 have something to run against, exactly the way the backend's own `team-rotation.test.ts`/`team-partition.test.ts` do it.
 
@@ -203,6 +205,10 @@ This route refuses to run in production and exists only as the narrow form Unit 
    - **Expect:** your entries are still there (reconnect state read restores your saved grid and the correct remaining time).
 5. On a phone or a narrow/portrait browser window: shrink the window to portrait.
    - **Expect:** a "please rotate your device" screen (`PAR-006`) instead of the grid.
+6. **Regression check (fixed 2026-10-16):** log in as a player who has **never connected to this round before** (e.g. `qa-player-3`), but only *after* Round 1 has already gone Active (wait past the 60s preparation countdown, or have a different player already mid-round). Also try it by waiting for Round 1 → Round 2's automatic handoff and only logging in once Round 2 is already Active.
+   - **Expect:** the real grid, not a frozen "Get ready / the round starts in Xs" screen. Previously this screen got the player stuck forever (even across a reload) — the fix added a `GET /api/gameplay/current-round` discovery call and a `status` field on the preparation-tick push so a late arrival can tell an ACTIVE round's tick from a genuine preparation one.
+7. **Regression check (fixed 2026-10-16), with 2+ categories:** make sure your test competition has at least two categories, each with its own 6 questions assigned to Round 1 (A5, repeated per category). Log in as a player in each category.
+   - **Expect:** each player sees exactly **6** puzzles — their own category's, never the other category's mixed in ("Puzzle 1 of 12" was the symptom of the bug; `round.repository.ts`'s `listRoundQuestions` now filters by category and the round-started push is routed to a per-category room instead of broadcast to everyone).
 
 ### C3 — Submit (Unit 08)
 
@@ -335,6 +341,8 @@ Needs Stage 1 (Individual) **fully finished** for the Manual QA Competition firs
    - **Expect:** they hold a **different** question (or the same one if it already rotated to them) — never literally the same held question as another member at once.
 5. Let the round run until every pool question is answered correctly, or the round's duration elapses.
    - **Expect:** a "Round over" screen with the final shared team score; this is one flat value (`correctCount × teamPointsPerQuestion`), identical for every member of the team.
+6. **Regression check (fixed 2026-10-16):** log in as a team member only *after* this round is already Active.
+   - **Expect:** the real rotation screen, not a frozen "round starts in Xs" — the same fix as C2's step 6 covers all three round kinds.
 
 ### G2 — Supervise a team round (judge/controller)
 
@@ -361,6 +369,8 @@ Team Round 2 (the second Team-stage round) starts **automatically** once Team Ro
    - **Expect:** once both bands are correct, the puzzle solves and the next one (of `partitionPuzzleCount`, default 3) loads for everyone on the team.
 5. Finish every puzzle, or let the round's duration elapse.
    - **Expect:** "Round over" with the final shared team score (`solvedCount × partitionPointsPerPuzzle`).
+6. **Regression check (fixed 2026-10-16):** log in as a team member only *after* this round is already Active (e.g. because Round 1's rotation relay finished on its own before you got here).
+   - **Expect:** the real partition screen, not a frozen "round starts in Xs" — same fix as C2's step 6.
 
 ---
 
@@ -375,6 +385,94 @@ Reached from **Live control**'s competition picker ("School ranking") or `/contr
 2. Check a school that hasn't finished every player yet (if any): its row is marked **incomplete** rather than silently included as if final.
 3. Check the status line: **provisional** until every participant and team in the category has finished, **final** afterward.
 4. If two schools land on the exact same total, look for the tie-break note — the row says whether the summed completion time actually separated them (`SCR-020`'s school-level tie-break, `schoolBreakTie()`, a separate function from the individual one).
+
+---
+
+## K. School management (BLD-052)
+
+On the competition setup page, the **Schools** panel sits just above **Participants** (an organizer creates schools before importing students who point at them). Works on any competition, published or not.
+
+### K1 — Add, rename, and the two delete guards
+
+1. On a competition's setup page, find **Schools**. If it's empty: "No school yet. Add one below."
+2. Type a name in the **New school name** field, click **Add school**.
+   - **Expect:** "School added" and the row appears, showing 0 participants / 0 teams.
+3. Click **Rename** on that row, change the name, **Save**.
+   - **Expect:** "School renamed", new name shown immediately.
+4. Try adding a second school with the **exact same name** as an existing one.
+   - **Expect:** rejected — "A school with this name already exists."
+5. Import at least one participant into this school (A8, or the seed script), then come back to this panel.
+   - **Expect:** **Remove** is disabled, with the reason printed right beside it: "Still has participants — remove them first." — no need to click anything to discover why.
+6. Pick a school with **zero** participants and **zero** teams (e.g. the one from step 2, if you never imported into it) and click **Remove**.
+   - **Expect:** "School removed", row disappears.
+7. (If you have a team-stage-tested competition with a seeded team attached to a school) try removing a school that has a team but no participants.
+   - **Expect:** blocked the same way, with "Still has a team — remove it first."
+
+---
+
+## L. Scoring configuration (BLD-051) — API only, no screen yet
+
+**There is currently no UI for this at all** — `schoolCoefficient` and `rankingCycleSeconds` can only be set through the API directly, by design (the decision added the fields to the existing create/update endpoints, not a new screen). Worth knowing before you go looking for a form that isn't there.
+
+### L1 — Set and read back custom values
+
+1. Get a fresh controller session token (see C1's dev-fallback box for the login `curl`).
+2. Create a competition with a custom scoring configuration:
+   ```bash
+   curl -s -X POST http://localhost:3001/api/competitions \
+     -H "Content-Type: application/json" -H "x-session-token: <token>" -H "x-device-id: <deviceId>" \
+     -d '{"name":"Scoring Config Test","categories":[{"code":"G1-2","name":"Grades 1-2"}],"scoringConfiguration":{"schoolCoefficient":0.75,"rankingCycleSeconds":60}}'
+   ```
+   - **Expect:** `201`, and the response's `scoringConfiguration.schoolCoefficient` reads back as the **string** `"0.75"` (it's a Prisma `Decimal`, not a number — matters if you're scripting against this, SCR-013's exact-decimal rule).
+3. `PATCH` the same competition's `/api/competitions/:id` with a different `schoolCoefficient`.
+   - **Expect:** the new value sticks on the next `GET`.
+4. Create a competition with **no** `scoringConfiguration` at all.
+   - **Expect:** it still gets one, with the schema defaults `"0.6"` / `180` — omitting the field doesn't break creation.
+
+---
+
+## M. Delete a competition (BLD-050)
+
+**This is permanent and has no undo.** Only do this to a throwaway competition you're done with — not the shared Manual QA Competition, unless you're about to re-seed anyway.
+
+### M1 — The warning dialog and the typed-name guard
+
+1. On the controller's competition picker (`/controller`), find **Delete this competition** on any competition's row.
+2. Click it.
+   - **Expect:** a dialog titled "Delete this competition forever?" that lists, in plain language, every category of data about to be destroyed — structure, questions, judge assignments (not the judges themselves), schools/teams/participants, student logins and their devices, results/corrections/rankings/audit entries, uploaded files. Not a generic "are you sure?".
+3. Try clicking **Delete forever** immediately, without typing anything.
+   - **Expect:** the button is disabled — it only activates once you've typed the competition's **exact** name into the field above it.
+4. Type the name exactly, click **Delete forever**.
+   - **Expect:** "Deleting…" then the competition disappears from the picker. It works at **any** status — try it on a published, or even a finished, competition too.
+5. Confirm the judges survive: go to `/controller/judges` — any judge who was assigned to the deleted competition is still listed (only their *assignment* to that competition was removed, not the judge itself, `ROL-010`'s reusable-judge model).
+
+---
+
+## N. Language switcher (BLD-053)
+
+### N1 — Default locale, switching, persistence, and where it's absent
+
+1. Clear `localStorage` (or open a fresh/private browser) and load any controller or judge screen.
+   - **Expect:** the UI renders in **Chinese** by default (U-68's confirmed default) — not English.
+2. Look at the bottom-left corner of the screen.
+   - **Expect:** a small floating control with two buttons, "English" and "中文". The one matching the current language is visually marked active.
+3. Click **English**.
+   - **Expect:** every piece of UI text on screen switches to English immediately, no reload.
+4. Reload the page.
+   - **Expect:** it stays in English — the choice is remembered (`localStorage` key `sudoku-arena.locale`), not reset to the default.
+5. Navigate to a player round screen (`/player`, logged in as any player) or a big-screen link (`/big-screen/<token>`).
+   - **Expect:** the language switcher is **not there at all** — not just disabled, genuinely absent, so a player can't accidentally flip their own screen's language mid-puzzle and the shared public big screen has no interactive control sitting on it.
+6. Go back to a controller screen.
+   - **Expect:** the switcher reappears, still showing your last choice.
+
+---
+
+## O. Visual design pass (BLD-054) — a look, not a click-test
+
+This was a pure CSS/styling pass (classes and inline styles only — the decision explicitly forbade any behaviour, content, route or data change alongside it), so there's nothing functional to verify beyond what sections A–N already cover. Worth a quick visual pass anyway:
+
+1. Skim through a few screens of each "mood" the design report defined: the login screen (glass-on-gradient), a controller back-office screen like competition setup or results (light), and a gameplay/big-screen screen (dark). Nothing should look unstyled, broken, or like it's missing a class (stray default blue links, unstyled buttons, overlapping elements).
+2. If anything looks visually broken, that's worth reporting — but a layout or color you simply don't like is a design-taste note for the project owner, not a bug.
 
 ---
 
@@ -397,9 +495,15 @@ Tick these off as you go — by the end, every built unit has been exercised at 
 - [ ] Unit 13 (Team stage rotation relay) — G1, G2
 - [ ] Unit 14 (Team stage partition collaboration) — H1
 - [ ] Unit 15 (School ranking) — I1
+- [ ] BLD-052 (School management) — K1
+- [ ] BLD-051 (Scoring configuration) — L1
+- [ ] BLD-050 (Delete a competition) — M1
+- [ ] BLD-053 (Language switcher) — N1
+- [ ] BLD-054 (Visual design pass) — O1
 
-## Known limitations of this guide, as of 2026-10-14
+## Known limitations of this guide, as of 2026-10-16
 
 - ~~**No real populated participant file exists.**~~ **Corrected 2026-10-15: it does — `选手信息.xlsx` has 3 real rows, already imported successfully.** A8 shows you how to hand-add a few more on top if you want a bigger sample for a fuller test run.
 - **Teams only exist because the seed script hand-creates them.** No screen or API anywhere lets a controller form, name or edit a team (Finding 11) — `U-102` (random mixed-school team formation) is still open with the stakeholder. Sections G/H/I above only work because section 0's seed script does what no application code does yet.
+- **Scoring configuration (section L) has no UI at all** — by design, per BLD-051's decision, not an oversight to report.
 - **The automated suites cover more edge cases than this guide does** (concurrency, idempotency under retries, exact error codes) — this guide is for confirming the system *behaves*, not for regression coverage; see `backend/tests/` and `frontend/tests/` for that.
