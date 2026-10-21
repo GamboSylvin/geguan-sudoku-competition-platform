@@ -35,11 +35,17 @@ export interface RoundScopeRow {
   status: string;
   stageType: string;
   competitionId: string;
+  /** The round's position inside its stage (1 or 2). */
+  sequence: number;
+  /** Present only once the round has been given settings; the caller holds the defaults. */
+  settings: { teamQuestionCount: number; partitionPuzzleCount: number } | null;
 }
 
 /**
- * A round with the two facts the selection rules need: its competition (to scope the
- * URL) and its stage type (only an Individual round ever holds a `roundId`, BLD-040).
+ * A round with the facts the selection rules need: its competition (to scope the URL),
+ * its stage type and sequence (to tell the two Team rounds apart — round 1 is the
+ * rotation relay, round 2 the partition collaboration), and the settings that carry
+ * each round's expected question count.
  */
 export function findRoundScope(roundId: string): Promise<RoundScopeRow | null> {
   return prisma.round.findUnique({
@@ -47,6 +53,10 @@ export function findRoundScope(roundId: string): Promise<RoundScopeRow | null> {
     select: {
       id: true,
       status: true,
+      sequence: true,
+      settings: {
+        select: { teamQuestionCount: true, partitionPuzzleCount: true },
+      },
       stage: { select: { type: true, competitionId: true } },
     },
   }).then((row) =>
@@ -55,6 +65,8 @@ export function findRoundScope(roundId: string): Promise<RoundScopeRow | null> {
       : {
           id: row.id,
           status: row.status,
+          sequence: row.sequence,
+          settings: row.settings,
           stageType: row.stage.type,
           competitionId: row.stage.competitionId,
         },
@@ -204,8 +216,9 @@ export function listPoolQuestionsByIds(
 // ---------------------------------------------------------------------------
 
 /**
- * Point the 6 chosen questions at the round and return every other question of that
- * round to the pool (spec Detail 5: re-selecting replaces the previous 6).
+ * Point the chosen questions at the round and return every other question of that
+ * round to the pool (spec Detail 5: re-selecting replaces the previous selection).
+ * The count is the round's own, decided by the service.
  */
 export async function applyRoundSelection(
   categoryId: string,

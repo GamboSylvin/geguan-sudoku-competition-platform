@@ -97,7 +97,7 @@ function importUrl(competitionId: string): string {
   return `/api/competitions/${competitionId}/participants/import`;
 }
 
-/** POST un classeur comme la partie fichier `multipart` que l'endpoint attend. */
+/** POSTs a workbook as the `multipart` file part the endpoint expects. */
 function upload(competitionId: string, rows: FixtureRow[], headers?: readonly string[]) {
   const workbook = buildParticipantWorkbook(rows, headers);
   const { body, boundary } = buildUploadBody(workbook);
@@ -160,7 +160,7 @@ describe("a valid file imports (AC 1)", () => {
 
     const credentials = res.body.credentials as Credential[];
     expect(credentials).toHaveLength(2);
-    // Un mot de passe en clair n'existe qu'ici, une seule fois (spec §4.4 step 4).
+    // A plaintext password exists only here, exactly once (spec §4.4 step 4).
     for (const credential of credentials) {
       expect(credential.password.length).toBeGreaterThan(0);
       expect(credential.participantId.length).toBeGreaterThan(0);
@@ -228,8 +228,17 @@ describe("a valid file imports (AC 1)", () => {
     expect(res.status).toBe(422);
     expect(res.body.error.code).toBe("participant.import.unknownCategory");
     const failures = res.body.error.details.failures as { row: number; column?: string }[];
-    // Excel's row 3: the header is row 1, `张三` row 2.
-    expect(failures).toEqual([{ row: 3, column: "组别", code: "participant.import.unknownCategory", message: expect.any(String) }]);
+    // Excel's row 3: the header is row 1, `张三` row 2. `value` names the rejected cell
+    // itself (report §6b: the message alone used to read as "the column is missing").
+    expect(failures).toEqual([
+      {
+        row: 3,
+        column: "组别",
+        code: "participant.import.unknownCategory",
+        message: expect.any(String),
+        value: "六年级组",
+      },
+    ]);
 
     // The import is atomic: the valid row wrote nothing either.
     const list = await authed(request(app).get(`/api/competitions/${ctx.id}/participants`));
@@ -241,9 +250,9 @@ describe("the two event flags (cell L2's rule, V6)", () => {
   it("reads 1 as taking part, and 2 or blank as not, for each of the two flags", async () => {
     const ctx = await makeCompetition(`Flags ${suffix}`);
     const res = await upload(ctx.id, [
-      validRow({ 姓名: "Un", 个人赛: "1", 团队赛: "1" }),
-      validRow({ 姓名: "Deux", 个人赛: "2", 团队赛: "2" }),
-      validRow({ 姓名: "Trois", 个人赛: null, 团队赛: null }),
+      validRow({ 姓名: "One", 个人赛: "1", 团队赛: "1" }),
+      validRow({ 姓名: "Two", 个人赛: "2", 团队赛: "2" }),
+      validRow({ 姓名: "Three", 个人赛: null, 团队赛: null }),
     ]);
     expect(res.status).toBe(200);
     expect(res.body.created).toBe(3);
@@ -264,12 +273,12 @@ describe("the two event flags (cell L2's rule, V6)", () => {
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
     expect(rows).toEqual([
-      { name: "Deux", individualEvent: false, teamEvent: false },
-      { name: "Trois", individualEvent: false, teamEvent: false },
-      { name: "Un", individualEvent: true, teamEvent: true },
+      { name: "One", individualEvent: true, teamEvent: true },
+      { name: "Three", individualEvent: false, teamEvent: false },
+      { name: "Two", individualEvent: false, teamEvent: false },
     ]);
 
-    // Les comptes que le round individuel utilisera vraiment (spec §8 Q3).
+    // The accounts the individual round will really use (spec §8 Q3).
     expect(list.body.counts).toMatchObject({
       total: 3,
       active: 3,
@@ -352,7 +361,7 @@ describe("the columns the spec says to ignore (PAR-012, spec §6)", () => {
     // the ignored columns are the same person for V5.
     const duplicate = await upload(ctx.id, [
       validRow({ 姓名: "王五", 选手编号: 1, 年龄: 8, 省: "浙江省", 备注: "" }),
-      validRow({ 姓名: "王五", 选手编号: 2, 年龄: 12, 省: "江苏省", 备注: "autre" }),
+      validRow({ 姓名: "王五", 选手编号: 2, 年龄: 12, 省: "江苏省", 备注: "other" }),
     ]);
     expect(duplicate.status).toBe(422);
     expect(duplicate.body.error.code).toBe("participant.import.duplicateParticipant");
@@ -387,17 +396,17 @@ describe("duplicates and warnings", () => {
     const ctx = await makeCompetition(`Duplicate ${suffix}`);
     const res = await upload(ctx.id, [
       validRow({ 姓名: "张三" }),
-      validRow({ 姓名: "Autre" }),
+      validRow({ 姓名: "Other" }),
       validRow({ 姓名: "张三" }),
     ]);
     expect(res.status).toBe(422);
     expect(res.body.error.code).toBe("participant.import.duplicateParticipant");
     const rows = (res.body.error.details.failures as { row: number }[]).map((f) => f.row);
-    // La ligne fautive **et** celle qui réclamait déjà la clé, pas seulement la
-    // seconde : le contrôleur voit la paire.
+    // The offending row **and** the one that already claimed the key, not only the
+    // second: the controller sees the pair.
     expect(rows.sort()).toEqual([2, 4]);
 
-    // Un même nom dans une autre école ou un autre groupe n'est pas un doublon.
+    // The same name in another school or another group is not a duplicate.
     const fine = await upload(ctx.id, [
       validRow({ 姓名: "张三", 学校名称: "卖鱼桥小学" }),
       validRow({ 姓名: "张三", 学校名称: "文澜小学" }),
@@ -409,7 +418,7 @@ describe("duplicates and warnings", () => {
 
   it("warns about a 比赛名称 that does not match, and imports anyway (V8)", async () => {
     const ctx = await makeCompetition(`Mismatch ${suffix}`);
-    const res = await upload(ctx.id, [validRow({ 比赛名称: "Une autre compétition" })]);
+    const res = await upload(ctx.id, [validRow({ 比赛名称: "Another competition" })]);
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("COMMITTED");
     expect(res.body.created).toBe(1);
@@ -428,15 +437,15 @@ describe("duplicates and warnings", () => {
     expect(matching.status).toBe(200);
     expect(matching.body.warnings).toEqual([]);
 
-    const blank = await upload(ctx.id, [validRow({ 姓名: "Cellule vide", 比赛名称: null })]);
+    const blank = await upload(ctx.id, [validRow({ 姓名: "Empty cell", 比赛名称: null })]);
     expect(blank.status).toBe(200);
     expect(blank.body.warnings).toEqual([]);
   });
 
   it("skips the template's note row with a warning instead of a failure", async () => {
     const ctx = await makeCompetition(`Note row ${suffix}`);
-    // La forme exacte du vrai fichier : une ligne dont seule la cellule `备注`
-    // porte l'instruction `个人赛团队赛参加填写1，未参加空白或者是2`.
+    // The exact shape of the real file: a row whose only filled cell is `备注`
+    // carries the instruction `个人赛团队赛参加填写1，未参加空白或者是2`.
     const res = await upload(ctx.id, [noteRow(), validRow({ 姓名: "张三" })]);
     expect(res.status).toBe(200);
     expect(res.body.created).toBe(1);
@@ -452,27 +461,27 @@ describe("duplicates and warnings", () => {
     expect(noRows.body.error.code).toBe("participant.import.emptyFile");
     expect(noRows.body.error.details.failures[0]).toMatchObject({ row: 0 });
 
-    const onlyNotes = await upload(ctx.id, [noteRow(), noteRow("autre note")]);
+    const onlyNotes = await upload(ctx.id, [noteRow(), noteRow("another note")]);
     expect(onlyNotes.status).toBe(422);
     expect(onlyNotes.body.error.code).toBe("participant.import.emptyFile");
 
-    // Rien n'a été écrit dans les deux cas.
+    // Nothing was written in either case.
     const list = await authed(request(app).get(`/api/competitions/${ctx.id}/participants`));
     expect(list.body.participants).toEqual([]);
   });
 
   it("rejects a body that is not a readable workbook, before writing any file or batch", async () => {
     const ctx = await makeCompetition(`Not excel ${suffix}`);
-    const { body, boundary } = buildUploadBody(Buffer.from("ceci n'est pas un xlsx", "utf8"));
+    const { body, boundary } = buildUploadBody(Buffer.from("this is not an xlsx", "utf8"));
     const res = await authed(request(app).post(importUrl(ctx.id)))
       .set("Content-Type", `multipart/form-data; boundary=${boundary}`)
       .send(body);
     expect(res.status).toBe(422);
     expect(res.body.error.code).toBe("participant.import.notAnExcelFile");
 
-    // Une archive illisible est rejetée par `readParticipantWorkbook`, donc **avant**
-    // l'écriture du fichier et du lot (BLD-039 ne couvre que les lignes qui n'ont pas pu
-    // être lues, pas un corps qui n'est pas un classeur). Rien n'est audité ici.
+    // An unreadable archive is rejected by `readParticipantWorkbook`, therefore **before**
+    // the file and batch are written (BLD-039 covers only rows that could not be read,
+    // not a body that is not a workbook). Nothing is audited here.
     const batches = await prisma.importBatch.findMany({ where: { competitionId: ctx.id } });
     expect(batches).toEqual([]);
   });
@@ -497,7 +506,7 @@ describe("re-import (PAR-010, spec §4.5, Finding 10)", () => {
     expect(second.body.created).toBe(0);
     expect(second.body.kept).toBe(1);
     expect(second.body.replaced).toBe(0);
-    // Aucun nouvel identifiant : celui déjà imprimé reste valable.
+    // No new identifier: the one already printed stays valid.
     expect(second.body.credentials).toEqual([]);
 
     const participant = await prisma.participant.findUniqueOrThrow({
@@ -514,9 +523,9 @@ describe("re-import (PAR-010, spec §4.5, Finding 10)", () => {
     const first = await upload(ctx.id, [validRow({ 姓名: "张三", 团队赛: null })]);
     const credential = (first.body.credentials as Credential[])[0]!;
 
-    // L'organisateur corrige une seule cellule `团队赛` : c'est la même personne,
-    // pas un changement d'identité. La lecture littérale de §4.5 la désactiverait
-    // et créerait une seconde ligne, orphanant tout résultat déjà écrit.
+    // The organizer corrects a single `团队赛` cell: it is the same person, not an
+    // identity change. The literal reading of §4.5 would deactivate her and create a
+    // second row, orphaning every result already written.
     const second = await upload(ctx.id, [validRow({ 姓名: "张三", 团队赛: "1" })]);
     expect(second.status).toBe(200);
     expect(second.body.created).toBe(0);
@@ -529,7 +538,7 @@ describe("re-import (PAR-010, spec §4.5, Finding 10)", () => {
       where: { competitionId: ctx.id },
       include: { account: true },
     });
-    // Une seule ligne, toujours la même, toujours active, avec son compte intact.
+    // One single row, always the same one, always active, with its account intact.
     expect(participants).toHaveLength(1);
     expect(participants[0]!.id).toBe(credential.participantId);
     expect(participants[0]!.participantNumber).toBe(credential.participantNumber);
@@ -541,25 +550,25 @@ describe("re-import (PAR-010, spec §4.5, Finding 10)", () => {
   it("deactivates the rows the new file no longer mentions, and re-activates one that comes back", async () => {
     const ctx = await makeCompetition(`Reimport omit ${suffix}`);
     const first = await upload(ctx.id, [
-      validRow({ 姓名: "Reste" }),
-      validRow({ 姓名: "Part", 学校名称: "文澜小学" }),
+      validRow({ 姓名: "Stays" }),
+      validRow({ 姓名: "Leaves", 学校名称: "文澜小学" }),
     ]);
     expect(first.body.created).toBe(2);
 
-    const second = await upload(ctx.id, [validRow({ 姓名: "Reste" })]);
+    const second = await upload(ctx.id, [validRow({ 姓名: "Stays" })]);
     expect(second.status).toBe(200);
     expect(second.body.deactivated).toBe(1);
     expect(second.body.kept).toBe(1);
 
     const gone = await prisma.participant.findFirstOrThrow({
-      where: { competitionId: ctx.id, name: "Part" },
+      where: { competitionId: ctx.id, name: "Leaves" },
     });
     expect(gone.active).toBe(false);
 
-    // La ligne désactivée qui revient réutilise sa propre ligne, pas une seconde.
+    // The deactivated row that comes back reuses its own row, not a second one.
     const third = await upload(ctx.id, [
-      validRow({ 姓名: "Reste" }),
-      validRow({ 姓名: "Part", 学校名称: "文澜小学" }),
+      validRow({ 姓名: "Stays" }),
+      validRow({ 姓名: "Leaves", 学校名称: "文澜小学" }),
     ]);
     expect(third.status).toBe(200);
     expect(third.body.created).toBe(0);
@@ -611,27 +620,27 @@ describe("access and lifecycle (ROL-002, PAR-009)", () => {
 
   it("refuses a whole-file import once the competition has left CREATED (PAR-009)", async () => {
     const ctx = await makeCompetition(`Published ${suffix}`);
-    const before = await upload(ctx.id, [validRow({ 姓名: "Avant" })]);
+    const before = await upload(ctx.id, [validRow({ 姓名: "Before" })]);
     expect(before.status).toBe(200);
 
     await prisma.competition.update({ where: { id: ctx.id }, data: { status: "WAITING" } });
 
-    const after = await upload(ctx.id, [validRow({ 姓名: "Après" })]);
+    const after = await upload(ctx.id, [validRow({ 姓名: "After" })]);
     expect(after.status).toBe(409);
     expect(after.body.error.code).toBe("participant.import.notAllowedAfterPublish");
 
-    // L'édition individuelle survit à cette coupure ([C] PAR-003) : c'est le seul
-    // chemin qui reste une fois la compétition publiée.
+    // Single-row editing survives that cut-over ([C] PAR-003): it is the only path
+    // left once the competition has been published.
     const participant = await prisma.participant.findFirstOrThrow({
-      where: { competitionId: ctx.id, name: "Avant" },
+      where: { competitionId: ctx.id, name: "Before" },
     });
     const edited = await authed(
       request(app).patch(`/api/competitions/${ctx.id}/participants/${participant.id}`),
     ).send({ teamEvent: true });
     expect(edited.status).toBe(200);
     expect(edited.body.participant.teamEvent).toBe(true);
-    // Un simple changement de drapeau ne remplace pas l'élève : pas de nouvel
-    // identifiant (PAR-003 ne le fait que pour un changement de **nom**).
+    // A plain flag change does not replace the student: no new identifier (PAR-003
+    // only mints one for a **name** change).
     expect(edited.body.credential).toBeNull();
   });
 

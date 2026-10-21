@@ -100,6 +100,8 @@ export interface ImportFailureView {
   column?: string;
   code: string;
   message: string;
+  /** The actual rejected cell value, when the server names it (report §6b). */
+  value?: string;
 }
 
 /** A rejection carrying the HTTP status, the machine code and any structured details. */

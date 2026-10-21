@@ -5,6 +5,7 @@ import { disconnectRedis } from "../src/infra/redis";
 import { identityService } from "../src/modules/identity";
 import { competitionService } from "../src/modules/competition";
 import { roundTimerService } from "../src/modules/round";
+import { seedReadinessQuestions } from "./readiness-questions";
 
 /**
  * Unit 10 integration tests: the judge's supervision view (status rows scoped
@@ -89,7 +90,6 @@ async function makeCompetitionWithTwoParticipants(name: string, judgeRange: { fr
   const category = full.categories[0]!;
   const individualStage = full.stages.find((s) => s.type === "INDIVIDUAL")!;
   const round1 = individualStage.rounds.find((r) => r.sequence === 1)!;
-  const round2 = individualStage.rounds.find((r) => r.sequence === 2)!;
 
   const school = await prisma.school.create({
     data: { competitionId: competition.id, name: `School ${suffix}`, sequence: 1 },
@@ -128,25 +128,20 @@ async function makeCompetitionWithTwoParticipants(name: string, judgeRange: { fr
     null, null, null, null,
     4, null, null, 1,
   ];
-  // Publish readiness requires a complete selection of 6 assigned questions per
-  // Individual round (BLD-040), so seed the full 6 for each round.
-  for (const round of [round1, round2]) {
-    for (let sequence = 1; sequence <= 6; sequence += 1) {
-      await prisma.question.create({
-        data: {
-          questionSetId: questionSet.id,
-          roundId: round.id,
-          sequence,
-          points: 10,
-          gridRows: 4,
-          gridColumns: 4,
-          regions: [[0, 1, 4, 5]],
-          startingGrid,
-          solution: startingGrid.map((v) => v ?? 1),
-        },
-      });
-    }
-  }
+  // Publish readiness requires every round to hold its own questions — all four of them,
+  // the two Team rounds included (BLD-040, revised 2026-10-19). This suite is about judge
+  // ranges, not questions, so the shared helper seeds the lot in one call.
+  await seedReadinessQuestions(prisma, {
+    questionSetId: questionSet.id,
+    stages: full.stages,
+    grid: {
+      gridRows: 4,
+      gridColumns: 4,
+      regions: [[0, 1, 4, 5]],
+      startingGrid,
+      solution: startingGrid.map((v) => v ?? 1),
+    },
+  });
 
   // The judge under test is assigned [judgeRange.from, judgeRange.to] — does not
   // cover #99. A second judge covers the rest so the publish-readiness check

@@ -6,6 +6,7 @@ import { identityService } from "../src/modules/identity";
 import { competitionService } from "../src/modules/competition";
 import { roundTimerService } from "../src/modules/round";
 import { gameplayService } from "../src/modules/gameplay";
+import { seedReadinessQuestions } from "./readiness-questions";
 
 /**
  * Unit 11 integration tests: the controller's live command surface.
@@ -160,25 +161,28 @@ async function seedCompetition(name: string): Promise<SeededCompetition> {
     data: { competitionId: competition.id, categoryId: category.id, name: `Set ${suffix}` },
   });
 
-  let questionId = "";
-  for (const round of [round1, round2]) {
-    for (let sequence = 1; sequence <= 6; sequence += 1) {
-      const q = await prisma.question.create({
-        data: {
-          questionSetId: questionSet.id,
-          roundId: round.id,
-          sequence,
-          points: 10,
-          gridRows: GRID_SIZE,
-          gridColumns: GRID_SIZE,
-          regions: [[0, 1, 4, 5]],
-          startingGrid: STARTING_GRID,
-          solution: SOLUTION,
-        },
-      });
-      if (sequence === 1 && round.id === round1.id) questionId = q.id;
-    }
-  }
+  // Every round must hold its own questions for publish readiness, the two Team rounds
+  // included (BLD-040, revised 2026-10-19).
+  await seedReadinessQuestions(prisma, {
+    questionSetId: questionSet.id,
+    stages: full.stages,
+    grid: {
+      gridRows: GRID_SIZE,
+      gridColumns: GRID_SIZE,
+      regions: [[0, 1, 4, 5]],
+      startingGrid: STARTING_GRID,
+      solution: SOLUTION,
+    },
+  });
+  // Read back rather than taking the helper's first id: neither the stage order nor the
+  // round order inside it is guaranteed by `include`, and this suite needs the specific
+  // question of Individual round 1. `Question` has no timestamp column, so `sequence`
+  // is the only stable ordering.
+  const questionId = (
+    await prisma.question.findFirstOrThrow({
+      where: { roundId: round1.id, sequence: 1 },
+    })
+  ).id;
 
   // Criterion 6's "no range restriction" is only a meaningful claim if a range
   // exists for the controller to skip: the suite's judge account is bound to the

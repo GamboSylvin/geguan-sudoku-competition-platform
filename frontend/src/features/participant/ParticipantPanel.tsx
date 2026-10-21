@@ -319,6 +319,7 @@ export function ParticipantPanel({
               <li key={`${failure.row}-${failure.code}-${index}`}>
                 {t("participant.row")} {failure.row}
                 {failure.column ? ` · ${failure.column}` : ""} — {t(failure.code)}
+                {failure.value ? ` ("${failure.value}")` : ""}
               </li>
             ))}
           </ul>

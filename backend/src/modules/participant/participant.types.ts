@@ -40,6 +40,12 @@ export interface ParticipantImportFailure {
   /** The i18n key naming the problem; the client localizes it. */
   code: string;
   message: string;
+  /**
+   * The actual rejected cell value, when showing it makes the message useful (report
+   * §6b: `unknownCategory` used to say "this group does not exist" without naming which
+   * group — indistinguishable from "the column itself is missing").
+   */
+  value?: string;
 }
 
 /** One warning that does **not** reject the file (spec §8 Q1: warn, do not reject). */

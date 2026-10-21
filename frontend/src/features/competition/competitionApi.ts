@@ -57,6 +57,14 @@ export interface CompetitionView {
   status: string;
   entryLinkToken: string;
   bigScreenLinkToken: string;
+  /**
+   * The two links as complete, openable URLs, composed by the backend (`shared/links`)
+   * so the rule is written in exactly one place. Empty when the server has no
+   * `PUBLIC_BASE_URL` configured — the UI then says "not configured" rather than showing
+   * a raw token that cannot be opened (report §9).
+   */
+  entryLinkUrl: string;
+  bigScreenLinkUrl: string;
   categories: CategoryView[];
   stages: StageView[];
   scoringConfiguration: {
@@ -76,6 +84,15 @@ export interface PublishResultView {
   publishedAt: string | null;
   entryLinkToken: string;
   bigScreenLinkToken: string;
+  /**
+   * The two links as complete, openable URLs, composed by the backend (`shared/links`)
+   * rather than by this screen: the composition rule is written in exactly one place, so
+   * the publish result and the credential slips cannot drift apart. Empty when the server
+   * has no `PUBLIC_BASE_URL` configured — the UI then says "not configured" instead of
+   * showing a raw token that cannot be opened (report §9a).
+   */
+  entryLinkUrl: string;
+  bigScreenLinkUrl: string;
 }
 
 /** A rejection carrying the HTTP status, the machine code and any structured details. */
@@ -129,7 +146,11 @@ export function createCompetition(input: {
 
 export function updateCompetition(
   id: string,
-  input: { roundSettings?: Record<string, { durationSeconds?: number }> },
+  input: {
+    roundSettings?: Record<string, { durationSeconds?: number }>;
+    /** Editable only before publish (report §6c) — the backend 409s otherwise. */
+    categories?: CategoryInput[];
+  },
 ): Promise<CompetitionView> {
   return request<CompetitionView>(`/api/competitions/${id}`, {
     method: "PATCH",

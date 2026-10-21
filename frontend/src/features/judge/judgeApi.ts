@@ -19,6 +19,14 @@ export interface CreatedJudgeView extends JudgeSummaryView {
   password: string;
 }
 
+/**
+ * A reactivated judge: its summary plus the username it kept. `username` is nullable
+ * because the server reports what the account carries rather than inventing one.
+ */
+export interface ReactivatedJudgeView extends JudgeSummaryView {
+  username: string | null;
+}
+
 export interface JudgeAssignmentView {
   id: string;
   competitionId: string;
@@ -32,7 +40,20 @@ export interface JudgeAssignmentView {
 
 export interface JudgeMeView {
   judgeId: string;
+  /** The judge's own display name — this screen used to fall back to the raw account id. */
+  name: string | null;
   assignments: (JudgeAssignmentView & { competitionName: string })[];
+}
+
+/**
+ * One row of a competition's range list (report §4c): who supervises which slice, and
+ * who recorded it. `judgeActive` matters because an assignment survives the judge's
+ * deactivation — the row is still there, the account behind it is not.
+ */
+export interface CompetitionJudgeAssignmentView extends JudgeAssignmentView {
+  judgeName: string;
+  judgeActive: boolean;
+  assignedByUsername: string | null;
 }
 
 export class JudgeApiError extends Error {
@@ -91,6 +112,16 @@ export function removeJudge(id: string): Promise<JudgeSummaryView> {
   });
 }
 
+/**
+ * Undo a deactivation (report §4a). The judge keeps its account and its username; the
+ * password is never returned again — it was shown once at creation (BLD-037).
+ */
+export function reactivateJudge(id: string): Promise<ReactivatedJudgeView> {
+  return request<ReactivatedJudgeView>(`/api/judges/${id}/reactivate`, {
+    method: "PATCH",
+  });
+}
+
 export function assignJudgeRange(
   competitionId: string,
   input: { judgeId: string; fromParticipantNumber: number; toParticipantNumber: number },
@@ -105,6 +136,16 @@ export function unassignJudge(competitionId: string, assignmentId: string): Prom
   return request<void>(`/api/competitions/${competitionId}/judge-assignments/${assignmentId}`, {
     method: "DELETE",
   });
+}
+
+/** The ranges already recorded on one competition (report §4c). */
+export function listCompetitionAssignments(
+  competitionId: string,
+): Promise<{ assignments: CompetitionJudgeAssignmentView[] }> {
+  return request<{ assignments: CompetitionJudgeAssignmentView[] }>(
+    `/api/competitions/${competitionId}/judge-assignments`,
+    { method: "GET" },
+  );
 }
 
 export function fetchJudgeMe(): Promise<JudgeMeView> {

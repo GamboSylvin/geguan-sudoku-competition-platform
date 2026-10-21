@@ -48,6 +48,9 @@ function seedControllerSession(): void {
     deviceId: "device-1",
     role: "CONTROLLER",
     accountId: "account-1",
+    // A controller is never scoped to a single competition (ROL-004): he picks it from
+    // the list on every screen. `null` is the honest value here, not a stopgap.
+    competitionId: null,
     sessionExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
   });
 }
@@ -437,7 +440,10 @@ describe("controller competition picker", () => {
 
     await screen.findByText("Winter Cup");
     expect(screen.getByText("Autumn Cup")).toBeInTheDocument();
-    const links = screen.getAllByRole("link", { name: "Open control panel" });
+    // The label was renamed 2026-10-19 (hole C): "Open control panel" never said that this
+    // is where a competition gets *started*, so the project owner looked for a start button
+    // and could not find one. The hrefs asserted below are unchanged.
+    const links = screen.getAllByRole("link", { name: "Run the competition" });
     expect(links).toHaveLength(2);
     expect(links[0]).toHaveAttribute("href", "/controller/competitions/comp-2/live");
   });

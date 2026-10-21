@@ -82,6 +82,12 @@ services:
       STORAGE_ROOT: /app/storage
       # Where the image put the built frontend bundle, so Express serves it.
       FRONTEND_DIST: /app/frontend-dist
+      # The base of the entry/big-screen links handed to players and to the venue's big
+      # screen (`backend/src/shared/links`). It is the instance's PUBLIC IP, set in
+      # `.env` — a link built on anything else opens the wrong machine. Listed here, not
+      # only inherited through `env_file`, so "the published link is blank" is
+      # diagnosable from this file alone.
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
     # The ONE port the server needs open. Plain HTTP: no domain means no TLS and no
     # ICP备案 (BLD-048) — deliberate current state, flagged as I-40 to revisit before
     # the real event. Host side is configurable so this file can be tested locally

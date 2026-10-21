@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useLocale } from "../../i18n/locale-context";
 import { clearSession } from "../auth/session";
 import { StudentsSupervisionPanel } from "./StudentsSupervisionPanel";
@@ -27,7 +27,14 @@ export function JudgeDashboardPage() {
     <main className="flex min-h-screen flex-col bg-gray-50 p-4 text-gray-900 sm:p-6">
       {/* Mood B header banner: indigo→purple gradient (§3.2/2), with the "glass"
           button of §3.6. This div already existed; nothing is added to the tree. */}
-      <div className="mb-4 -mx-4 -mt-4 flex justify-end bg-gradient-to-r from-indigo-700 to-purple-700 px-4 py-3 text-white shadow-lg sm:-mx-6 sm:-mt-6 sm:px-6">
+      <div className="mb-4 -mx-4 -mt-4 flex justify-between bg-gradient-to-r from-indigo-700 to-purple-700 px-4 py-3 text-white shadow-lg sm:-mx-6 sm:-mt-6 sm:px-6">
+        {/* Report §7: this page had no way back to the judge's own landing. */}
+        <Link
+          to="/judge"
+          className="rounded-lg bg-white/10 px-3 py-2 text-xs text-white transition-colors hover:bg-white/20 sm:text-sm"
+        >
+          {t("common.back")}
+        </Link>
         <button
           type="button"
           className="rounded-lg bg-white/10 px-3 py-2 text-xs text-white transition-colors hover:bg-white/20 sm:text-sm"

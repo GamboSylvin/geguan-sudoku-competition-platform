@@ -19,11 +19,11 @@
  * `features/gameplay` follow the same mood.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { io, type Socket } from "socket.io-client";
 import { API_BASE_URL } from "@/config/env";
 import { useLocale } from "@/i18n/locale-context";
-import { loadSession, landingPath } from "@/features/auth/session";
+import { loadSession, landingPath, setEntryToken, setEntryRoleHint } from "@/features/auth/session";
 import { ActiveRoundScreen, PartitionRoundScreen, RotationRoundScreen } from "@/features/gameplay";
 import type { PartitionViewState, RotationViewState } from "@/features/gameplay";
 
@@ -83,6 +83,49 @@ interface CurrentRoundPayload {
     status: "WAITING" | "PREPARATION" | "ACTIVE" | "PAUSED" | "FINISHED";
     timer: { remainingSeconds: number; totalSeconds: number } | null;
   } | null;
+}
+
+/**
+ * What `GET /api/gameplay/competition` returns: which competition this session is
+ * in, who the caller is inside it, and what is coming.
+ *
+ * This is the waiting screen's only source of a name. The entry token that carried
+ * the competition id is consumed and deleted by exactly one login, the stored
+ * session never held one, and a player session can reach nothing outside the
+ * gameplay module — so before this route existed the screen could show only two
+ * static strings. Every field is nullable except `programme`; null renders as the
+ * bare waiting screen rather than an error, because "nothing has started yet" is
+ * the normal state here, not a failure.
+ */
+interface MyCompetitionPayload {
+  competition: {
+    id: string;
+    name: string;
+    description: string | null;
+    status: string;
+  } | null;
+  participant: {
+    name: string;
+    participantNumber: number;
+    individualEvent: boolean;
+    teamEvent: boolean;
+  } | null;
+  category: { id: string; code: string; name: string } | null;
+  school: { name: string } | null;
+  programme: {
+    stageId: string;
+    stageType: "INDIVIDUAL" | "TEAM";
+    stageSequence: number;
+    stageStatus: "WAITING" | "PREPARATION" | "ACTIVE" | "PAUSED" | "FINISHED";
+    rounds: {
+      roundId: string;
+      name: string;
+      sequence: number;
+      status: "WAITING" | "PREPARATION" | "ACTIVE" | "PAUSED" | "FINISHED";
+      kind: "individual" | "rotation" | "partition";
+      totalSeconds: number | null;
+    }[];
+  }[];
 }
 
 interface RoundStartedPayload {
@@ -308,9 +351,21 @@ type ScreenState =
 export function PlayerPage() {
   const { t } = useLocale();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const session = useMemo(() => loadSession(), []);
   const [screen, setScreen] = useState<ScreenState>({ kind: "waiting" });
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Which competition this session is in, and who the caller is inside it
+   * (report 2026-10-19, hole A). Read once on mount, from the session alone —
+   * the entry token that carried the competition id was consumed at login and
+   * the stored session never held one, so this fetch is the only way the
+   * waiting screen can name the event.
+   *
+   * Null means "not loaded yet" *and* "the server had nothing to say"; both
+   * render as the bare waiting screen, which is what it used to show anyway.
+   */
+  const [myCompetition, setMyCompetition] = useState<MyCompetitionPayload | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const activeSnapshotRef = useRef<ScreenState | null>(null);
   /**
@@ -335,12 +390,84 @@ export function PlayerPage() {
     screenRef.current = screen;
   }, [screen]);
 
-  // Gate: a player session only. Other roles go to their own landing.
+  /**
+   * The entry link's token (report §9c, ARCH-030: the competition link *identifies the
+   * competition*). A player opens `/player?token=…` from the printed slip; the token is
+   * remembered in `sessionStorage` so the login screen can pass it along, and the page
+   * then redirects to login — the gate below does that.
+   *
+   * Deliberately NOT treated as a credential: the username and password are still
+   * required, and the token only names the competition. Whether a bare token should be
+   * enough to get in is an open project-owner decision (§9d scope note), so the safe
+   * reading is built.
+   *
+   * Captured on mount, before the redirect, so the hop to `/login` cannot lose it. The role
+   * hint is captured with it: this path is player-only, so the login page can preselect
+   * "player" and save a tablet one tap. The unified `/enter?token=…` link deliberately sets
+   * no hint — one address serves both roles there (hole D, 2026-10-20).
+   */
   useEffect(() => {
-    if (!session || session.role !== "PLAYER") {
-      navigate(landingPath(session?.role ?? "PLAYER"), { replace: true });
+    const token = searchParams.get("token");
+    if (token !== null && token !== "") {
+      setEntryToken(token);
+      setEntryRoleHint("player");
+    }
+  }, [searchParams]);
+
+  /**
+   * Gate: a player session only. Without a session this goes to `/login` — it used to
+   * navigate to the player's own landing route, which is this route, so an unauthenticated
+   * player arriving on the entry link sat on a blank waiting screen instead of being asked
+   * to log in. A session of another role goes to that role's landing.
+   */
+  useEffect(() => {
+    if (!session) {
+      navigate("/login", { replace: true });
+      return;
+    }
+    if (session.role !== "PLAYER") {
+      navigate(landingPath(session.role), { replace: true });
     }
   }, [session, navigate]);
+
+  /**
+   * Load "which competition am I in" once, on mount, for a player session only.
+   *
+   * Read once, not polled: the competition's name, the caller's category and the
+   * programme's *shape* do not change while a student sits on the waiting screen.
+   * Each round's live status does change, but that is the socket's job — it
+   * already pushes every transition, and re-fetching the whole competition four
+   * times a second to catch them would be pure waste. So a round that starts
+   * after mount is reflected by the push that also swaps the screen; the status
+   * shown in the programme list is a best-effort snapshot, and the screen the
+   * student actually lands on comes from the push.
+   *
+   * A failure here is silent: the waiting screen still renders, just without the
+   * greeting. Surfacing an error banner would replace one readable screen with
+   * one that says a network call failed, which is not more useful to a student.
+   */
+  useEffect(() => {
+    if (!session || session.role !== "PLAYER") return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/gameplay/competition`, {
+          headers: {
+            "x-session-token": session.token,
+            "x-device-id": session.deviceId,
+          },
+        });
+        if (!response.ok) return;
+        const payload = (await response.json()) as MyCompetitionPayload;
+        if (!cancelled) setMyCompetition(payload);
+      } catch {
+        // Left on the bare waiting screen; see the comment above.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
 
   // Pull the current state once on mount so a player who joins mid-round (or
   // returns after a disconnect) renders the right screen without waiting for
@@ -822,12 +949,7 @@ export function PlayerPage() {
   }
 
   if (screen.kind === "waiting") {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-900 p-6 text-center text-white">
-        <h1 className="text-2xl font-semibold sm:text-3xl">{t("player.waitingTitle")}</h1>
-        <p className="text-base text-gray-400 sm:text-lg">{t("player.waitingSubtitle")}</p>
-      </div>
-    );
+    return <WaitingScreen competition={myCompetition} />;
   }
 
   if (screen.kind === "preparation") {
@@ -890,6 +1012,95 @@ export function PlayerPage() {
       deviceId={session.deviceId}
       initialParticipationState={screen.participationState}
     />
+  );
+}
+
+/**
+ * The waiting screen (report 2026-10-19, hole A). It used to render two static
+ * strings — "Competition room" / "Waiting for the competition to start…" — which
+ * told the student nothing about which event they were in, because nothing on the
+ * client could ever know: the entry token that carried the competition id is
+ * consumed and deleted by exactly one login, the stored session never held one,
+ * and a player session reaches no module outside `gameplay`.
+ *
+ * `competition` is the payload of `GET /api/gameplay/competition`, loaded once on
+ * mount. Null (not loaded yet, fetch failed, or the participant row is gone) falls
+ * back to the two original strings, so the screen can never be *worse* than before.
+ *
+ * Everything shown here is the student's own row and the public shape of their
+ * competition: no other participant's data, no question content, no score.
+ */
+function WaitingScreen({ competition }: { competition: MyCompetitionPayload | null }) {
+  const { t } = useLocale();
+
+  const named = competition?.competition ?? null;
+  const participant = competition?.participant ?? null;
+  const programme = competition?.programme ?? [];
+
+  if (!named) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-900 p-6 text-center text-white">
+        <h1 className="text-2xl font-semibold sm:text-3xl">{t("player.waitingTitle")}</h1>
+        <p className="text-base text-gray-400 sm:text-lg">{t("player.waitingSubtitle")}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col items-center gap-6 bg-gray-900 p-6 text-white">
+      <div className="w-full max-w-md space-y-2 pt-10 text-center">
+        <p className="text-sm text-gray-400">{t("player.welcomeTitle")}</p>
+        <h1 className="text-2xl font-semibold sm:text-3xl">{named.name}</h1>
+        {named.description ? (
+          <p className="text-base text-gray-400 sm:text-lg">{named.description}</p>
+        ) : null}
+        {participant ? (
+          <p className="pt-1 text-sm text-gray-300">
+            {t("player.yourEntry")} #{participant.participantNumber}
+            {competition?.category ? ` · ${competition.category.name}` : ""}
+            {competition?.school ? ` · ${competition.school.name}` : ""}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="w-full max-w-md rounded-lg bg-gray-800 p-4">
+        <p className="mb-3 text-sm font-semibold text-gray-300">{t("player.programmeTitle")}</p>
+        {programme.length === 0 ? (
+          <p className="text-sm text-gray-400">{t("player.programmeEmpty")}</p>
+        ) : (
+          <ul className="space-y-3">
+            {programme.map((stage) => (
+              <li key={stage.stageId}>
+                <p className="text-sm font-semibold text-gray-200">
+                  {t(`player.stageType.${stage.stageType}`)} {stage.stageSequence}
+                </p>
+                <ul className="mt-1 space-y-1">
+                  {stage.rounds.map((round) => (
+                    <li
+                      key={round.roundId}
+                      className="flex items-baseline justify-between gap-3 text-sm text-gray-400"
+                    >
+                      <span className="text-gray-200">{round.name}</span>
+                      <span className="shrink-0 text-xs tabular-nums">
+                        {round.totalSeconds !== null
+                          ? `${Math.ceil(round.totalSeconds / 60)} min`
+                          : "–"}
+                        {" · "}
+                        {t(`player.roundStatus.${round.status}`)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <p className="pb-8 text-center text-base text-gray-400 sm:text-lg">
+        {t("player.waitingSubtitle")}
+      </p>
+    </div>
   );
 }
 

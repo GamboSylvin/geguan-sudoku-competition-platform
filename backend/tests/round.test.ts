@@ -6,6 +6,7 @@ import { identityService } from "../src/modules/identity";
 import { competitionService } from "../src/modules/competition";
 import { roundService, roundTimerService } from "../src/modules/round";
 import type { RoundStartedPayload } from "../src/modules/round";
+import { seedReadinessQuestions } from "./readiness-questions";
 
 /**
  * Unit 07 integration tests: the dev-only internal trigger that starts stage 1
@@ -121,35 +122,27 @@ async function makePublishedCompetition(
   const questionSet = await prisma.questionSet.create({
     data: { competitionId: competition.id, categoryId: category.id, name: `Set ${suffix}` },
   });
-  // A 4x4 puzzle with 16 cells, a few of them given. Publish readiness (spec
-  // Unit 03) demands a question on *both* Individual rounds, so seed round 2
-  // too — only round 1's is ever exercised by these tests.
-  const round2 = individualStage.rounds.find((r) => r.sequence === 2)!;
+  // A 4x4 puzzle with 16 cells, a few of them given. Publish readiness (spec Unit 03)
+  // demands every round hold its own questions, and since BLD-040's revision (2026-10-19)
+  // that includes the two Team rounds — so the shared helper seeds all four. Only
+  // Individual round 1's questions are ever exercised by these tests.
   const startingGrid: (number | null)[] = [
     1, null, null, 4,
     null, null, null, null,
     null, null, null, null,
     4, null, null, 1,
   ];
-  // Publish readiness requires a complete selection of 6 assigned questions per
-  // Individual round (BLD-040), so seed the full 6 for each round.
-  for (const round of [round1, round2]) {
-    for (let sequence = 1; sequence <= 6; sequence += 1) {
-      await prisma.question.create({
-        data: {
-          questionSetId: questionSet.id,
-          roundId: round.id,
-          sequence,
-          points: 10,
-          gridRows: 4,
-          gridColumns: 4,
-          regions: [[0, 1, 4, 5]],
-          startingGrid,
-          solution: startingGrid.map((v) => v ?? 1),
-        },
-      });
-    }
-  }
+  await seedReadinessQuestions(prisma, {
+    questionSetId: questionSet.id,
+    stages: full.stages,
+    grid: {
+      gridRows: 4,
+      gridColumns: 4,
+      regions: [[0, 1, 4, 5]],
+      startingGrid,
+      solution: startingGrid.map((v) => v ?? 1),
+    },
+  });
 
   const judge = await prisma.judge.create({ data: { name: `Judge ${suffix}` } });
   createdJudgeIds.push(judge.id);
@@ -642,7 +635,6 @@ async function makeTwoCategoryCompetition(name: string) {
   });
   const individualStage = full.stages.find((s) => s.type === "INDIVIDUAL")!;
   const round1 = individualStage.rounds.find((r) => r.sequence === 1)!;
-  const round2 = individualStage.rounds.find((r) => r.sequence === 2)!;
 
   const school = await prisma.school.create({
     data: { competitionId: competition.id, name: `School2 ${suffix}`, sequence: 1 },
@@ -685,27 +677,27 @@ async function makeTwoCategoryCompetition(name: string) {
       },
     });
 
-    // Six per Individual round per category — exactly what publish readiness
-    // (Unit 03) requires, and what makes `6n` questions share one `roundId`.
-    const questionIds: string[] = [];
-    for (const round of [round1, round2]) {
-      for (let q = 1; q <= 6; q += 1) {
-        const created = await prisma.question.create({
-          data: {
-            questionSetId: questionSet.id,
-            roundId: round.id,
-            sequence: q,
-            points: 10,
-            gridRows: 4,
-            gridColumns: 4,
-            regions: [[0, 1, 4, 5]],
-            startingGrid,
-            solution: startingGrid.map((v) => v ?? 1),
-          },
-        });
-        if (round.id === round1.id) questionIds.push(created.id);
-      }
-    }
+    // Every round of every category must hold its own questions — the two Team rounds
+    // included since BLD-040's revision (2026-10-19). This seed is about the
+    // cross-category leak, so only Individual round 1's ids are collected: those are the
+    // `6n` questions that must share one `roundId` per category and never cross it.
+    const seeded = await seedReadinessQuestions(prisma, {
+      questionSetId: questionSet.id,
+      stages: full.stages,
+      grid: {
+        gridRows: 4,
+        gridColumns: 4,
+        regions: [[0, 1, 4, 5]],
+        startingGrid,
+        solution: startingGrid.map((v) => v ?? 1),
+      },
+    });
+    const questionIds = (
+      await prisma.question.findMany({
+        where: { id: { in: seeded }, roundId: round1.id },
+        orderBy: { sequence: "asc" },
+      })
+    ).map((question) => question.id);
 
     categories.push({
       categoryId: category.id,

@@ -100,6 +100,26 @@ export interface PublishResult {
   publishedAt: string | null;
   entryLinkToken: string;
   bigScreenLinkToken: string;
+  /**
+   * The two links as complete, openable URLs, composed by the backend (`shared/links`)
+   * rather than by the screen that displays them: the composition rule is written once,
+   * and the credential slips and this publish result cannot drift apart. Empty strings
+   * when `PUBLIC_BASE_URL` is not configured — the UI says "not configured" instead of
+   * showing a link that opens nothing.
+   */
+  entryLinkUrl: string;
+  bigScreenLinkUrl: string;
+}
+
+/**
+ * The two public links of a competition, in URL form. Attached to every competition
+ * read the HTTP layer returns, so a controller reopening an already-published
+ * competition sees the same links as the one who clicked Publish — the tokens alone
+ * are not links, which is what the 2026-10-19 manual-test report (§9a) found.
+ */
+export interface CompetitionLinks {
+  entryLinkUrl: string;
+  bigScreenLinkUrl: string;
 }
 
 /** The default per-round duration in seconds (spec Context, decided 2026-10-02). */

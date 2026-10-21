@@ -18,6 +18,8 @@ import type {
 import {
   BIG_SCREEN_EVENTS,
   categoryRoom,
+  competitionRoom,
+  JUDGE_EVENTS,
   PARTITION_EVENTS,
   RANKING_EVENTS,
   REALTIME_NAMESPACES,
@@ -25,6 +27,8 @@ import {
   ROUND_EVENTS,
   SYSTEM_EVENTS,
   tabletRoom,
+  type JudgePresencePayload,
+  type JudgeRoundStartedPayload,
   type SystemConnectedPayload,
 } from "./events";
 
@@ -118,6 +122,31 @@ export function createRealtimeGateway(httpServer: HttpServer): SocketServer {
         if (categoryId) socket.join(categoryRoom(categoryId));
       }
 
+      // F3 (2026-10-21): a judge socket joins the room of the competition its session
+      // entered through. That is what makes a presence push addressable at all — without
+      // a room, the only options were the whole judge namespace (a judge of competition A
+      // hearing about every student of competition B) or a per-judge room nobody could
+      // enumerate. The scope is `socket.data.auth.competitionId`, resolved server-side
+      // from the session's own token at the handshake above, never from the client
+      // (invariant 3).
+      //
+      // The controller namespace joins every competition it opens a live page for, by the
+      // same mechanism: it has no session scope (ROL-004 — a controller is not bound to
+      // one competition), so its page tells the server which competition it is watching.
+      // That is a *narrowing* declaration, not a widening one: a controller is already
+      // authorized for every competition, so there is nothing to leak.
+      if (namespace === REALTIME_NAMESPACES.judge) {
+        const competitionId = socket.data.auth?.competitionId as string | null | undefined;
+        if (competitionId) socket.join(competitionRoom(competitionId));
+      }
+      if (namespace === REALTIME_NAMESPACES.controller) {
+        socket.on("controller:watch", (raw: unknown) => {
+          const competitionId = typeof raw === "string" && raw.length > 0 ? raw : null;
+          if (competitionId === null) return;
+          void socket.join(competitionRoom(competitionId));
+        });
+      }
+
       const payload: SystemConnectedPayload = { serverTime: now().toISOString() };
       socket.emit(SYSTEM_EVENTS.connected, payload);
 
@@ -204,6 +233,54 @@ export function createRealtimeGateway(httpServer: HttpServer): SocketServer {
   // the gateway's only job is to put each one on the wire to its own room.
   roundService.installRoundStartedHook((payload: RoundStartedPayload) => {
     playerNamespace.to(categoryRoom(payload.categoryId)).emit(ROUND_EVENTS.started, payload);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Judge namespace pushes (F3, 2026-10-21)
+  //
+  // `REALTIME_NAMESPACES.judge` existed and nothing was ever emitted on it, so the
+  // judge screen had no push to listen to. Two facts reach it now, both addressed to
+  // the competition's room: that a student of that competition logged in or out, and
+  // that the round started. Neither carries question content — the judge is not
+  // entitled to a category's puzzles, which is why the round push is its own hook
+  // rather than a second listener on `roundStartedHook`.
+  // ---------------------------------------------------------------------------
+  const judgeNamespace = io.of(REALTIME_NAMESPACES.judge);
+
+  // A player login/logout (identity.service announces it; the gateway only puts it on
+  // the wire — invariant 8). The row is read from the participant so the push names a
+  // student by the number the judge's range is expressed in; a participant that no
+  // longer resolves announces nothing rather than a payload with `undefined` in it.
+  identityService.installPresenceHook(async (fact) => {
+    const participant = await identityService.findParticipantPresence(fact.participantId);
+    if (participant === null) return;
+    const payload: JudgePresencePayload = {
+      competitionId: fact.competitionId,
+      participantId: participant.id,
+      participantNumber: participant.participantNumber,
+      participantName: participant.name,
+      at: now().toISOString(),
+    };
+    const event =
+      fact.kind === "CONNECTED"
+        ? JUDGE_EVENTS.studentConnected
+        : JUDGE_EVENTS.studentDisconnected;
+    judgeNamespace.to(competitionRoom(fact.competitionId)).emit(event, payload);
+  });
+
+  // The round's two beginnings reach the judge as one event, distinguished by `phase`
+  // (see `JudgeRoundStartedPayload`). Fired once per round, not once per category, so
+  // the payload names no category — that would be a made-up fact.
+  roundService.installJudgeRoundStartedHook((fact) => {
+    const payload: JudgeRoundStartedPayload = {
+      competitionId: fact.competitionId,
+      roundId: fact.roundId,
+      stageId: fact.stageId,
+      phase: fact.phase,
+      durationSeconds: fact.durationSeconds,
+      at: now().toISOString(),
+    };
+    judgeNamespace.to(competitionRoom(fact.competitionId)).emit(JUDGE_EVENTS.roundStarted, payload);
   });
 
   // ---------------------------------------------------------------------------

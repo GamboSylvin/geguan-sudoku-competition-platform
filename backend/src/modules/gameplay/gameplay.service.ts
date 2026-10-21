@@ -43,6 +43,8 @@ import type {
   AutosaveInput,
   CurrentRoundPayload,
   GameplayStatePayload,
+  MyCompetitionPayload,
+  ProgrammeStageView,
   RoundKind,
   SubmitResult,
   WorkingGrid,
@@ -274,6 +276,142 @@ async function getCurrentRound(participantId: string): Promise<CurrentRoundPaylo
         ? { remainingSeconds: timer.remainingSeconds, totalSeconds: timer.totalSeconds }
         : null,
     },
+  };
+}
+
+/**
+ * The round's own playing time, resolved per kind. The three kinds read three
+ * different columns of `RoundSettings`: an Individual round plays for
+ * `durationSeconds`, the rotation relay for `teamTotalTimeSeconds` (which is
+ * nullable — a team round may instead run one fixed `rotationPeriodSeconds` per
+ * question), and the partition round (齐心协力) for `partitionTotalTimeSeconds`.
+ * Null means "not decided yet", which the client renders as no duration rather
+ * than inventing one.
+ */
+function roundTotalSeconds(
+  kind: RoundKind,
+  settings: {
+    durationSeconds: number;
+    teamTotalTimeSeconds: number | null;
+    partitionTotalTimeSeconds: number | null;
+  } | null,
+): number | null {
+  if (!settings) return null;
+  if (kind === "rotation") return settings.teamTotalTimeSeconds;
+  if (kind === "partition") return settings.partitionTotalTimeSeconds;
+  return settings.durationSeconds;
+}
+
+/**
+ * GET /api/gameplay/competition — **which competition this session belongs to**,
+ * and who the caller is inside it.
+ *
+ * Report 2026-10-19, hole A: the waiting screen could only render two static
+ * strings. The player's entry token is consumed and deleted by exactly one login
+ * (`takeEntryToken` in `session.ts`), the stored `Session` carries no
+ * `competitionId`, and a PLAYER session may reach only this module — so nothing
+ * on the client could ever say the competition's name. The server always knew it
+ * (`identity.repository`'s `findAccountCompetitionIds`, already used to verify the
+ * token at login); it was simply never exposed for reading. This is that
+ * exposure: read-only, resolved from the participant row of the session alone,
+ * **no migration and no new session field**.
+ *
+ * Scoping is the same rule as every other route here: the caller reads their own
+ * participant row, their own category and school, and the programme of the one
+ * competition that row belongs to. There is no id in the path to spoof, and a
+ * judge or controller session is rejected by the controller's participant guard
+ * before reaching this function.
+ *
+ * A participant whose row has gone away (a stale session, a removed student) gets
+ * an all-null payload rather than a 403: this is the screen a player sees while
+ * waiting, and turning it into an error page for a row that simply is not there
+ * would be worse than an empty greeting. The programme is empty in that case
+ * too — there is no competition to describe.
+ */
+async function getMyCompetition(participantId: string): Promise<MyCompetitionPayload> {
+  const participant = await prisma.participant.findUnique({
+    where: { id: participantId },
+    select: {
+      name: true,
+      participantNumber: true,
+      individualEvent: true,
+      teamEvent: true,
+      competitionId: true,
+      category: { select: { id: true, code: true, name: true } },
+      school: { select: { name: true } },
+      competition: { select: { id: true, name: true, description: true, status: true } },
+    },
+  });
+  if (!participant) {
+    return {
+      competition: null,
+      participant: null,
+      category: null,
+      school: null,
+      programme: [],
+    };
+  }
+
+  const stages = await prisma.stage.findMany({
+    where: { competitionId: participant.competitionId },
+    orderBy: { sequence: "asc" },
+    select: {
+      id: true,
+      type: true,
+      sequence: true,
+      status: true,
+      rounds: {
+        orderBy: { sequence: "asc" },
+        select: {
+          id: true,
+          name: true,
+          sequence: true,
+          status: true,
+          settings: {
+            select: {
+              durationSeconds: true,
+              teamTotalTimeSeconds: true,
+              partitionTotalTimeSeconds: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const programme: ProgrammeStageView[] = stages.map((stage) => ({
+    stageId: stage.id,
+    stageType: stage.type,
+    stageSequence: stage.sequence,
+    stageStatus: stage.status,
+    rounds: stage.rounds.map((round) => {
+      const kind: RoundKind = teamRotationService.isRotationRound(stage.type, round.sequence)
+        ? "rotation"
+        : teamPartitionService.isPartitionRound(stage.type, round.sequence)
+          ? "partition"
+          : "individual";
+      return {
+        roundId: round.id,
+        name: round.name,
+        sequence: round.sequence,
+        status: round.status,
+        kind,
+        totalSeconds: roundTotalSeconds(kind, round.settings),
+      };
+    }),
+  }));
+
+  return {
+    competition: participant.competition,
+    participant: {
+      name: participant.name,
+      participantNumber: participant.participantNumber,
+      individualEvent: participant.individualEvent,
+      teamEvent: participant.teamEvent,
+    },
+    category: participant.category,
+    school: participant.school,
+    programme,
   };
 }
 
@@ -861,6 +999,7 @@ export const gameplayService = {
   autosave,
   getState,
   getCurrentRound,
+  getMyCompetition,
   submit,
   handleRoundEnded,
   recordLeftAnswerPage,

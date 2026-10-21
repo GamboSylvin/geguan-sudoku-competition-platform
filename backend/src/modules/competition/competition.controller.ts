@@ -97,7 +97,7 @@ competitionRouter.post(
     try {
       const input = parseInput(createSchema, req.body);
       const competition = await competitionService.createCompetition(input);
-      res.status(201).json(competition);
+      res.status(201).json(competitionService.withLinks(competition));
     } catch (error) {
       next(error);
     }
@@ -134,7 +134,7 @@ competitionRouter.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = parseInput(idParamSchema, req.params);
-      res.status(200).json(await competitionService.getCompetition(id));
+      res.status(200).json(competitionService.withLinks(await competitionService.getCompetition(id)));
     } catch (error) {
       next(error);
     }
@@ -155,7 +155,7 @@ competitionRouter.patch(
       const { id } = parseInput(idParamSchema, req.params);
       const input = parseInput(updateSchema, req.body);
       const competition = await competitionService.updateCompetition(id, input);
-      res.status(200).json(competition);
+      res.status(200).json(competitionService.withLinks(competition));
     } catch (error) {
       next(error);
     }
@@ -222,7 +222,7 @@ competitionRouter.post(
     try {
       const { id } = parseInput(idParamSchema, req.params);
       const competition = await competitionCopyService.copyCompetition(id);
-      res.status(201).json(competition);
+      res.status(201).json(competitionService.withLinks(competition));
     } catch (error) {
       next(error);
     }

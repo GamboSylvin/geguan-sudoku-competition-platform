@@ -37,3 +37,18 @@ AI-HANDOFF*.md
 # The project owner's French deployment aide-mémoire — local only, same as the hand-off notes
 # above; `DEPLOY.md` is the committed, English runbook it complements.
 DEPLOY-CHECKLIST.md
+
+# The AI build methodology reference — kept local, never part of the shipped repo.
+building-with-ai/
+
+# Scratch artifacts, not part of the project — crash dumps, ad-hoc .xlsx inspection files.
+bash.exe.stackdump
+.tmp-xlsx/
+
+# Dated anomaly/findings reports written up from a manual test pass — working documents for
+# the project owner and the coding side, not part of the deliverable (unlike
+# testing/manual-test-scenarios.md, which stays tracked). The canonical copy of the client
+# CSS reference report lives at context/design/RAPPORT-CSS-sudoku_arena.md; a root-level copy
+# is a stray duplicate, not a second source of truth.
+/RAPPORT-CSS-sudoku_arena.md
+RAPPORT-TESTS-MANUELS-*.md

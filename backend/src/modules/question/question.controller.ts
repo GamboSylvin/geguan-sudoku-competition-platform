@@ -7,7 +7,7 @@
  * Unit 09 uses) so `:id` and `:categoryId` come from the path:
  * - `POST   /:categoryId/questions/import` — multipart upload of one `.xlsx`
  * - `GET    /:categoryId/questions/pool` — the pool, grouped by `QuestionSet`
- * - `POST   /:categoryId/rounds/:roundId/select-questions` — assign exactly 6
+ * - `POST   /:categoryId/rounds/:roundId/select-questions` — assign that round's own questions
  *
  * Every one is controller-only (ROL-002, spec Security Considerations).
  *
@@ -47,12 +47,14 @@ const paramsSchema = z.object({
 const selectionParamsSchema = paramsSchema.extend({ roundId: z.string().min(1) });
 
 /**
- * Exactly 6 question ids (BLD-040). The count is checked here so a wrong-shaped body
- * is a 400 before the service is reached; the service re-checks it, since it is the
- * rule's owner and other callers exist.
+ * A non-empty array of question ids. The controller only validates the *shape* of the
+ * body here; the exact count is per-round — 6 for an Individual round, `teamQuestionCount`
+ * for the Team rotation relay, `partitionPuzzleCount` for the Team partition round
+ * (BLD-040, revised 2026-10-19) — so the service owns that check and reports the count
+ * it wanted in `details.expected`.
  */
 const selectionSchema = z.object({
-  questionIds: z.array(z.string().min(1)).length(6),
+  questionIds: z.array(z.string().min(1)).nonempty(),
 });
 
 /** The raw multipart body Express hands over, plus its boundary. */

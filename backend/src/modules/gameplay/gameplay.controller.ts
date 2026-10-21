@@ -9,6 +9,10 @@
  *   - `GET  /api/gameplay/:roundId/state` — the reconnect path. Returns the
  *     round's questions, the player's saved grids, and the server-authoritative
  *     timer snapshot (spec API Contract).
+ *   - `GET  /api/gameplay/competition` — the player's own competition: its name,
+ *     status, the caller's category/school/number and the whole programme with
+ *     each round's status (report 2026-10-19, hole A). Read-only, no id in the
+ *     path, resolved from the session alone.
  * Unit 13 adds `POST /rotation/:roundId/submit` and `GET /rotation/:roundId/state`;
  * Unit 14 adds `POST /partition/:roundId/autosave` and
  * `GET /partition/:roundId/state` (both documented at their own definitions below).
@@ -88,6 +92,37 @@ gameplayRouter.get(
     try {
       const participantId = req.auth!.participantId!;
       const result = await gameplayService.getCurrentRound(participantId);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * GET /api/gameplay/competition — the competition this session belongs to, plus
+ * who the caller is inside it (report 2026-10-19, hole A). No id in the path:
+ * the caller asking it is precisely the one that does not know its competition
+ * id yet, because the entry token that carried it was consumed and deleted at
+ * login (`takeEntryToken`) and the stored `Session` never held one.
+ *
+ * 200 always. Every field is nullable except `programme`, which is empty when
+ * there is nothing to describe — "you are in this competition, nothing has
+ * started" is an answer, not an error, and this is the screen a player stares at
+ * while waiting.
+ *
+ * Registered beside `current-round` and above the `:roundId` routes: both are
+ * single-segment, so no `:roundId/*` route could swallow them, but keeping the
+ * two id-less routes together at the top stays readable.
+ */
+gameplayRouter.get(
+  "/competition",
+  requireAuth,
+  requireParticipant,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const participantId = req.auth!.participantId!;
+      const result = await gameplayService.getMyCompetition(participantId);
       res.status(200).json(result);
     } catch (error) {
       next(error);

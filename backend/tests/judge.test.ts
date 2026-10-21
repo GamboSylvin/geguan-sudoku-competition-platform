@@ -292,6 +292,95 @@ describe("removal guard (AC 4)", () => {
   });
 });
 
+describe("reactivation (report §4a)", () => {
+  it("undoes a deactivation: the judge is active again and logs in with its original password", async () => {
+    const judgeRes = await authed(request(app).post("/api/judges")).send({
+      name: `Judge Ivy ${suffix}`,
+    });
+    createdJudgeIds.push(judgeRes.body.id);
+
+    const deactivated = await authed(
+      request(app).delete(`/api/judges/${judgeRes.body.id}`),
+    ).send();
+    expect(deactivated.status).toBe(200);
+    expect(deactivated.body.active).toBe(false);
+
+    const reactivated = await authed(
+      request(app).patch(`/api/judges/${judgeRes.body.id}/reactivate`),
+    ).send();
+    expect(reactivated.status).toBe(200);
+    expect(reactivated.body.active).toBe(true);
+    expect(reactivated.body.username).toBe(judgeRes.body.username);
+
+    // The original password still works — reactivation never touches the hash.
+    const loginRes = await request(app)
+      .post("/api/auth/judge/login")
+      .set("x-device-id", `device-${Math.random().toString(36).slice(2)}`)
+      .send({ username: judgeRes.body.username, password: judgeRes.body.password });
+    expect(loginRes.status).toBe(200);
+  });
+
+  it("refuses a judge or an unauthenticated caller", async () => {
+    const judgeRes = await authed(request(app).post("/api/judges")).send({
+      name: `Judge Jack ${suffix}`,
+    });
+    createdJudgeIds.push(judgeRes.body.id);
+
+    const asJudge = await request(app)
+      .patch(`/api/judges/${judgeRes.body.id}/reactivate`)
+      .set("x-session-token", judgeToken)
+      .set("x-device-id", judgeDevice);
+    expect(asJudge.status).toBe(403);
+
+    const anon = await request(app).patch(`/api/judges/${judgeRes.body.id}/reactivate`);
+    expect(anon.status).toBe(401);
+  });
+});
+
+describe("listing a competition's recorded ranges (report §4c)", () => {
+  it("lists every range on the competition, with the judge's name and who recorded it", async () => {
+    const competition = await makeCompetition(`RangeList ${suffix}`);
+    const judgeRes = await authed(request(app).post("/api/judges")).send({
+      name: `Judge Kim ${suffix}`,
+    });
+    createdJudgeIds.push(judgeRes.body.id);
+
+    await authed(
+      request(app).post(`/api/competitions/${competition.id}/judge-assignments`),
+    ).send({ judgeId: judgeRes.body.id, fromParticipantNumber: 1, toParticipantNumber: 40 });
+
+    const res = await authed(
+      request(app).get(`/api/competitions/${competition.id}/judge-assignments`),
+    ).send();
+    expect(res.status).toBe(200);
+    const row = (res.body.assignments as { judgeId: string; judgeName: string; judgeActive: boolean; fromParticipantNumber: number; toParticipantNumber: number; assignedByUsername: string | null }[]).find(
+      (a) => a.judgeId === judgeRes.body.id,
+    );
+    expect(row).toBeDefined();
+    expect(row?.judgeName).toBe(`Judge Kim ${suffix}`);
+    expect(row?.judgeActive).toBe(true);
+    expect(row?.fromParticipantNumber).toBe(1);
+    expect(row?.toParticipantNumber).toBe(40);
+    expect(row?.assignedByUsername).toBe(users.controller);
+  });
+
+  it("returns an empty list for a competition with no ranges recorded, and refuses a judge session", async () => {
+    const competition = await makeCompetition(`NoRanges ${suffix}`);
+
+    const res = await authed(
+      request(app).get(`/api/competitions/${competition.id}/judge-assignments`),
+    ).send();
+    expect(res.status).toBe(200);
+    expect(res.body.assignments).toEqual([]);
+
+    const asJudge = await request(app)
+      .get(`/api/competitions/${competition.id}/judge-assignments`)
+      .set("x-session-token", judgeToken)
+      .set("x-device-id", judgeDevice);
+    expect(asJudge.status).toBe(403);
+  });
+});
+
 describe("controller-only access (AC 5)", () => {
   it("refuses a judge session on the judge-management endpoints", async () => {
     const createRes = await request(app)

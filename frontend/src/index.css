@@ -3,51 +3,51 @@
 @tailwind utilities;
 
 /* ─────────────────────────────────────────────────────────────
-   Système de design adopté 2026-10-15 (BLD-054, révise UI-008)
-   Recette : context/design/RAPPORT-CSS-sudoku_arena.md, section 2
-   Mapping : context/ui-context.md, « Visual design system »
+   Design system adopted 2026-10-15 (BLD-054, revises UI-008)
+   Recipe: context/design/RAPPORT-CSS-sudoku_arena.md, section 2
+   Mapping: context/ui-context.md, "Visual design system"
 
-   Ces 5 keyframes + 5 classes utilitaires sont recopiées
-   verbatim du rapport. Le dépôt source est en Tailwind v4
-   « CSS-first » (@import "tailwindcss") ; ce projet est en
-   Tailwind v3, donc les trois directives @tailwind ci-dessus
-   sont conservées telles quelles et rien n'est remplacé.
+   These 5 keyframes + 5 utility classes are copied verbatim
+   from the report. The source repository is on Tailwind v4
+   "CSS-first" (@import "tailwindcss"); this project is on
+   Tailwind v3, so the three @tailwind directives above are
+   kept as they are and nothing is replaced.
 
-   Les couleurs sont exactement les Tailwind par défaut :
+   The colours are exactly the Tailwind defaults:
    rgb(34 197 94) = green-500, rgb(168 85 247) = purple-500,
    rgb(234 179 8) = yellow-500.
 
-   Aucune animation n'est décorative : chacune doit être branchée
-   sur un changement d'état déjà existant dans ce projet. S'il
-   n'y a pas d'état équivalent, on n'ajoute pas l'animation.
+   No animation is decorative: each one must be wired to a state
+   change that already exists in this project. If there is no
+   equivalent state, the animation is not added.
    ───────────────────────────────────────────────────────────── */
 
-/* Apparition en « pop » d'une lettre/case révélée */
+/* A revealed letter/cell "popping" into existence */
 @keyframes letter-reveal {
   0%   { transform: scale(0.4) rotate(-12deg); opacity: 0; }
   60%  { transform: scale(1.15) rotate(3deg);  opacity: 1; }
   100% { transform: scale(1) rotate(0);        opacity: 1; }
 }
 
-/* Bref flash vert quand une case est correctement remplie */
+/* Brief green flash when a cell is correctly filled */
 @keyframes correct-flash {
   0%   { background-color: rgb(34 197 94 / 0.6); transform: scale(1.12); }
   100% { background-color: transparent;          transform: scale(1); }
 }
 
-/* Halo pulsant quand le puzzle final se déverrouille */
+/* Pulsing halo when the final puzzle unlocks */
 @keyframes unlock-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgb(168 85 247 / 0.5); }
   50%       { box-shadow: 0 0 20px 6px rgb(168 85 247 / 0.35); }
 }
 
-/* Entrée par la droite pour les bannières de message */
+/* Entry from the right for message banners */
 @keyframes slide-in {
   0%   { transform: translateX(100%); opacity: 0; }
   100% { transform: translateX(0);    opacity: 1; }
 }
 
-/* Flash doré quand une ligne de classement entre dans le podium */
+/* Golden flash when a ranking row enters the podium */
 @keyframes rank-highlight {
   0%   { background-color: rgb(234 179 8 / 0.25); }
   100% { background-color: transparent; }

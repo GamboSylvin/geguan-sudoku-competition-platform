@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLocale } from "../../i18n/locale-context";
-import { clearSession } from "../auth/session";
+import { clearSession, loadSession } from "../auth/session";
 import {
   fetchJudgeStudents,
   restartStudent,
   type JudgeStudentView,
   JudgeApiError,
 } from "./judgeApi";
+import { useJudgeLivePush } from "./useJudgeLivePush";
 
 /**
  * The student-status/restart panel (Unit 10), reusable by both roles that may see
@@ -16,10 +17,18 @@ import {
  * whole competition, Unit 11 spec Detail 6). Both reach the *same* backend code
  * path; only the scope differs, which is why this is one component and not two.
  *
- * Polling, not realtime: the spec does not ask for a live push, and a 3-second poll
- * on a judge's tablet or the controller's desk is well within the event's scale
- * (~300 tablets, a handful of judges, one controller). A realtime upgrade is a
- * later unit's call.
+ * Polling **and** a live push (F3, 2026-10-21), and the poll stays. The push is what
+ * makes a change visible the moment it happens — a three-second interval is not slow,
+ * but a judge reading a table of a dozen rows does not notice one cell flip, and the
+ * round starting changed no cell at all. The push therefore announces the fact and
+ * triggers an immediate re-read; the interval remains as the safety net for a push
+ * that never arrives, because a dropped WebSocket frame must not leave the panel
+ * showing a student who left an hour ago. Neither channel edits a row locally: the
+ * rows come from HTTP, which is where the authority is (invariant 3).
+ *
+ * The push is judge-only. A controller session gets the same re-read from its own
+ * interval, and connecting it to `/judge` would authenticate a controller against a
+ * namespace scoped to a judge's assignments — a room it has no business joining.
  *
  * Visual: mood B, "light, sober, white cards" (BLD-054, revising U-66).
  * This panel is rendered in two B screens (the judge's dashboard and the live
@@ -102,6 +111,16 @@ export function StudentsSupervisionPanel({
     }
   }, [competitionId, navigate, t]);
 
+  // The live push, judge sessions only (F3). Which role this panel is being rendered
+  // for is read from the session, not inferred from `showHeader` or from whether a
+  // `competitionId` was passed: those are display and scope concerns that happen to
+  // line up today, and a screen that stopped lining them up would silently connect a
+  // controller to a namespace scoped to a judge's assignments. `refresh` is read
+  // through a ref inside the hook, so its changing identity cannot tear the socket
+  // down mid-round.
+  const isJudgeSession = loadSession()?.role === "JUDGE";
+  const { notices, live } = useJudgeLivePush(refresh, isJudgeSession);
+
   useEffect(() => {
     void refresh();
     const handle = window.setInterval(() => {
@@ -136,7 +155,31 @@ export function StudentsSupervisionPanel({
       {showHeader && (
         <header className="mb-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">{t("judge.supervision.title")}</h1>
+            <h1 className="flex items-center gap-2 text-xl font-bold text-gray-900 sm:text-2xl">
+              {t("judge.supervision.title")}
+              {/* The badge says whether this panel is hearing the server right now. A
+                  judge who sees "Reconnecting…" knows a stale row is possible; one
+                  who sees nothing has no way to tell a quiet room from a dead socket. */}
+              <span
+                className={
+                  live
+                    ? "inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800 sm:text-xs"
+                    : "inline-flex items-center gap-1 rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-700 sm:text-xs"
+                }
+              >
+                <span
+                  aria-hidden="true"
+                  className={
+                    live
+                      ? "h-1.5 w-1.5 rounded-full bg-green-600"
+                      : "h-1.5 w-1.5 rounded-full bg-gray-500"
+                  }
+                />
+                {live
+                  ? t("judge.supervision.liveBadge")
+                  : t("judge.supervision.offlineBadge")}
+              </span>
+            </h1>
             <p className="mt-1 text-xs text-gray-500 sm:text-sm">{t("judge.supervision.subtitle")}</p>
           </div>
           <button
@@ -160,6 +203,24 @@ export function StudentsSupervisionPanel({
             {t("judge.supervision.refresh")}
           </button>
         </div>
+      )}
+
+      {notices.length > 0 && (
+        // A feed, not an alert. `role="log"` is the honest landmark: a list that gains
+        // entries as they happen and is meant to be read in passing, not a message the
+        // judge must act on. Announcing each line with `role="status"` would interrupt a
+        // judge mid-action once per student, and there are ~300 of them.
+        <ul
+          role="log"
+          aria-live="polite"
+          className="mb-3 space-y-1 rounded-xl border-l-4 border-indigo-500 bg-white p-3 shadow sm:p-4"
+        >
+          {notices.map((notice) => (
+            <li key={notice.id} className="text-xs text-gray-700 sm:text-sm">
+              {notice.text}
+            </li>
+          ))}
+        </ul>
       )}
 
       {error && (

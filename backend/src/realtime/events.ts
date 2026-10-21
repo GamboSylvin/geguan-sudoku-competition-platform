@@ -112,7 +112,82 @@ export function tabletRoom(participantId: string): string {
 export function categoryRoom(categoryId: string): string {
   return `category:${categoryId}`;
 }
+
+/**
+ * Judge and controller events (F3, 2026-10-21).
+ *
+ * The judge namespace existed in `REALTIME_NAMESPACES` and was never used: no socket
+ * ever joined it, so the judge screen had no push to listen to and the supervision
+ * panel fell back to a three-second poll. A judge therefore learned that a student
+ * had connected — or that the round had started — only at the next poll, and often not
+ * at all, because the row it was watching was one of a dozen.
+ *
+ * These are the three pushes that replace that:
+ *   - `judge:student-connected` / `judge:student-disconnected` — a player of the
+ *     judge's competition logged in or logged out. Carries the participant, never the
+ *     session token or the device id.
+ *   - `judge:round-started` — the competition's round began. Deliberately **not**
+ *     `ROUND_EVENTS.started`: that payload carries the questions (BLD-06), and a judge
+ *     is not entitled to another category's puzzles. This one names the round and its
+ *     duration and stops there.
+ */
+export const JUDGE_EVENTS = {
+  studentConnected: "judge:student-connected",
+  studentDisconnected: "judge:student-disconnected",
+  roundStarted: "judge:round-started",
+} as const;
+
+/**
+ * The per-competition room, on the judge and controller namespaces.
+ *
+ * A judge socket joins the room of the competition its session entered through, so a
+ * presence push about competition B never reaches a judge sitting in competition A's
+ * room. The room name is the competition id itself, matching the big-screen namespace's
+ * existing convention; it is a different namespace, so the two cannot collide.
+ */
+export function competitionRoom(competitionId: string): string {
+  return competitionId;
+}
 export interface SystemConnectedPayload {
   /** ISO timestamp from the single server clock (the server owns time). */
   serverTime: string;
+}
+
+/**
+ * A player of the judge's competition logged in or out (F3). Fields only a judge is
+ * already entitled to see about a student in its own range: the number the range is
+ * expressed in, the name, and the category. No token, no device id, no attempt data.
+ */
+export interface JudgePresencePayload {
+  competitionId: string;
+  participantId: string;
+  participantNumber: number;
+  participantName: string;
+  /** ISO timestamp of the change, from the server clock. */
+  at: string;
+}
+
+/**
+ * The judge's round-started push (F3): the same fact `ROUND_EVENTS.started` tells a
+ * player, minus everything that would hand the judge another category's questions.
+ */
+export interface JudgeRoundStartedPayload {
+  competitionId: string;
+  roundId: string;
+  stageId: string;
+  /**
+   * Which of the round's two beginnings this is. `PREPARATION` is the countdown —
+   * every tablet left the waiting screen; `ACTIVE` is the moment the puzzles are on
+   * screen and answering counts. They are seconds apart and both are worth a judge
+   * looking up, so they share one event name rather than being two hooks.
+   *
+   * There is deliberately **no `categoryId` here**: this push fires once per round,
+   * while the player's `ROUND_EVENTS.started` fires once per category. A `Round` is
+   * shared by every category of a competition, so naming one category here would be a
+   * made-up fact.
+   */
+  phase: "PREPARATION" | "ACTIVE";
+  durationSeconds: number;
+  /** ISO timestamp from the server clock. */
+  at: string;
 }
