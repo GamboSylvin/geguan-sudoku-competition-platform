@@ -115,7 +115,12 @@ export function fetchQuestionPool(
   );
 }
 
-/** Assign exactly 6 pool questions to one Individual round, replacing any earlier 6. */
+/**
+ * Assign a round's questions, replacing any earlier selection. The count is the round's
+ * own — 6 for an Individual round, `teamQuestionCount` for the Team rotation relay,
+ * `partitionPuzzleCount` for the Team partition round (BLD-040, revised 2026-10-19); the
+ * server rejects any other count and says which it wanted in `details.expected`.
+ */
 export function selectRoundQuestions(
   competitionId: string,
   categoryId: string,

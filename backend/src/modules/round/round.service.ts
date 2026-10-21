@@ -66,6 +66,39 @@ export function installRoundStartedHook(hook: RoundStartedHook): void {
 }
 
 /**
+ * The judge's own round-started notification (F3, 2026-10-21), installed the same way —
+ * by the gateway, at startup, so this module keeps importing nothing from realtime.
+ *
+ * It is a **separate** hook rather than a second listener on `roundStartedHook`, for two
+ * reasons. The payload must not carry questions: `RoundStartedPayload` does, and a judge
+ * supervising one category is not entitled to another's puzzles. And it fires **once per
+ * round**, not once per category: the player hook has to fan out because each category
+ * needs its own six questions, while the judge's fact is simply "the round began", which
+ * is true of the competition as a whole and would otherwise be announced N times.
+ */
+export interface JudgeRoundStartedFact {
+  roundId: string;
+  stageId: string;
+  competitionId: string;
+  /**
+   * Which of the round's two beginnings this is. `PREPARATION` is the countdown the
+   * controller started — every tablet leaves the waiting screen; `ACTIVE` is the moment
+   * the puzzles are on screen and answering counts. Both are worth a judge looking up,
+   * and they are seconds apart, so a single event name with this field beats two hooks
+   * and beats one push that arrives too early to mean anything.
+   */
+  phase: "PREPARATION" | "ACTIVE";
+  durationSeconds: number;
+}
+
+type JudgeRoundStartedHook = (fact: JudgeRoundStartedFact) => void;
+let judgeRoundStartedHook: JudgeRoundStartedHook | null = null;
+
+export function installJudgeRoundStartedHook(hook: JudgeRoundStartedHook): void {
+  judgeRoundStartedHook = hook;
+}
+
+/**
  * Who performs a **team** round's start (the Gameplay module's rotation service,
  * Unit 13) installs this hook. A team round's questions are not `Question.roundId`
  * rows — they are drawn per team from the category's pool at deal time (BLD-040,
@@ -207,6 +240,18 @@ async function startStagePreparation(
 
   await startPreparationTimer(round.id, competitionId, stage.id, preparationSeconds);
 
+  // The judge's "the round is launched" notification (F3). Fired here rather than at
+  // the active phase below, because this is the moment the event visibly begins: every
+  // player's tablet leaves the waiting screen and starts counting down, which is exactly
+  // when a judge needs to look up. It fires once per round, not once per category.
+  judgeRoundStartedHook?.({
+    roundId: round.id,
+    stageId: stage.id,
+    competitionId,
+    phase: "PREPARATION",
+    durationSeconds: preparationSeconds,
+  });
+
   return {
     competitionId,
     stageId: stage.id,
@@ -326,6 +371,18 @@ async function startActivePhaseFromTimer(state: TimerState): Promise<void> {
     await openParticipationsForRound(state.competitionId, state.roundId);
 
     await startRoundTimer(state.roundId, state.competitionId, state.stageId, durationSeconds);
+
+    // The second of the judge's two notifications (F3): the round is now live and
+    // answers count. Fired before the team/individual branches below, so a team round
+    // notifies too — the branch returns early, and a judge supervising a team round
+    // would otherwise never hear anything.
+    judgeRoundStartedHook?.({
+      roundId: state.roundId,
+      stageId: state.stageId,
+      competitionId: state.competitionId,
+      phase: "ACTIVE",
+      durationSeconds,
+    });
 
     // The Team stage's two rounds each deal their own questions from the category
     // pool — `listRoundQuestions` finds nothing for either, because a team round
@@ -506,6 +563,7 @@ export const roundService = {
   startStage1Round1Preparation,
   startStagePreparation,
   installRoundStartedHook,
+  installJudgeRoundStartedHook,
   installTeamRoundStartHook,
   pause,
   resume,

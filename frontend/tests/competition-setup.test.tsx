@@ -146,6 +146,14 @@ function baseRoutes(): Route[] {
       status: 200,
       body: { schools: [] },
     },
+    // The judge range panel (report §4c) now also reads the competition's recorded
+    // ranges as soon as it mounts. Same failure mode as the two routes above without it.
+    {
+      method: "GET",
+      url: /\/api\/competitions\/comp-1\/judge-assignments$/,
+      status: 200,
+      body: { assignments: [] },
+    },
   ];
 }
 
@@ -174,10 +182,14 @@ describe("competition setup page", () => {
     // Two stages, four rounds, each round's default duration shown.
     expect(screen.getByText("INDIVIDUAL")).toBeInTheDocument();
     expect(screen.getByText("TEAM")).toBeInTheDocument();
-    // "Individual round 1" appears in the structure list and again as an option of the
-    // question panel's round picker (Unit 5), so it is matched loosely here.
+    // A round's name is no longer unique on the page: the structure list carries it, and
+    // so does the question panel, which since BLD-040's revision shows one block per
+    // round — all four of them, Team included. Matched loosely for that reason.
     expect(screen.getAllByText("Individual round 1").length).toBeGreaterThan(0);
-    expect(screen.getByText("Team round 2")).toBeInTheDocument();
+    expect(screen.getAllByText("Team round 2").length).toBeGreaterThan(0);
+    // And the question panel really does offer a block for each of the four rounds.
+    expect(screen.getByTestId("round-block-round-1")).toBeInTheDocument();
+    expect(screen.getByTestId("round-block-round-4")).toBeInTheDocument();
     const durations = screen.getAllByLabelText("Duration (seconds)") as HTMLInputElement[];
     expect(durations.map((input) => input.value)).toEqual(["1200", "1800", "1800", "1800"]);
   });
@@ -227,6 +239,9 @@ describe("competition setup page", () => {
           publishedAt: new Date().toISOString(),
           entryLinkToken: "entry-token",
           bigScreenLinkToken: "screen-token",
+          // Composed by the backend (`shared/links`) — the screen renders these as-is.
+          entryLinkUrl: "http://10.0.0.5/player?token=entry-token",
+          bigScreenLinkUrl: "http://10.0.0.5/big-screen/screen-token",
         },
       },
     ]);
@@ -238,7 +253,46 @@ describe("competition setup page", () => {
     await waitFor(() => {
       expect(screen.getByText("Published")).toBeInTheDocument();
     });
-    expect(screen.getByText("entry-token")).toBeInTheDocument();
-    expect(screen.getByText("screen-token")).toBeInTheDocument();
+    // Real, openable addresses — not the raw tokens (report §9a).
+    const entry = screen.getByRole("link", { name: "http://10.0.0.5/player?token=entry-token" });
+    expect(entry).toHaveAttribute("href", "http://10.0.0.5/player?token=entry-token");
+    const bigScreen = screen.getByRole("link", { name: "http://10.0.0.5/big-screen/screen-token" });
+    expect(bigScreen).toHaveAttribute("href", "http://10.0.0.5/big-screen/screen-token");
+    expect(screen.getAllByRole("button", { name: "Copy link" })).toHaveLength(2);
+  });
+
+  it("says the link address is not configured when the server has no PUBLIC_BASE_URL", async () => {
+    mockFetch([
+      ...baseRoutes(),
+      {
+        method: "POST",
+        url: /\/api\/competitions\/comp-1\/publish$/,
+        status: 200,
+        body: {
+          id: "comp-1",
+          status: "WAITING",
+          publishedAt: new Date().toISOString(),
+          entryLinkToken: "entry-token",
+          bigScreenLinkToken: "screen-token",
+          entryLinkUrl: "",
+          bigScreenLinkUrl: "",
+        },
+      },
+    ]);
+    renderPage();
+
+    await createCompetition();
+    fireEvent.click(screen.getByRole("button", { name: "Publish" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Published")).toBeInTheDocument();
+    });
+    // No dead link and no raw token: an explanation instead.
+    expect(
+      screen.getAllByText(
+        "The link address is not configured on this server (PUBLIC_BASE_URL). Set it, then reopen this screen.",
+      ),
+    ).toHaveLength(2);
+    expect(screen.queryByRole("link", { name: /entry-token/ })).not.toBeInTheDocument();
   });
 });

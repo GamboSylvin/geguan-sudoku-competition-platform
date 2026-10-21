@@ -16,7 +16,8 @@ import { DEFAULT_LOCALE, translate, type Locale } from "./index";
 interface LocaleContextValue {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (key: string) => string;
+  /** Second argument interpolates the catalogue string's `{name}` placeholders. */
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const LocaleContext = createContext<LocaleContextValue | null>(null);
@@ -30,7 +31,11 @@ export function LocaleProvider({
 }) {
   const [locale, setLocale] = useState<Locale>(initialLocale);
 
-  const t = useCallback((key: string) => translate(locale, key), [locale]);
+  const t = useCallback(
+    (key: string, params?: Record<string, string | number>) =>
+      translate(locale, key, params),
+    [locale],
+  );
 
   const value = useMemo(
     () => ({ locale, setLocale, t }),

@@ -3,6 +3,7 @@
  * (role picker + credentials), the session store, and the per-role placeholder
  * landing route. Real role screens arrive in later units.
  */
+export { EnterPage } from "./EnterPage";
 export { LoginPage } from "./LoginPage";
 export { RoleHomePage } from "./RoleHomePage";
 export {
@@ -12,6 +13,12 @@ export {
   saveSession,
   clearSession,
   landingPath,
+  peekEntryToken,
+  setEntryToken,
+  takeEntryToken,
+  peekEntryRoleHint,
+  setEntryRoleHint,
+  clearEntryRoleHint,
   ROLE_SLUGS,
 } from "./session";
 export type { Role, RoleSlug, Session } from "./session";

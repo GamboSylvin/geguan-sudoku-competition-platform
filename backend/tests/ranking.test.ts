@@ -174,15 +174,25 @@ async function seedCompetition(name: string): Promise<SeededCompetition> {
 
   let questionId = "";
   let question2Id = "";
-  // Publish readiness requires a complete selection of 6 assigned questions per
-  // Individual round (BLD-040); `questionId`/`question2Id` point at sequence 1 of
-  // each round, which is the one the gameplay calls below use.
-  for (const round of [round1, round2]) {
-    for (let sequence = 1; sequence <= 6; sequence += 1) {
+  // Publish readiness requires every round to hold its own questions (BLD-040, revised
+  // 2026-10-19: a Team round holds a selection too). Counts: 6 per Individual round, 10
+  // for the Team rotation relay, 3 for the Team partition round. `questionId`/`question2Id`
+  // still point at sequence 1 of each Individual round, the ones the gameplay calls use.
+  const teamStage = full.stages.find((s) => s.type === "TEAM");
+  const teamRound1 = teamStage?.rounds.find((r) => r.sequence === 1);
+  const teamRound2 = teamStage?.rounds.find((r) => r.sequence === 2);
+  const perRound: Array<[string, number]> = [
+    [round1.id, 6],
+    [round2.id, 6],
+    ...(teamRound1 ? [[teamRound1.id, 10] as [string, number]] : []),
+    ...(teamRound2 ? [[teamRound2.id, 3] as [string, number]] : []),
+  ];
+  for (const [roundId, count] of perRound) {
+    for (let sequence = 1; sequence <= count; sequence += 1) {
       const q = await prisma.question.create({
         data: {
           questionSetId: questionSet.id,
-          roundId: round.id,
+          roundId,
           sequence,
           points: 10,
           gridRows: GRID_SIZE,
@@ -193,8 +203,8 @@ async function seedCompetition(name: string): Promise<SeededCompetition> {
         },
       });
       if (sequence !== 1) continue;
-      if (round.id === round1.id) questionId = q.id;
-      if (round.id === round2.id) question2Id = q.id;
+      if (roundId === round1.id) questionId = q.id;
+      if (roundId === round2.id) question2Id = q.id;
     }
   }
 

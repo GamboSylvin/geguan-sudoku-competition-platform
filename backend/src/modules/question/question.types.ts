@@ -1,10 +1,11 @@
 /**
  * Public types for the Question module (Unit 05).
  *
- * A question file is a *pool*: every row becomes a `Question` with `roundId = null`
- * (BLD-040), and a separate manual controller step assigns exactly 6 of them to each
- * Individual round. Nothing here is an ORM type — the module's internals stay behind
- * its barrel (invariant 4).
+ * A question file is a *pool*: every row becomes a `Question` with `roundId = null`,
+ * and a separate manual controller step assigns the questions each round uses — 6 per
+ * Individual round, and each Team round's own count (BLD-040, revised 2026-10-19 so a
+ * Team round holds a selection too). Nothing here is an ORM type — the module's
+ * internals stay behind its barrel (invariant 4).
  */
 
 /** One raw data row of the question Excel, as text, keyed by the column header. */

@@ -5,6 +5,7 @@ import { disconnectRedis } from "../src/infra/redis";
 import { identityService } from "../src/modules/identity";
 import { competitionService } from "../src/modules/competition";
 import { roundTimerService } from "../src/modules/round";
+import { seedReadinessQuestions } from "./readiness-questions";
 import { gameplayService, teamRotationService } from "../src/modules/gameplay";
 import * as rotationRepository from "../src/modules/gameplay/team-rotation.repository";
 import type { RotationState } from "../src/modules/gameplay";
@@ -30,9 +31,10 @@ import type { RotationState } from "../src/modules/gameplay";
  * `Team`/`Participant`/`Question` rows are seeded directly, the same precedent
  * Units 03, 06, 08 and 10 set for data whose real import unit isn't built yet
  * (Unit 04 is still gated on U-01; Unit 05's importer is not exercised here).
- * The seeded pool still satisfies publish readiness: exactly 6 assigned
- * questions per Individual round, one active participant per category, and a
- * judge range covering every participant number.
+ * The seed still satisfies publish readiness: every round holds its own selection —
+ * 6 per Individual round, `teamQuestionCount` for the rotation round, `partitionPuzzleCount`
+ * for the partition one (BLD-040, revised 2026-10-19) — one active participant per
+ * category, and a judge range covering every participant number.
  *
  * The rotation period is never waited out (the default is 60s and the seed uses
  * 3600s so no background tick can move a question mid-test). A test instead moves
@@ -87,8 +89,6 @@ const PARTIAL_GRID: (number | null)[] = [
 ];
 
 const TEAM_SIZE = 4;
-/** Enough pool for a 6-question draw per team, so the refill queue is non-empty. */
-const POOL_SIZE = 8;
 const DRAW_COUNT = 6;
 
 const createdCompetitionIds: string[] = [];
@@ -138,7 +138,13 @@ async function seedTeamCompetition(name: string): Promise<SeededTeamCompetition>
 
   const full = await prisma.competition.findUniqueOrThrow({
     where: { id: competition.id },
-    include: { categories: true, stages: { include: { rounds: true } } },
+    // `settings` is included on purpose: the seeding below reads each Team round's own
+    // count off it (`teamQuestionCount`, `partitionPuzzleCount`) rather than repeating
+    // the schema's defaults here.
+    include: {
+      categories: true,
+      stages: { include: { rounds: { include: { settings: true } } } },
+    },
   });
   const category = full.categories[0]!;
   const individualStage = full.stages.find((s) => s.type === "INDIVIDUAL")!;
@@ -179,53 +185,12 @@ async function seedTeamCompetition(name: string): Promise<SeededTeamCompetition>
     data: { competitionId: competition.id, categoryId: category.id, name: `Set ${suffix}` },
   });
 
-  // Publish readiness: exactly 6 assigned questions per Individual round.
-  for (const round of individualStage.rounds) {
-    for (let sequence = 1; sequence <= 6; sequence += 1) {
-      await prisma.question.create({
-        data: {
-          questionSetId: questionSet.id,
-          roundId: round.id,
-          sequence,
-          points: 10,
-          gridRows: GRID_SIZE,
-          gridColumns: GRID_SIZE,
-          regions: [[0, 1, 4, 5]],
-          startingGrid: STARTING_GRID,
-          solution: SOLUTION,
-        },
-      });
-    }
-  }
-  // The team pool: `roundId` null (BLD-040 — a team round never sets it).
-  for (let sequence = 1; sequence <= POOL_SIZE; sequence += 1) {
-    await prisma.question.create({
-      data: {
-        questionSetId: questionSet.id,
-        roundId: null,
-        sequence: 100 + sequence,
-        points: 10,
-        gridRows: GRID_SIZE,
-        gridColumns: GRID_SIZE,
-        regions: [[0, 1, 4, 5]],
-        startingGrid: STARTING_GRID,
-        solution: SOLUTION,
-      },
-    });
-  }
-
-  const judge = await prisma.judge.create({ data: { name: `Judge ${suffix}` } });
-  await prisma.competitionJudgeAssignment.create({
-    data: {
-      competitionId: competition.id,
-      judgeId: judge.id,
-      fromParticipantNumber: 1,
-      toParticipantNumber: TEAM_SIZE,
-    },
-  });
-
-  // The team round's own settings: a short period so the tests are quick, and a
-  // long duration so the Unit 07 clock never pre-empts the rotation end.
+  // The team round's own settings, set **before** the questions are seeded: since
+  // BLD-040's revision (2026-10-19) each Team round holds its own selection, and the
+  // readiness check counts against `teamQuestionCount` / `partitionPuzzleCount`. Seeding
+  // first would read the schema defaults and then publish against a different target.
+  // A short period so the tests are quick, and a long duration so the Unit 07 clock
+  // never pre-empts the rotation end.
   await prisma.roundSettings.update({
     where: { roundId: teamRound1.id },
     data: {
@@ -243,6 +208,36 @@ async function seedTeamCompetition(name: string): Promise<SeededTeamCompetition>
   await prisma.roundSettings.update({
     where: { roundId: teamRound2.id },
     data: { durationSeconds: 1200, preparationSeconds: 60 },
+  });
+
+  // Every round of the competition gets its own selection: 6 per Individual round,
+  // `DRAW_COUNT` for this rotation round, `partitionPuzzleCount` for the partition one.
+  // The rotation round therefore draws from exactly `DRAW_COUNT` questions — its own —
+  // so the refill queue is `DRAW_COUNT - TEAM_SIZE`, which is what the deal test asserts.
+  const reloaded = await prisma.competition.findUniqueOrThrow({
+    where: { id: competition.id },
+    include: { stages: { include: { rounds: { include: { settings: true } } } } },
+  });
+  await seedReadinessQuestions(prisma, {
+    questionSetId: questionSet.id,
+    stages: reloaded.stages,
+    grid: {
+      gridRows: GRID_SIZE,
+      gridColumns: GRID_SIZE,
+      regions: [[0, 1, 4, 5]],
+      startingGrid: STARTING_GRID,
+      solution: SOLUTION,
+    },
+  });
+
+  const judge = await prisma.judge.create({ data: { name: `Judge ${suffix}` } });
+  await prisma.competitionJudgeAssignment.create({
+    data: {
+      competitionId: competition.id,
+      judgeId: judge.id,
+      fromParticipantNumber: 1,
+      toParticipantNumber: TEAM_SIZE,
+    },
   });
 
   await competitionService.publishCompetition(competition.id);
@@ -534,16 +529,20 @@ describe("initial deal (acceptance criterion 1)", () => {
     expect(state.totalQuestionCount).toBe(DRAW_COUNT);
     expect(state.correctCount).toBe(0);
 
-    // Every dealt question comes from the category's pool — which is the whole
-    // `QuestionSet` content, **not** filtered by `roundId` (spec Detail 1,
-    // BLD-040): `roundId` is the Individual stage's manual-assignment column and a
-    // team round never sets it, so filtering on it would find nothing at all.
+    // Every dealt question is one of *this round's own* selection (BLD-040, revised
+    // 2026-10-19). It used to be "anything the category imported", because a team round
+    // set no `roundId` and the pool was read unfiltered; the round now holds a selection
+    // and draws from it, which is also what keeps it off the Individual rounds' questions.
     const dealtIds = [...state.holds.map((h) => h.question!.id), ...state.refillQueue.map((q) => q.id)];
-    const inCategoryPool = await prisma.question.findMany({
-      where: { id: { in: dealtIds }, questionSet: { competitionId: ctx.competitionId, categoryId: ctx.categoryId } },
+    const inRoundSelection = await prisma.question.findMany({
+      where: {
+        id: { in: dealtIds },
+        roundId: ctx.teamRound1Id,
+        questionSet: { competitionId: ctx.competitionId, categoryId: ctx.categoryId },
+      },
       select: { id: true },
     });
-    expect(inCategoryPool).toHaveLength(dealtIds.length);
+    expect(inRoundSelection).toHaveLength(dealtIds.length);
     // No duplicate question is dealt twice.
     expect(new Set(dealtIds).size).toBe(dealtIds.length);
 

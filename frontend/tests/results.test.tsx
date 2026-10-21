@@ -49,6 +49,8 @@ function seedControllerSession(): void {
     deviceId: "device-1",
     role: "CONTROLLER",
     accountId: "account-1",
+    // A controller is never scoped to a single competition (ROL-004).
+    competitionId: null,
     sessionExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
   });
 }

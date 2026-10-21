@@ -10,6 +10,9 @@ export const en = {
     notFound: "Not found",
     validationFailed: "Validation failed",
     internalError: "Something went wrong",
+    // Report §7: a plain "go back" link, for a page whose parent is not itself
+    // another screen worth a specific label (e.g. the judge's own landing).
+    back: "Back",
   },
   placeholder: {
     title: "Sudoku Arena",
@@ -17,6 +20,9 @@ export const en = {
   },
   auth: {
     title: "Sudoku Arena",
+    // Hole D (2026-10-20). Shown above the role picker when an entry link named a
+    // competition, so the person knows which event they are signing into.
+    welcomeTo: "Welcome to {name}",
     chooseRole: "Choose your role",
     username: "Username",
     password: "Password",
@@ -45,6 +51,13 @@ export const en = {
     categoryName: "Name",
     addCategory: "Add category",
     removeCategory: "Remove",
+    // Report §6c: editing categories was only ever possible on the blank create form —
+    // once a competition existed there was no way to add or fix one, even though the
+    // backend's PATCH already accepted it.
+    editCategories: "Categories",
+    saveCategories: "Save categories",
+    categoriesLockedNote:
+      "Categories are locked once the competition is published; only round durations can still change.",
     create: "Create competition",
     wifiNote:
       "Before the event, ask your network/IT team to properly configure the venue Wi-Fi — about 300 tablets connect at once, and the venue Wi-Fi is the biggest real-world risk.",
@@ -56,8 +69,21 @@ export const en = {
     saved: "Saved",
     publish: "Publish",
     published: "Published",
-    entryLink: "Entry link",
+    // Hole C (report 2026-10-19): publishing ended the screen with two links and no next
+    // step, so the owner could not tell where a competition actually gets started. It is
+    // the controller's live page (CS-022 [C]/J-004 give the start to the controller, not
+    // the judge), so say so and link straight to it.
+    nextStep: "Next: start the rounds from the live control panel.",
+    openLive: "Go to the live control panel",
+    // Hole D (2026-10-20): this is the ONE address the room uses. A student and a judge
+    // both open it and pick their role on the login page it leads to, so the label says
+    // so — printing two addresses is how the two halves drift apart.
+    entryLink: "Entry link (players and judges)",
     bigScreenLink: "Big-screen link",
+    copyLink: "Copy link",
+    copied: "Copied",
+    linkNotConfigured:
+      "The link address is not configured on this server (PUBLIC_BASE_URL). Set it, then reopen this screen.",
     notReady: "Not ready to publish. Still missing:",
     backToList: "Back to the competition list",
     genericError: "Something went wrong. Please try again.",
@@ -104,19 +130,44 @@ export const en = {
     list: "Existing judges",
     active: "Active",
     inactive: "Inactive",
-    remove: "Remove",
-    removed: "Removed",
-    blocked: "Cannot remove: still assigned to",
+    // §4a: the button used to read "Remove", which announced a destruction that never
+    // happens — the row is only deactivated. Deactivating and reactivating are both here.
+    deactivate: "Deactivate",
+    deactivateBlocked: "Cannot deactivate: still assigned to",
+    reactivate: "Reactivate",
+    reactivated: "Judge reactivated. Their username is",
+    reactivatedNote:
+      "The judge logs in again with the password given when they were created; it is never shown a second time.",
     assign: "Assign range",
     assignTo: "Assign on competition",
+    createJudgeLink: "Create a judge",
     range: "Participants #",
-    from: "From",
-    to: "To",
+    // §4b: "From"/"To" alone told nobody what the numbers mean. They are participant
+    // numbers, scoped to this competition only.
+    rangeHelp:
+      "This judge may supervise the participants whose numbers fall inside this range, for this competition only.",
+    fromParticipantNumber: "From participant number",
+    toParticipantNumber: "To participant number",
+    // §4c: the panel used to be write-only, so a second range had to be assigned blind.
+    existingRanges: "Ranges already recorded on this competition",
+    noRanges: "No range recorded yet.",
+    columnJudge: "Judge",
+    columnRange: "Range",
+    columnRecordedBy: "Recorded by",
+    columnRecordedAt: "Recorded at",
+    judgeInactiveHint: "deactivated",
     saveAssignment: "Save assignment",
     unassign: "Unassign",
     assignedTo: "Assigned to",
     notAssigned: "Not yet assigned to a competition.",
+    landingBadge: "Judge",
     landingTitle: "Your assignment",
+    // Hole B (report 2026-10-19): Unit 10's supervision dashboard was built and tested
+    // but had no way in — this landing listed the assignments and stopped there, so the
+    // judge saw "no interface to do anything with". The dashboard supervises the judge's
+    // own range across every competition they hold, so one entry point is honest rather
+    // than one per assignment.
+    openDashboard: "Open the supervision dashboard",
     genericError: "Something went wrong. Please try again.",
     supervision: {
       title: "Your students",
@@ -154,6 +205,17 @@ export const en = {
       noRound: "No active round.",
       empty: "No students in your assigned range yet.",
       refresh: "Refresh",
+      // Live notifications (F3, 2026-10-21). The panel already polled every three
+      // seconds, but a judge watching a table of a dozen rows does not notice one cell
+      // flip — and the round starting changed nothing visible at all. These are the
+      // spoken versions of the same facts, pushed over WebSocket the moment they happen.
+      studentConnected: "{name} (#{number}) connected.",
+      studentDisconnected: "{name} (#{number}) disconnected.",
+      roundStarted: "Round started: {phase}.",
+      roundStartedPreparation: "preparation countdown",
+      roundStartedActive: "answering is now live",
+      liveBadge: "Live",
+      offlineBadge: "Reconnecting…",
     },
   },
   controller: {
@@ -161,7 +223,12 @@ export const en = {
     pickTitle: "Competitions",
     pickSubtitle: "Choose the competition to control.",
     pickEmpty: "No competition yet.",
-    pickOpen: "Open control panel",
+    // Hole C (report 2026-10-19): "Open control panel" never said that this is where a
+    // competition gets *started*, so the project owner looked for a start button on the
+    // judge's page, then on the controller's, and found neither. The capability was there
+    // all along — CS-022 [C] and J-004 deliberately give it to the controller alone, not
+    // to the judge — it was only undiscoverable. The label now names what it does.
+    pickOpen: "Run the competition",
     pickResults: "Open results",
     pickSetup: "Open setup",
     pickSchoolRanking: "School ranking",
@@ -197,6 +264,8 @@ export const en = {
     genericError: "Something went wrong. Please try again.",
     noCompetition: "No competition selected.",
     sequenceTitle: "Sequence",
+    sequenceHint:
+      "This is where the competition is started. Start stage 1; stage 2 unlocks once stage 1 has finished. Stages run in order and the server refuses to start one out of turn.",
     startStage: "Start stage",
     pause: "Pause",
     resume: "Resume",
@@ -317,6 +386,21 @@ export const en = {
   player: {
     waitingTitle: "Competition room",
     waitingSubtitle: "Waiting for the competition to start…",
+    welcomeTitle: "Welcome to",
+    yourEntry: "Your entry:",
+    programmeTitle: "Today's programme",
+    programmeEmpty: "The programme has not been set up yet.",
+    stageType: {
+      INDIVIDUAL: "Individual stage",
+      TEAM: "Team stage",
+    },
+    roundStatus: {
+      WAITING: "upcoming",
+      PREPARATION: "starting soon",
+      ACTIVE: "in progress",
+      PAUSED: "paused",
+      FINISHED: "finished",
+    },
     preparationTitle: "Get ready",
     preparationSubtitle: "The round starts in",
     preparationRules: "Round rules",
@@ -477,7 +561,6 @@ export const en = {
   question: {
     title: "Questions",
     category: "Category",
-    round: "Individual round",
     importFile: "Import file",
     importHint: "One .xlsx file per variant. Each row is one puzzle.",
     chooseFile: "Question file",
@@ -488,8 +571,25 @@ export const en = {
     poolEmpty: "No questions imported into this category yet.",
     points: "points",
     selectedCount: "Selected",
-    assign: "Assign the 6 questions",
-    assigned: "The round's 6 questions are set.",
+    loading: "Loading…",
+    // Revised with BLD-040 on 2026-10-19: every round now holds its own selection, so
+    // the panel has one collapsible block per round and a per-round count that is not
+    // always 6. These are that block's labels.
+    setUpRound: "Set up",
+    changeQuestions: "Change questions",
+    closeBlock: "Close",
+    roundSetUp: "{round} is set up.",
+    roundSetUpShort: "set up",
+    roundNotSetUp: "not set up",
+    addQuestions: "Add the {count} questions",
+    fromThisFile: "From the file you just uploaded",
+    showWholePool: "Show the whole pool",
+    nothingInThisFileYet: "This block has no file yet — upload one above.",
+    inAnotherRound: "in another round",
+    // Report §8b: no way to see at a glance which round is complete.
+    roundsOverview: "Rounds in this category",
+    roundComplete: "complete",
+    roundIncomplete: "incomplete",
     genericError: "Something went wrong. Please try again.",
     notFound: "This category or round isn't part of this competition.",
     forbidden: "Only the controller can manage questions.",
@@ -514,11 +614,15 @@ export const en = {
       mixedVariants: "One file must contain a single variant.",
     },
     selection: {
+      // Kept as a catalogue entry even though the service no longer raises it: the API
+      // still defines the code, so a stale client must not show a raw dot-path.
       notIndividualRound: "Only an Individual round holds a question selection.",
       locked: "This round's preparation has begun; its questions can no longer change.",
-      invalidCount: "Exactly 6 questions must be selected.",
+      invalidCount: "Select exactly the number of questions this round uses.",
       duplicateIds: "The same question can't be selected twice.",
       notInPool: "One of the selected questions isn't in this category's pool.",
+      alreadyAssigned:
+        "One of the selected questions is already assigned to another round. Unassign it there first.",
     },
   },
   results: {

@@ -14,6 +14,21 @@ export const LOGIN_ROLES: readonly Role[] = ["PLAYER", "JUDGE", "CONTROLLER"];
 export interface LoginInput {
   username: string;
   password: string;
+  /**
+   * The competition's entry-link token, supplied by a player who arrived through
+   * `/player?token=…` (ARCH-030: the competition link *identifies the competition* —
+   * there is no competition-selection screen). Optional and only meaningful for a
+   * `PLAYER` login: it scopes the login to that competition, it does not replace the
+   * username and password.
+   *
+   * Deliberately not a credential on its own. Whether a bare token should be enough to
+   * get in is an open project-owner decision (report §9d scope note / Annex B item 8:
+   * a token in a query string is copyable and can leak through browser history and server
+   * logs). Until that is decided, the printed credentials are still required, which is
+   * also the safest reading — and it makes a wrong or foreign token a rejection rather
+   * than a way into someone else's competition.
+   */
+  entryLinkToken?: string;
 }
 
 /** What a successful login returns to the client. */
@@ -25,6 +40,14 @@ export interface LoginResult {
   deviceId: string;
   /** ISO timestamp of when the session ends (login + SESSION_TTL_HOURS). */
   sessionExpiresAt: string;
+  /**
+   * The competition the entry link named, when the login came through one (ARCH-030;
+   * F1, 2026-10-21). Null for a controller — never scoped to one competition
+   * (ROL-004) — and for a login with no link. The client may display it; it is never
+   * what authorizes anything, because the server holds the same value against the
+   * session token and re-checks the assignment on every scoped request.
+   */
+  competitionId: string | null;
 }
 
 /** The authenticated caller resolved from a session token by the auth middleware. */
@@ -44,6 +67,14 @@ export interface AuthenticatedAccount {
    */
   categoryId: string | null;
   judgeId: string | null;
+  /**
+   * The competition this session entered through, or null when it did not come from an
+   * entry link. Read server-side from the session's own scope, never from the client,
+   * so a caller cannot widen its own view by naming another competition. The judge
+   * routes use it to answer with one assignment instead of all of them (F1), and the
+   * gateway uses it to join the judge's socket to that competition's room (F3).
+   */
+  competitionId: string | null;
 }
 
 /** The identity of the requesting device, taken from the request/handshake. */
@@ -95,6 +126,28 @@ export interface JudgeAssignment {
   toParticipantNumber: number;
   assignedAt: string;
   assignedByAccountId: string | null;
+}
+
+/**
+ * What reactivating a judge returns (report §4a): the judge back in its summary shape
+ * plus the username its account already carries. The password is deliberately absent —
+ * it was shown once at creation and is never re-shown, so the screen reminds the
+ * controller of the username only.
+ */
+export interface ReactivatedJudge extends JudgeSummary {
+  username: string | null;
+}
+
+/**
+ * One row of the competition's range list (report §4c) — the controller-side read of
+ * who supervises which slice of which competition. Carries the judge's display name and
+ * the username of whoever recorded the range, so the panel does not have to join
+ * anything itself.
+ */
+export interface CompetitionJudgeAssignmentView extends JudgeAssignment {
+  judgeName: string;
+  judgeActive: boolean;
+  assignedByUsername: string | null;
 }
 
 export interface CreateJudgeInput {

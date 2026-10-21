@@ -261,6 +261,9 @@ async function loadPuzzle(
 ): Promise<repository.PartitionPuzzleEntry | null> {
   const questionId = state.puzzles[state.puzzleIndex]?.id;
   if (!questionId) return null;
+  // No `roundId` here on purpose: this looks one puzzle up by id and the category's
+  // whole pool is the safe superset — it also still resolves for a round dealt from the
+  // no-selection fallback, whose puzzles carry no `roundId`.
   const pool = await repository.listPartitionPool(state.competitionId, state.categoryId);
   return pool.find((entry) => entry.question.id === questionId) ?? null;
 }
@@ -347,7 +350,11 @@ async function dealTeam(input: {
   const existing = await repository.loadPartitionState(input.roundId, input.team.teamId);
   if (existing) return existing;
 
-  const pool = await repository.listPartitionPool(input.competitionId, input.team.categoryId);
+  const pool = await repository.listPartitionPool(
+    input.competitionId,
+    input.team.categoryId,
+    input.roundId,
+  );
   // A pool smaller than the configured count gives the team fewer puzzles; a puzzle is
   // never repeated (spec Context: only puzzles that reached a fully correct state count).
   const drawn = drawPuzzles(pool, input.puzzleCount);

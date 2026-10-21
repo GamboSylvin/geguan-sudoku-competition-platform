@@ -23,6 +23,8 @@ export const zh: MessageCatalogue = {
     noSession: "未登录",
     sessionExpired: "会话已结束，请重新登录。",
     deviceTakenOver: "该账号已在另一台设备上登录。",
+    // Hole D (2026-10-20). The public entry-link lookup: a token no competition carries.
+    entryLinkUnknown: "该比赛链接无效。",
   },
   competition: {
     forbidden: "只有管理员可以管理比赛。",
@@ -31,7 +33,7 @@ export const zh: MessageCatalogue = {
     readiness: {
       categoryRequired: "请至少添加一个组别。",
       participantsRequired: "每个组别至少需要一名参赛选手。",
-      questionsRequired: "每个组别需要为两轮个人赛各分配一套题目。",
+      questionsRequired: "每个组别需要为所有轮次（两轮个人赛和两轮团队赛）分配题目。",
       judgeRangesRequired: "裁判负责范围必须覆盖所有参赛号。",
     },
   },
@@ -179,9 +181,10 @@ export const zh: MessageCatalogue = {
     selection: {
       notIndividualRound: "只有个人赛轮次才有题目选择。",
       locked: "该轮次已进入准备阶段，无法再更改其题目选择。",
-      invalidCount: "请正好选择 6 道题目。",
+      invalidCount: "请正好选择该轮次所需的题目数量。",
       duplicateIds: "同一道题目不能被重复选择。",
       notInPool: "所选题目中有不属于该组别题库的条目。",
+      alreadyAssigned: "所选题目中有已分配给其他轮次的条目，请先从该轮次移除。",
     },
   },
   results: {

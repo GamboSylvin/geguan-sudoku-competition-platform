@@ -1,7 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { LocaleProvider } from "./i18n/locale-context";
 import { LanguageSwitcher, readStoredLocale } from "./i18n/LanguageSwitcher";
-import { LoginPage } from "./features/auth";
+import { EnterPage, LoginPage } from "./features/auth";
 import { BigScreenPage } from "./features/big-screen";
 import { CompetitionSetupPage } from "./features/competition";
 import { ControllerLivePage, ControllerPickerPage } from "./features/controller";
@@ -42,6 +42,11 @@ export function App() {
         <LanguageSwitcher />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          {/* Hole D (2026-10-20): the unified entry link, `/enter?token=…`. One address per
+              competition, opened by a student and by a judge alike; the role is chosen on the
+              login page it lands on. Deliberately not `/player` or `/judge`: both carry a role
+              gate that would bounce the other role before the token had any effect. */}
+          <Route path="/enter" element={<EnterPage />} />
           <Route path="/player" element={<PlayerPage />} />
           <Route path="/judge" element={<JudgeLandingPage />} />
           <Route path="/judge/dashboard" element={<JudgeDashboardPage />} />

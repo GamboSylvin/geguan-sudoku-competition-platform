@@ -24,10 +24,12 @@ import {
   JUDGE_NOT_FOUND,
   type AssignJudgeRangeInput,
   type BlockingAssignment,
+  type CompetitionJudgeAssignmentView,
   type CreateJudgeInput,
   type CreatedJudge,
   type JudgeAssignment,
   type JudgeSummary,
+  type ReactivatedJudge,
 } from "./identity.types";
 
 function toSummary(judge: {
@@ -130,6 +132,32 @@ export async function removeJudge(judgeId: string): Promise<JudgeSummary> {
   return toSummary(deactivated);
 }
 
+/**
+ * Reactivate a judge that was deactivated by mistake (report §4a). Deliberately not the
+ * inverse operation with new credentials: the account row, its username and its stored
+ * password hash all survive deactivation, so this only flips the two `active` flags back
+ * and the judge logs in with the credentials it was already given. Nothing is created and
+ * nothing has to be redistributed — which was the whole point of the report's complaint
+ * (an accidentally deactivated judge was otherwise unrecoverable short of creating a
+ * second judge with a second username and password).
+ *
+ * The password question the report raises (§4a point 2, Annex B item 4: keep the existing
+ * password, or regenerate credentials on reactivation?) is already logged open as I-46 and
+ * is not decided here. Keeping the hash is the non-destructive reading — a regeneration
+ * cannot be undone, while a later decision to regenerate can still be added on top.
+ *
+ * No ROL-010 guard applies: the guard protects supervision during an event, and
+ * reactivation restores it rather than cutting it.
+ */
+export async function reactivateJudge(judgeId: string): Promise<ReactivatedJudge> {
+  const judge = await repository.findJudgeById(judgeId);
+  if (!judge) {
+    throw notFoundError();
+  }
+  const reactivated = await repository.reactivateJudge(judgeId);
+  return { ...toSummary(reactivated.judge), username: reactivated.username };
+}
+
 // ---------------------------------------------------------------------------
 // Range assignment
 // ---------------------------------------------------------------------------
@@ -204,22 +232,65 @@ export async function isJudgeAuthorizedForParticipant(
 }
 
 /**
- * The judge's current assignments (the minimal landing confirms "assigned to
- * competition X, participants #Y–#Z" — or none).
+ * The judge's own display name, for its minimal landing (`GET /api/judges/me`). Before
+ * this the screen had nothing of the kind to show and fell back to the raw account id —
+ * a 2026-10-19 manual-test finding on the same screen whose near-colorless card was
+ * also redesigned.
  */
-export async function listJudgeAssignments(judgeId: string): Promise<
-  (JudgeAssignment & { competitionName: string })[]
-> {
-  const rows = await repository.listAssignmentsForJudge(judgeId);
+export async function getOwnName(judgeId: string): Promise<string | null> {
+  const judge = await repository.findJudgeById(judgeId);
+  return judge?.name ?? null;
+}
+
+/**
+ * The judge's assignments, restricted to the competition this session entered
+ * through when it came through one (F1, 2026-10-21).
+ *
+ * The landing confirms "assigned to competition X, participants #Y–#Z" — or none.
+ * It used to confirm that once per competition the judge had ever been assigned to,
+ * because ARCH-03's "the link identifies the competition" stopped at the login
+ * check. `competitionId` is the session's own scope, read server-side, so passing it
+ * narrows the answer and passing nothing keeps the old behaviour for a session that
+ * arrived with no link.
+ */
+export async function listJudgeAssignments(
+  judgeId: string,
+  competitionId?: string | null,
+): Promise<(JudgeAssignment & { competitionName: string })[]> {
+  const rows = await repository.listAssignmentsForJudge(judgeId, competitionId);
   return rows.map((row) => ({ ...toAssignment(row), competitionName: row.competition.name }));
+}
+
+/**
+ * Every range recorded on one competition, judge names included (report §4c). This is
+ * the controller-side read; `listJudgeAssignments` below is the judge-side one (its own
+ * assignments only). Both read the same rows.
+ *
+ * Overlap is neither prevented nor flagged here: whether two judges may claim the same
+ * participant number is an open decision (report §4c point 3, logged as I-43), so this
+ * list simply shows what is recorded and leaves the judgement to the controller.
+ */
+export async function listCompetitionAssignments(
+  competitionId: string,
+): Promise<CompetitionJudgeAssignmentView[]> {
+  const rows = await repository.listAssignmentsForCompetition(competitionId);
+  return rows.map((row) => ({
+    ...toAssignment(row),
+    judgeName: row.judge.name,
+    judgeActive: row.judge.active,
+    assignedByUsername: row.assignedBy?.username ?? null,
+  }));
 }
 
 export const judgeService = {
   createJudge,
   listJudges,
   removeJudge,
+  reactivateJudge,
+  getOwnName,
   assignJudgeRange,
   unassignJudge,
   isJudgeAuthorizedForParticipant,
   listJudgeAssignments,
+  listCompetitionAssignments,
 };

@@ -170,10 +170,18 @@ async function buildStudentRows(
  * the judge's own assignments. One row per (assignment, participant) pair —
  * the spec does not ask us to deduplicate a participant who somehow falls into
  * two of the judge's own ranges (which the controller UI already prevents).
+ *
+ * `competitionId` is the session's own scope when the judge arrived through an
+ * entry link (F1, 2026-10-21), and narrows "every assignment" to that one. It is
+ * applied in the query, so a competition the session did not enter is never even
+ * read. Null keeps the old behaviour, for a session that carries no scope.
  */
-async function listStudentsForJudge(judgeId: string): Promise<JudgeStudentRow[]> {
+async function listStudentsForJudge(
+  judgeId: string,
+  competitionId?: string | null,
+): Promise<JudgeStudentRow[]> {
   const assignments = await prisma.competitionJudgeAssignment.findMany({
-    where: { judgeId },
+    where: competitionId ? { judgeId, competitionId } : { judgeId },
     include: {
       competition: { select: { id: true, name: true, status: true } },
     },

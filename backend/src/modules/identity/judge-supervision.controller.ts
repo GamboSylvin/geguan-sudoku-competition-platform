@@ -93,7 +93,13 @@ judgeSupervisionRouter.get(
         return;
       }
       const judgeId = req.auth!.judgeId!;
-      const students = await judgeSupervisionService.listStudentsForJudge(judgeId);
+      // A judge never names a competition in the query: its scope comes from its own
+      // session, read server-side (F1). Letting `?competitionId=` through here would let
+      // a judge widen its own view, which invariant 3 forbids.
+      const students = await judgeSupervisionService.listStudentsForJudge(
+        judgeId,
+        req.auth!.competitionId,
+      );
       res.status(200).json({ students });
     } catch (error) {
       next(error);

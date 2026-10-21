@@ -179,7 +179,7 @@ nano .env
 Copies the template to the real `.env` (which is git-ignored and never committed) and
 opens it in an editor. `Ctrl+O` saves, `Ctrl+X` exits.
 
-**Three values must change before the first start** — they are marked `CHANGE_ME` in the
+**Four values must change before the first start** — they are marked `CHANGE_ME` in the
 template:
 
 1. **`POSTGRES_PASSWORD`** — a real random password. Generate one:
@@ -193,6 +193,14 @@ template:
    `http://`, no trailing slash, no port if you keep 80. This one is not cosmetic: it is
    what the **Socket.io handshake** checks, so a wrong value leaves the pages loading but
    the live timer and the live ranking dead.
+4. **`PUBLIC_BASE_URL`** — the **same** `http://<YOUR_PUBLIC_IP>`. This is the base of
+   the two links the platform hands to human beings: the player entry link printed on the
+   credential slips (`…/player?token=…`) and the big-screen link shown after publish
+   (`…/big-screen/…`). Those links are opened by tablets on the venue Wi-Fi, so a
+   `localhost` value here makes every printed slip point at the player's own device. If
+   you changed `HTTP_PORT` away from 80, include it: `http://<YOUR_PUBLIC_IP>:<PORT>`.
+   Left empty, both links come back blank and the publish screen says so instead of
+   showing something that cannot be opened.
 
 Everything else in the template is already correct for this deployment. Leave
 **`VITE_API_BASE_URL` empty** — see "How the frontend is served" above.
@@ -484,8 +492,11 @@ The two stacks do still want the same **host ports**, so:
    ```bash
    # only for a local test — never on the server
    echo "HTTP_PORT=8080" >> .env
+   echo "PUBLIC_BASE_URL=http://localhost:8080" >> .env
    ```
-   Then browse to `http://localhost:8080/` instead of `http://<IP>/`.
+   Then browse to `http://localhost:8080/` instead of `http://<IP>/`. (`PUBLIC_BASE_URL`
+   has to follow the port here too, or the entry/big-screen links the publish screen
+   shows point at the dev stack's 5173 instead of this test.)
 3. **Build and start:**
    ```bash
    docker compose -f docker-compose.prod.yml up -d --build

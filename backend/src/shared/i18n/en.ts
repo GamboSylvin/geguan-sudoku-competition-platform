@@ -23,6 +23,10 @@ export const en = {
     noSession: "Not signed in",
     sessionExpired: "Your session has ended. Please log in again.",
     deviceTakenOver: "This account was signed in on another device.",
+    // Hole D (2026-10-20). The public entry-link lookup: a token no competition carries.
+    // Deliberately not `invalidCredentials` — nobody has typed a password yet, so saying
+    // "incorrect username or password" here would misdescribe what went wrong.
+    entryLinkUnknown: "This competition link is not valid.",
   },
   competition: {
     // Unit 03. Only a controller may create, edit or publish (ROL-002); the
@@ -36,7 +40,7 @@ export const en = {
       participantsRequired:
         "Every category needs at least one participant.",
       questionsRequired:
-        "Every category needs a question set assigned to both of its Individual rounds.",
+        "Every category needs its questions assigned to every round — both Individual rounds and both Team rounds.",
       judgeRangesRequired:
         "Judge ranges must cover every participant number.",
     },
@@ -164,7 +168,10 @@ export const en = {
       missingRequiredColumn: "The file is missing a required column.",
       nameRequired: "The name (姓名) is empty.",
       schoolRequired: "The school (学校名称) is empty.",
-      unknownCategory: "This group (组别) does not exist in this competition.",
+      // Report 2026-10-19 §6b: this used to read "This group (组别) does not exist",
+      // which reads as "the 组别 COLUMN is missing" rather than "this cell's VALUE
+      // matches no category". The frontend appends the rejected value itself.
+      unknownCategory: "This group does not exist in this competition.",
       invalidIndividualFlag:
         "The individual event (个人赛) cell must be 1, 2 or blank.",
       invalidTeamFlag: "The team event (团队赛) cell must be 1, 2 or blank.",
@@ -230,9 +237,11 @@ export const en = {
       notIndividualRound: "Only an Individual round holds a question selection.",
       locked:
         "This round's preparation has begun; its question selection can no longer change.",
-      invalidCount: "Select exactly 6 questions.",
+      invalidCount: "Select exactly the number of questions this round uses.",
       duplicateIds: "The same question cannot be selected twice.",
       notInPool: "One of the selected questions is not in this category's pool.",
+      alreadyAssigned:
+        "One of the selected questions is already assigned to another round. Remove it from that round first.",
     },
   },
   results: {

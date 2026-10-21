@@ -27,8 +27,11 @@
  *     finished (Unit 11's big-screen `FINAL` mode). Both finish paths fire it.
  *   - `gameplayRouter`: HTTP routes — `POST /:roundId/autosave`,
  *     `GET /:roundId/state`, `POST /:roundId/submit`, `POST /:roundId/left-page`,
- *     Unit 13's `POST /rotation/:roundId/submit`, `GET /rotation/:roundId/state`,
- *     and Unit 14's `POST /partition/:roundId/autosave`,
+ *     the two routes with no id in the path (`GET /current-round`: what round am
+ *     I in; `GET /competition`: what competition am I in, whose name the waiting
+ *     screen otherwise has no way to learn), Unit 13's
+ *     `POST /rotation/:roundId/submit`, `GET /rotation/:roundId/state`, and
+ *     Unit 14's `POST /partition/:roundId/autosave`,
  *     `GET /partition/:roundId/state`.
  */
 export {

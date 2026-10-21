@@ -107,6 +107,27 @@ judgeRouter.delete(
 );
 
 /**
+ * PATCH /api/judges/:id/reactivate — undo a deactivation (report §4a). 200 with the
+ * reactivated judge plus the username its account keeps; the password is never re-shown
+ * (BLD-037), and no new account is created. No ROL-010 guard here: that guard protects
+ * supervision during an event, and reactivation restores it.
+ */
+judgeRouter.patch(
+  "/:id/reactivate",
+  requireAuth,
+  requireController,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = parseInput(judgeIdParamSchema, req.params);
+      const judge = await judgeService.reactivateJudge(id);
+      res.status(200).json(judge);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
  * GET /api/judges/me — the minimal judge landing: the calling judge's own
  * assignments (which competition, which participant-number range), so the judge
  * sees confirmation after login. Requires a JUDGE session, not a controller one.
@@ -130,8 +151,15 @@ judgeRouter.get(
         return;
       }
       const judgeId = req.auth.judgeId;
-      const assignments = await judgeService.listJudgeAssignments(judgeId);
-      res.status(200).json({ judgeId, assignments });
+      // The session's own scope (F1): a judge who came through one competition's link
+      // answers with that competition's assignment only. Null when the session arrived
+      // with no link, which keeps the pre-F1 answer rather than showing nothing.
+      const scopedCompetitionId = req.auth.competitionId;
+      const [assignments, name] = await Promise.all([
+        judgeService.listJudgeAssignments(judgeId, scopedCompetitionId),
+        judgeService.getOwnName(judgeId),
+      ]);
+      res.status(200).json({ judgeId, name, assignments });
     } catch (error) {
       next(error);
     }
@@ -161,6 +189,27 @@ judgeAssignmentRouter.post(
         req.auth?.accountId ?? null,
       );
       res.status(201).json(assignment);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * GET /api/competitions/:id/judge-assignments — the ranges already recorded on this
+ * competition, judge names included (report §4c: the panel was write-only, so assigning
+ * a second judge meant working blind). 200 with `{ assignments }`, ordered by the first
+ * number of each range. Overlap is reported, not rejected — see the service.
+ */
+judgeAssignmentRouter.get(
+  "/",
+  requireAuth,
+  requireController,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id: competitionId } = parseInput(competitionIdParamSchema, req.params);
+      const assignments = await judgeService.listCompetitionAssignments(competitionId);
+      res.status(200).json({ assignments });
     } catch (error) {
       next(error);
     }

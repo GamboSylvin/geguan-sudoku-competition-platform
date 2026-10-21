@@ -83,7 +83,7 @@ describe("language switching (BLD-053)", () => {
     fireEvent.click(screen.getByRole("button", { name: "English" }));
     first.unmount();
 
-    // Le remontage reproduit ce que fait `App.tsx` : la langue vient du stockage.
+    // The remount reproduces what `App.tsx` does: the language comes from storage.
     render(
       <LocaleProvider initialLocale={readStoredLocale() ?? undefined}>
         <MemoryRouter initialEntries={["/login"]}>

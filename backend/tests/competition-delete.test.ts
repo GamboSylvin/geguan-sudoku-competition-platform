@@ -7,6 +7,7 @@ import { prisma, disconnectPrisma } from "../src/infra/prisma";
 import { disconnectRedis } from "../src/infra/redis";
 import { identityService } from "../src/modules/identity";
 import { competitionService } from "../src/modules/competition";
+import { seedReadinessQuestions } from "./readiness-questions";
 
 /**
  * BLD-050's hard delete (decided 2026-10-15). The point of this suite is that the
@@ -429,9 +430,6 @@ describe("DELETE /api/competitions/:id (BLD-050)", () => {
     // Publish needs participants, questions and judge ranges; the point here is only
     // the status, so the readiness data is seeded the same way the Unit 03 suite does.
     const categories = competition.categories;
-    const individualRoundIds = (
-      competition.stages.find((stage) => stage.type === "INDIVIDUAL")?.rounds ?? []
-    ).map((round) => round.id);
     const judgeName = `Judge ${suffix} b`;
     createdJudgeNames.push(judgeName);
     const judge = await prisma.judge.create({ data: { name: judgeName } });
@@ -455,23 +453,19 @@ describe("DELETE /api/competitions/:id (BLD-050)", () => {
       const set = await prisma.questionSet.create({
         data: { competitionId: competition.id, categoryId: category.id, name: `Set ${category.code} ${suffix} b` },
       });
-      for (const [roundIndex, roundId] of individualRoundIds.entries()) {
-        for (let i = 0; i < 6; i += 1) {
-          await prisma.question.create({
-            data: {
-              questionSetId: set.id,
-              roundId,
-              sequence: roundIndex * 6 + i + 1,
-              points: 10,
-              gridRows: 4,
-              gridColumns: 4,
-              regions: [[0, 1, 4, 5]],
-              startingGrid: [[0]],
-              solution: [[1]],
-            },
-          });
-        }
-      }
+      // Every round of the competition, not just the Individual ones: BLD-040's revision
+      // (2026-10-19) made a Team round hold its own selection too, and readiness checks it.
+      await seedReadinessQuestions(prisma, {
+        questionSetId: set.id,
+        stages: competition.stages,
+        grid: {
+          gridRows: 4,
+          gridColumns: 4,
+          regions: [[0, 1, 4, 5]],
+          startingGrid: [[0]],
+          solution: [[1]],
+        },
+      });
     }
     await prisma.competitionJudgeAssignment.create({
       data: { competitionId: competition.id, judgeId: judge.id, fromParticipantNumber: 1, toParticipantNumber: number },

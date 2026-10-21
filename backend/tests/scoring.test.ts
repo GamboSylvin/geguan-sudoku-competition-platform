@@ -137,14 +137,25 @@ async function seedCompetition(name: string): Promise<SeededCompetition> {
   });
 
   let questionId = "";
-  // Publish readiness requires a complete selection of 6 assigned questions per
-  // Individual round (BLD-040); `questionId` is sequence 1 of round 1.
-  for (const round of [round1, round2]) {
-    for (let sequence = 1; sequence <= 6; sequence += 1) {
+  // Publish readiness requires every round to hold its own questions (BLD-040, revised
+  // 2026-10-19: a Team round holds a selection too). Counts: 6 per Individual round, 10
+  // for the Team rotation relay, 3 for the Team partition round. `questionId` stays
+  // sequence 1 of Individual round 1.
+  const teamStage = full.stages.find((s) => s.type === "TEAM");
+  const teamRound1 = teamStage?.rounds.find((r) => r.sequence === 1);
+  const teamRound2 = teamStage?.rounds.find((r) => r.sequence === 2);
+  const perRound: Array<[string, number]> = [
+    [round1.id, 6],
+    [round2.id, 6],
+    ...(teamRound1 ? [[teamRound1.id, 10] as [string, number]] : []),
+    ...(teamRound2 ? [[teamRound2.id, 3] as [string, number]] : []),
+  ];
+  for (const [roundId, count] of perRound) {
+    for (let sequence = 1; sequence <= count; sequence += 1) {
       const q = await prisma.question.create({
         data: {
           questionSetId: questionSet.id,
-          roundId: round.id,
+          roundId,
           sequence,
           points: 10,
           gridRows: GRID_SIZE,
@@ -154,7 +165,7 @@ async function seedCompetition(name: string): Promise<SeededCompetition> {
           solution: SOLUTION,
         },
       });
-      if (sequence === 1 && round.id === round1.id) questionId = q.id;
+      if (sequence === 1 && roundId === round1.id) questionId = q.id;
     }
   }
 
@@ -715,7 +726,7 @@ describe("a restarted participant still gets a real result at round end (regress
     });
     await roundTimerService.startRoundTimer(ctx.roundId, ctx.competitionId, ctx.stageId, 1200);
 
-    // Le juge relance le participant ; il ne resoumettra jamais.
+    // The judge restarts the participant; he will never resubmit.
     const restarted = await orchestratorService.restartOneParticipant({
       roundId: ctx.roundId,
       participantId: ctx.participantId,
@@ -726,7 +737,7 @@ describe("a restarted participant still gets a real result at round end (regress
       where: { roundId: ctx.roundId, participantId: ctx.participantId },
     });
     expect(afterRestart.state).toBe("ACTIVE");
-    // Aucun placeholder : pas de tentative courante tant qu'il n'a pas soumis.
+    // No placeholder: no current attempt until he has submitted.
     expect(afterRestart.currentAttemptId).toBeNull();
     expect(
       await prisma.attempt.count({
@@ -931,16 +942,31 @@ describe("cross-category question leakage does not poison scoring (regression, 2
 
     const ownQuestionIds: string[] = [];
     const foreignQuestionIds: string[] = [];
+    // Publish readiness requires every round to hold its own questions (BLD-040, revised
+    // 2026-10-19: a Team round holds a selection too). Counts: 6 per Individual round, 10
+    // for the Team rotation relay, 3 for the Team partition round. Each category gets its
+    // own `QuestionSet`, which is what this regression is about — the Team rounds are
+    // seeded the same way so publish still passes, and `ownQuestionIds`/`foreignQuestionIds`
+    // keep collecting only Individual round 1, the round the player actually plays.
+    const teamStage = full.stages.find((s) => s.type === "TEAM");
+    const teamRound1 = teamStage?.rounds.find((r) => r.sequence === 1);
+    const teamRound2 = teamStage?.rounds.find((r) => r.sequence === 2);
+    const perRound: Array<[string, number]> = [
+      [round1.id, 6],
+      [round2.id, 6],
+      ...(teamRound1 ? [[teamRound1.id, 10] as [string, number]] : []),
+      ...(teamRound2 ? [[teamRound2.id, 3] as [string, number]] : []),
+    ];
     for (const category of [categoryA!, categoryB!]) {
       const questionSet = await prisma.questionSet.create({
         data: { competitionId: competition.id, categoryId: category.id, name: `ScoringSet ${category.code} ${suffix}` },
       });
-      for (const round of [round1, round2]) {
-        for (let sequence = 1; sequence <= 6; sequence += 1) {
+      for (const [roundId, count] of perRound) {
+        for (let sequence = 1; sequence <= count; sequence += 1) {
           const q = await prisma.question.create({
             data: {
               questionSetId: questionSet.id,
-              roundId: round.id,
+              roundId,
               sequence,
               points: 10,
               gridRows: GRID_SIZE,
@@ -950,7 +976,7 @@ describe("cross-category question leakage does not poison scoring (regression, 2
               solution: SOLUTION,
             },
           });
-          if (round.id === round1.id) {
+          if (roundId === round1.id) {
             if (category.id === categoryA!.id) ownQuestionIds.push(q.id);
             else foreignQuestionIds.push(q.id);
           }

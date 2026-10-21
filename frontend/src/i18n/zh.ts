@@ -8,6 +8,7 @@ export const zh: MessageCatalogue = {
     notFound: "未找到",
     validationFailed: "校验失败",
     internalError: "出错了",
+    back: "返回",
   },
   placeholder: {
     title: "数独竞技场",
@@ -15,6 +16,8 @@ export const zh: MessageCatalogue = {
   },
   auth: {
     title: "数独竞技场",
+    // Hole D (2026-10-20). 当入场链接指明了比赛时显示在身份选择上方。
+    welcomeTo: "欢迎来到{name}",
     chooseRole: "请选择您的身份",
     username: "用户名",
     password: "密码",
@@ -43,6 +46,9 @@ export const zh: MessageCatalogue = {
     categoryName: "名称",
     addCategory: "添加组别",
     removeCategory: "移除",
+    editCategories: "组别",
+    saveCategories: "保存组别",
+    categoriesLockedNote: "比赛发布后组别将被锁定，仅可修改回合时长。",
     create: "创建比赛",
     wifiNote:
       "赛前请让网络/IT 团队妥善配置赛场 Wi-Fi——约 300 台平板同时连接,赛场 Wi-Fi 是最大的现实风险。",
@@ -54,8 +60,19 @@ export const zh: MessageCatalogue = {
     saved: "已保存",
     publish: "发布",
     published: "已发布",
-    entryLink: "参赛链接",
+    // Hole C (report 2026-10-19): publishing ended the screen with two links and no next
+    // step, so the owner could not tell where a competition actually gets started. It is
+    // the controller's live page (CS-022 [C]/J-004 give the start to the controller, not
+    // the judge), so say so and link straight to it.
+    nextStep: "下一步：在实时控制面板中开始各轮比赛。",
+    openLive: "前往实时控制面板",
+    // Hole D (2026-10-20): 这是全场使用的同一个地址,选手与裁判都打开它,
+    // 并在登录页选择自己的身份。
+    entryLink: "参赛链接（选手与裁判通用）",
     bigScreenLink: "大屏链接",
+    copyLink: "复制链接",
+    copied: "已复制",
+    linkNotConfigured: "服务器尚未配置链接地址（PUBLIC_BASE_URL）。请配置后重新打开本页面。",
     notReady: "尚不能发布,还缺少:",
     backToList: "返回比赛列表",
     genericError: "出错了,请重试。",
@@ -99,19 +116,37 @@ export const zh: MessageCatalogue = {
     list: "已有裁判",
     active: "启用",
     inactive: "停用",
-    remove: "移除",
-    removed: "已移除",
-    blocked: "无法移除:仍被分配到",
+    deactivate: "停用",
+    deactivateBlocked: "无法停用：仍被分配到",
+    reactivate: "重新启用",
+    reactivated: "裁判已重新启用，其用户名为",
+    reactivatedNote: "该裁判使用创建时发放的密码重新登录；密码不会第二次显示。",
     assign: "分配范围",
     assignTo: "在此比赛上分配",
+    createJudgeLink: "创建裁判",
     range: "参赛号 #",
-    from: "起始",
-    to: "结束",
+    rangeHelp: "该裁判只能监管参赛号在此范围内的选手，且仅限本次比赛。",
+    fromParticipantNumber: "起始参赛号",
+    toParticipantNumber: "结束参赛号",
+    existingRanges: "本次比赛已记录的范围",
+    noRanges: "尚未记录任何范围。",
+    columnJudge: "裁判",
+    columnRange: "范围",
+    columnRecordedBy: "记录人",
+    columnRecordedAt: "记录时间",
+    judgeInactiveHint: "已停用",
     saveAssignment: "保存分配",
     unassign: "取消分配",
     assignedTo: "已分配到",
     notAssigned: "尚未被分配到任何比赛。",
+    landingBadge: "裁判",
     landingTitle: "您的分配",
+    // Hole B (report 2026-10-19): Unit 10's supervision dashboard was built and tested
+    // but had no way in — this landing listed the assignments and stopped there, so the
+    // judge saw "no interface to do anything with". The dashboard supervises the judge's
+    // own range across every competition they hold, so one entry point is honest rather
+    // than one per assignment.
+    openDashboard: "打开监考面板",
     genericError: "出错了,请重试。",
     supervision: {
       title: "您负责的选手",
@@ -148,6 +183,14 @@ export const zh: MessageCatalogue = {
       noRound: "当前没有进行中的轮次。",
       empty: "您的负责范围内暂无选手。",
       refresh: "刷新",
+      // Live notifications (F3, 2026-10-21) — the same three facts the push carries.
+      studentConnected: "{name}(#{number})已连接。",
+      studentDisconnected: "{name}(#{number})已断开。",
+      roundStarted: "轮次已开始:{phase}。",
+      roundStartedPreparation: "准备倒计时",
+      roundStartedActive: "现在可以作答",
+      liveBadge: "实时",
+      offlineBadge: "重新连接中…",
     },
   },
   controller: {
@@ -155,7 +198,7 @@ export const zh: MessageCatalogue = {
     pickTitle: "比赛列表",
     pickSubtitle: "选择要控制的比赛。",
     pickEmpty: "暂无比赛。",
-    pickOpen: "打开控制面板",
+    pickOpen: "运行比赛",
     pickResults: "查看成绩",
     pickSetup: "打开设置",
     pickSchoolRanking: "学校排名",
@@ -186,6 +229,8 @@ export const zh: MessageCatalogue = {
     genericError: "操作失败,请重试。",
     noCompetition: "未选择比赛。",
     sequenceTitle: "赛程",
+    sequenceHint:
+      "比赛在这里开始。先开始第 1 阶段；第 1 阶段结束后，第 2 阶段才可开始。阶段按顺序进行，服务器会拒绝跳序开始。",
     startStage: "开始阶段",
     pause: "暂停",
     resume: "继续",
@@ -299,6 +344,21 @@ export const zh: MessageCatalogue = {
   player: {
     waitingTitle: "比赛等候室",
     waitingSubtitle: "等待比赛开始…",
+    welcomeTitle: "欢迎参加",
+    yourEntry: "你的参赛信息：",
+    programmeTitle: "今日赛程",
+    programmeEmpty: "赛程尚未设置。",
+    stageType: {
+      INDIVIDUAL: "个人赛阶段",
+      TEAM: "团体赛阶段",
+    },
+    roundStatus: {
+      WAITING: "未开始",
+      PREPARATION: "即将开始",
+      ACTIVE: "进行中",
+      PAUSED: "已暂停",
+      FINISHED: "已结束",
+    },
     preparationTitle: "准备",
     preparationSubtitle: "本轮将在以下时间后开始",
     preparationRules: "本轮规则",
@@ -449,7 +509,6 @@ export const zh: MessageCatalogue = {
   question: {
     title: "题目",
     category: "组别",
-    round: "个人赛轮次",
     importFile: "导入文件",
     importHint: "每个变体一个 .xlsx 文件,每行为一道题。",
     chooseFile: "题目文件",
@@ -460,8 +519,23 @@ export const zh: MessageCatalogue = {
     poolEmpty: "该组别尚未导入题目。",
     points: "分",
     selectedCount: "已选",
-    assign: "选定这 6 道题",
-    assigned: "本轮的 6 道题已确定。",
+    loading: "正在加载…",
+    // 2026-10-19 修订 BLD-040 后新增：每个轮次都有自己的选题区块，
+    // 且所需题目数量因轮次而异（不一定是 6 道）。以下是该区块的文案。
+    setUpRound: "设置",
+    changeQuestions: "更改题目",
+    closeBlock: "收起",
+    roundSetUp: "{round} 已完成设置。",
+    roundSetUpShort: "已设置",
+    roundNotSetUp: "未设置",
+    addQuestions: "添加这 {count} 道题",
+    fromThisFile: "来自刚上传的文件",
+    showWholePool: "显示整个题库",
+    nothingInThisFileYet: "本区块还没有文件——请先在上方上传。",
+    inAnotherRound: "已分配给其他轮次",
+    roundsOverview: "本组别各轮次情况",
+    roundComplete: "已完成",
+    roundIncomplete: "未完成",
     genericError: "出错了,请重试。",
     notFound: "该组别或轮次不属于本次比赛。",
     forbidden: "只有管理员可以管理题目。",
@@ -486,9 +560,10 @@ export const zh: MessageCatalogue = {
     selection: {
       notIndividualRound: "只有个人赛轮次才需要选题。",
       locked: "本轮已进入准备阶段,题目不能再更改。",
-      invalidCount: "必须恰好选择 6 道题。",
+      invalidCount: "请正好选择该轮次所需的题目数量。",
       duplicateIds: "同一道题不能重复选择。",
       notInPool: "所选题目中有一道不在本组别的题库内。",
+      alreadyAssigned: "所选题目中有一道已分配给其他轮次,请先取消那边的分配。",
     },
   },
   results: {

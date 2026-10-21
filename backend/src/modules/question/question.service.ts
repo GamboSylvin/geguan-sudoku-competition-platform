@@ -4,7 +4,7 @@
  *
  * What lives here: importing one category's `.xlsx` file into a pool of `Question`
  * rows, listing that pool grouped by `QuestionSet`, and the controller's manual
- * round-selection step that assigns exactly 6 pool questions to an Individual round.
+ * round-selection step that assigns one round's questions to that round.
  *
  * Three rules worth stating:
  * - **The import is atomic.** Every row must parse; one bad row rejects the whole
@@ -13,9 +13,12 @@
  *   rejection is auditable (BLD-039) without leaving a half-filled pool behind.
  * - **No image is read and no OCR runs** (BLD-047): the given cells come from a
  *   plain text column, complementary to `*正确答案`.
- * - **Only an Individual round holds a selection** (BLD-040). Team rounds draw from
- *   the pool directly — the rotation round at random, the partition round by index —
- *   so neither is ever given a `roundId`.
+ * - **Every round holds a selection** (BLD-040, revised 2026-10-19): the controller
+ *   picks the round's own questions for Individual *and* Team rounds, and the Team
+ *   runtime draws from what was picked — the rotation round among its assigned
+ *   questions, the partition round by index. `Question.roundId` now names the Team
+ *   round's questions too, so the pool a Team round sees is the one the controller
+ *   chose, not the category's whole import.
  */
 import { randomUUID } from "node:crypto";
 import { createHash } from "node:crypto";
@@ -42,6 +45,30 @@ import type {
 
 /** An Individual round uses exactly 6 questions (competition-rules.md §2, BLD-040). */
 export const ROUND_QUESTION_COUNT = 6;
+
+/** The Team round's default question counts, matching the `RoundSettings` column defaults. */
+const TEAM_ROTATION_QUESTION_COUNT = 10;
+const TEAM_PARTITION_PUZZLE_COUNT = 3;
+
+/**
+ * How many questions one round expects. It is *not* 6 everywhere (BLD-040 revised):
+ * an Individual round is 6, the Team rotation relay is `teamQuestionCount` (default 10)
+ * and the Team partition round is `partitionPuzzleCount` (default 3). The two Team
+ * rounds are told apart by their sequence — round 2 is the partition collaboration,
+ * anything else the rotation relay, the same dispatch `app.ts`'s team-round hook uses.
+ * When the round has no settings row yet, the column defaults are used.
+ */
+export function expectedQuestionCount(round: {
+  stageType: string;
+  sequence: number;
+  settings: { teamQuestionCount: number; partitionPuzzleCount: number } | null;
+}): number {
+  if (round.stageType === "INDIVIDUAL") return ROUND_QUESTION_COUNT;
+  if (round.sequence === 2) {
+    return round.settings?.partitionPuzzleCount ?? TEAM_PARTITION_PUZZLE_COUNT;
+  }
+  return round.settings?.teamQuestionCount ?? TEAM_ROTATION_QUESTION_COUNT;
+}
 
 /** The round statuses past which a selection can no longer change (RND-002/RND-004). */
 const LOCKED_ROUND_STATUSES = new Set(["PREPARATION", "ACTIVE", "PAUSED", "FINISHED"]);
@@ -226,12 +253,18 @@ function countByRound(roundIds: (string | null)[]): { roundId: string; count: nu
 }
 
 /**
- * Assign exactly 6 pool questions to one Individual round (spec Detail 5).
+ * Assign a round's whole selection of pool questions (spec Detail 5, BLD-040 revised
+ * 2026-10-19 to cover the Team rounds too).
  *
- * Re-selecting replaces the previous 6 — they revert to `roundId = null`, back in the
- * pool. Rejected with 409 once that round's preparation has begun (the same cutoff
- * `RoundSettings` uses, RND-002/RND-004), with 400 when the ids don't make a valid
- * selection, and with 404 when the round or category isn't in this competition.
+ * The count is the round's own — 6 for an Individual round, `teamQuestionCount` for the
+ * Team rotation relay, `partitionPuzzleCount` for the Team partition round — because the
+ * Team runtime now draws only from what was selected here.
+ *
+ * Re-selecting replaces the previous selection — those questions revert to
+ * `roundId = null`, back in the pool. Rejected with 409 once that round's preparation
+ * has begun (the same cutoff `RoundSettings` uses, RND-002/RND-004), with 400 when the
+ * ids don't make a valid selection, and with 404 when the round or category isn't in
+ * this competition.
  */
 export async function selectRoundQuestions(params: {
   competitionId: string;
@@ -250,18 +283,22 @@ export async function selectRoundQuestions(params: {
     throw notFoundError();
   }
 
-  // A Team round never holds a `roundId` (BLD-040): it draws from the pool itself.
-  if (round.stageType !== "INDIVIDUAL") {
-    throw badRequest("question.selection.notIndividualRound");
-  }
   if (LOCKED_ROUND_STATUSES.has(round.status)) {
     throw new ConflictError(translate("en", "question.selection.locked"), {
       code: "question.selection.locked",
     });
   }
 
-  if (questionIds.length !== ROUND_QUESTION_COUNT) {
-    throw badRequest("question.selection.invalidCount");
+  const expected = expectedQuestionCount(round);
+  if (questionIds.length !== expected) {
+    // The expected count goes in `details` as well as the English message, because the
+    // message is built server-side in English and the controller's screen is bilingual:
+    // a Chinese UI localizes by `code` and renders `expected` from the details.
+    throw new AppError(translate("en", "question.selection.invalidCount"), {
+      statusCode: 400,
+      code: "question.selection.invalidCount",
+      details: { expected },
+    });
   }
   if (new Set(questionIds).size !== questionIds.length) {
     throw badRequest("question.selection.duplicateIds");
@@ -272,6 +309,21 @@ export async function selectRoundQuestions(params: {
     throw badRequest("question.selection.notInPool");
   }
 
+  // A question already assigned to a *different* round must not be moved silently.
+  // Doing so used to leave that other round short of its own count with no warning
+  // anywhere, and the loss only surfaced much later as the publish readiness rejection
+  // — far from its cause, which made it look like a missing feature rather than a
+  // stolen question. This matters more now that the Team rounds hold a selection too:
+  // a Team rotation relay short of a question deals a member nothing.
+  // Re-selecting the *same* round stays allowed: that is the documented "re-selecting
+  // replaces the previous selection" path (spec Detail 5).
+  const assignedElsewhere = found.filter(
+    (question) => question.roundId !== null && question.roundId !== roundId,
+  );
+  if (assignedElsewhere.length > 0) {
+    throw badRequest("question.selection.alreadyAssigned");
+  }
+
   await repository.applyRoundSelection(categoryId, roundId, questionIds);
   return { roundId, questionIds };
 }
@@ -280,5 +332,6 @@ export const questionService = {
   importQuestionFile,
   listPool,
   selectRoundQuestions,
+  expectedQuestionCount,
   ROUND_QUESTION_COUNT,
 };

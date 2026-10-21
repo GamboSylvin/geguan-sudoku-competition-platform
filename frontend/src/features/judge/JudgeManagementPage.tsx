@@ -1,9 +1,12 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useLocale } from "../../i18n/locale-context";
+import { clearSession } from "../auth/session";
 import {
   blockingCompetitionsFrom,
   createJudge,
   listJudges,
+  reactivateJudge,
   removeJudge,
   type CreatedJudgeView,
   type JudgeSummaryView,
@@ -11,8 +14,13 @@ import {
 
 /**
  * The controller's judge-management screen (Unit 06): create a judge, see the
- * one-time credentials for the slip export, list every judge, remove a judge (with
- * the ROL-010 removal-guard error naming the blocking competition).
+ * one-time credentials for the slip export, list every judge, deactivate a judge (with
+ * the ROL-010 guard naming the blocking competition) and reactivate one by mistake
+ * deactivated (report §4a).
+ *
+ * §4a: deactivation never deleted a row, yet the button read "Remove" — it announced a
+ * destruction that did not happen, and left a deactivated judge with no action at all.
+ * The label now says what the server does, and both directions are offered.
  *
  * Visual: mood B, "light, sober, white cards" (BLD-054, revising U-66).
  * Recipe: RAPPORT-CSS-sudoku_arena.md §4.B, mapping in context/ui-context.md,
@@ -20,10 +28,19 @@ import {
  */
 export function JudgeManagementPage() {
   const { t } = useLocale();
+  const navigate = useNavigate();
+
+  async function onLogout(): Promise<void> {
+    clearSession();
+    navigate("/login", { replace: true });
+  }
 
   const [judges, setJudges] = useState<JudgeSummaryView[] | null>(null);
   const [name, setName] = useState("");
   const [created, setCreated] = useState<CreatedJudgeView | null>(null);
+  const [reactivated, setReactivated] = useState<{ name: string; username: string | null } | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [blockedBy, setBlockedBy] = useState<string[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -55,6 +72,7 @@ export function JudgeManagementPage() {
     event.preventDefault();
     setError(null);
     setBlockedBy(null);
+    setReactivated(null);
     setBusy(true);
     try {
       const judge = await createJudge({ name: name.trim() });
@@ -68,9 +86,11 @@ export function JudgeManagementPage() {
     }
   }
 
-  async function onRemove(id: string): Promise<void> {
+  async function onDeactivate(id: string): Promise<void> {
     setError(null);
     setBlockedBy(null);
+    setReactivated(null);
+    setCreated(null);
     setBusy(true);
     try {
       await removeJudge(id);
@@ -87,9 +107,45 @@ export function JudgeManagementPage() {
     }
   }
 
+  /** §4a: the way back. Keeps the existing username and password hash — see the service. */
+  async function onReactivate(judge: JudgeSummaryView): Promise<void> {
+    setError(null);
+    setBlockedBy(null);
+    setCreated(null);
+    setReactivated(null);
+    setBusy(true);
+    try {
+      const result = await reactivateJudge(judge.id);
+      setReactivated({ name: result.name, username: result.username });
+      await refresh();
+    } catch {
+      setError(t("judge.genericError"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 bg-gray-50 p-4 text-gray-900 sm:p-6">
-      <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">{t("judge.title")}</h1>
+      {/* Report §7: this page had no back link and no logout at all. */}
+      <div className="flex items-start justify-between gap-4">
+        <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">{t("judge.title")}</h1>
+        <div className="flex gap-2">
+          <Link
+            to="/controller"
+            className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 sm:text-sm"
+          >
+            {t("competition.backToList")}
+          </Link>
+          <button
+            type="button"
+            className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 sm:text-sm"
+            onClick={onLogout}
+          >
+            {t("auth.logout")}
+          </button>
+        </div>
+      </div>
 
       <form className="flex flex-col gap-4 rounded-xl bg-white p-4 shadow sm:p-6" onSubmit={onCreate}>
         <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 sm:text-sm">
@@ -125,12 +181,26 @@ export function JudgeManagementPage() {
         </section>
       )}
 
+      {reactivated && (
+        <section className="flex flex-col gap-1 rounded-xl border border-green-200 bg-green-50 p-4 text-xs sm:p-6 sm:text-sm">
+          <p className="font-medium text-green-800">
+            {t("judge.reactivated")}{" "}
+            {reactivated.username && (
+              <code className="rounded bg-white px-1 font-mono text-gray-900">
+                {reactivated.username}
+              </code>
+            )}
+          </p>
+          <p className="text-green-700">{t("judge.reactivatedNote")}</p>
+        </section>
+      )}
+
       {blockedBy && (
         <div
           role="alert"
           className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-700 sm:text-sm"
         >
-          <p className="font-medium">{t("judge.blocked")}</p>
+          <p className="font-medium">{t("judge.deactivateBlocked")}</p>
           <ul className="mt-1 list-disc pl-5">
             {blockedBy.map((n) => (
               <li key={n}>{n}</li>
@@ -164,14 +234,23 @@ export function JudgeManagementPage() {
                     ({judge.active ? t("judge.active") : t("judge.inactive")})
                   </span>
                 </span>
-                {judge.active && (
+                {judge.active ? (
                   <button
                     type="button"
                     className="rounded border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
-                    onClick={() => onRemove(judge.id)}
+                    onClick={() => onDeactivate(judge.id)}
                     disabled={busy}
                   >
-                    {t("judge.remove")}
+                    {t("judge.deactivate")}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="rounded border border-green-300 px-3 py-1.5 text-xs font-medium text-green-700 transition-colors hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
+                    onClick={() => onReactivate(judge)}
+                    disabled={busy}
+                  >
+                    {t("judge.reactivate")}
                   </button>
                 )}
               </li>

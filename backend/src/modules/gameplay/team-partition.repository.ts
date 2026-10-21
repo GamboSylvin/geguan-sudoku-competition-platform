@@ -170,14 +170,17 @@ export async function mirrorPartitionState(state: PartitionState): Promise<void>
 }
 
 // ---------------------------------------------------------------------------
-// The round's teams, the question pool, the settled result
+// The round's teams, the settled result
 // ---------------------------------------------------------------------------
 //
-// All three are identical in shape to Unit 13's rotation repository, and are
-// re-exported from there rather than duplicated: both team rounds need the same
-// teams-with-active-members query, the same `roundId`-unfiltered category pool
-// (BLD-040 — a team round never sets `Question.roundId`), and the same idempotent
-// `TeamRoundResult` write. One copy means the two rounds cannot drift apart.
+// Both are identical in shape to Unit 13's rotation repository, and are re-exported
+// from there rather than duplicated: both team rounds need the same
+// teams-with-active-members query and the same idempotent `TeamRoundResult` write.
+// One copy means the two rounds cannot drift apart.
+//
+// The category pool is *not* among them any more: since BLD-040's 2026-10-19 revision
+// a Team round plays the questions the controller selected for it, and this round's
+// pool needs both grids flattened — so it has its own reader below.
 
 export {
   listTeamsWithActiveMembers,
@@ -202,16 +205,40 @@ export interface PartitionPuzzleEntry {
 }
 
 /**
- * A category's pool, ready for the partition round: the same pool the rotation round
- * draws from, with both grids flattened (see `flattenStoredGrid` for why that is this
- * round's job and not the shared query's).
+ * A category's pool for one Team round, ready for the partition round: with both grids
+ * flattened (see `flattenStoredGrid` for why that is this round's job and not the shared
+ * query's).
+ *
+ * **Filtered by `roundId` when that round holds a selection** — the same rule and the
+ * same deliberate fallback as the rotation round's `listCategoryPool` (BLD-040, revised
+ * 2026-10-19): a round with no question assigned plays the category's whole pool, the
+ * behaviour this unit shipped with. One reading here means the two Team rounds cannot
+ * disagree about what their pool is.
  */
 export async function listPartitionPool(
   competitionId: string,
   categoryId: string,
+  roundId?: string | null,
+): Promise<PartitionPuzzleEntry[]> {
+  const selected = await selectPartitionPool(competitionId, categoryId, roundId ?? null);
+  if (selected.length > 0) return selected;
+  return selectPartitionPool(competitionId, categoryId, null);
+}
+
+/**
+ * One read of the pool. `roundId === null` means "every question of this category",
+ * the fallback branch; a real id means "only the questions assigned to this round".
+ */
+async function selectPartitionPool(
+  competitionId: string,
+  categoryId: string,
+  roundId: string | null,
 ): Promise<PartitionPuzzleEntry[]> {
   const rows = await prisma.question.findMany({
-    where: { questionSet: { competitionId, categoryId } },
+    where: {
+      questionSet: { competitionId, categoryId },
+      ...(roundId === null ? {} : { roundId }),
+    },
     orderBy: { sequence: "asc" },
     select: {
       id: true,

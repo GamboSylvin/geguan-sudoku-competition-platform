@@ -316,6 +316,14 @@ export function ControllerLivePage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {/* Report §7: unconditional, this page had no way back to the competition list
+              at all. */}
+          <Link
+            to="/controller"
+            className="rounded-lg bg-white/10 px-3 py-2 text-xs text-white transition-colors hover:bg-white/20 sm:text-sm"
+          >
+            {t("competition.backToList")}
+          </Link>
           {/* Unit 12: the results screen is the dashboard's sibling, reached from here. */}
           <Link
             to={`/controller/competitions/${encodeURIComponent(id ?? "")}/results`}
@@ -359,6 +367,16 @@ export function ControllerLivePage() {
       {/* Sequence control: start a stage, pause/resume the shared timer. */}
       <section className="rounded-xl bg-white p-4 shadow sm:p-6">
         <h2 className="mb-3 text-base font-bold text-gray-900 sm:text-lg">{t("controller.sequenceTitle")}</h2>
+        {/*
+          Hole C (report 2026-10-19): the buttons below are the only way a competition is
+          ever started (CS-022 [C] and J-004 deliberately give that to the controller, not
+          the judge), but the section was titled with a bare "赛程" and buried among panels,
+          so the owner looked for a start button and could not find one. One line of text
+          says what these buttons do. The buttons themselves, their enable rule
+          (`canStartStage`) and the server call are untouched — the server stays the
+          authority on ordering and on whether a stage may start.
+        */}
+        <p className="mb-3 text-xs text-gray-600 sm:text-sm">{t("controller.sequenceHint")}</p>
         <div className="mb-3 flex flex-wrap gap-2">
           {stages.map((stage) => (
             <button

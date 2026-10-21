@@ -4,6 +4,7 @@ import { prisma, disconnectPrisma } from "../src/infra/prisma";
 import { disconnectRedis } from "../src/infra/redis";
 import { identityService } from "../src/modules/identity";
 import { competitionService } from "../src/modules/competition";
+import { seedReadinessQuestions } from "./readiness-questions";
 
 /**
  * Unit 15 integration tests for the competition copy (acceptance criteria 3, 4, 5
@@ -111,10 +112,12 @@ async function seedSource(name: string): Promise<{ id: string; playerUsername: s
     data: { schoolCoefficient: "0.75", rankingCycleSeconds: 42 },
   });
 
-  // One question set per category (a set belongs to exactly one category, BLD-028),
-  // each with a complete round-1 and round-2 selection of 6 assigned questions —
-  // Unit 03's readiness condition 2 — plus one pooled question with `roundId = null`
-  // (BLD-040), so a copy has to carry both kinds and re-point both links.
+  // One question set per category (a set belongs to exactly one category, BLD-028), each
+  // with every round holding its own selection — Unit 3's readiness condition 2, which
+  // since BLD-040's revision (2026-10-19) covers the two Team rounds as well — plus one
+  // pooled question with `roundId = null`, so a copy has to carry both kinds and re-point
+  // both links. Per category that is 6 + 6 + 10 + 3 assigned, plus the one pooled.
+  const POOLED_SEQUENCE = 100;
   let firstQuestionId = "";
   for (const [categoryIndex, cat] of full.categories.entries()) {
     const questionSet = await prisma.questionSet.create({
@@ -124,31 +127,22 @@ async function seedSource(name: string): Promise<{ id: string; playerUsername: s
         name: `Set ${cat.code} ${suffix}`,
       },
     });
-    let sequence = 0;
-    for (const round of [round1, round2]) {
-      for (let i = 0; i < 6; i += 1) {
-        sequence += 1;
-        await prisma.question.create({
-          data: {
-            questionSetId: questionSet.id,
-            roundId: round.id,
-            sequence,
-            points: 10,
-            gridRows: 4,
-            gridColumns: 4,
-            regions: [[0, 1, 4, 5]],
-            startingGrid: [[0]],
-            solution: [[1]],
-          },
-        });
-      }
-    }
-    sequence += 1;
+    await seedReadinessQuestions(prisma, {
+      questionSetId: questionSet.id,
+      stages: full.stages,
+      grid: {
+        gridRows: 4,
+        gridColumns: 4,
+        regions: [[0, 1, 4, 5]],
+        startingGrid: [[0]],
+        solution: [[1]],
+      },
+    });
     await prisma.question.create({
       data: {
         questionSetId: questionSet.id,
         roundId: null,
-        sequence,
+        sequence: POOLED_SEQUENCE,
         points: 20,
         gridRows: 6,
         gridColumns: 6,
@@ -364,13 +358,24 @@ describe("copy a competition (criterion 3)", () => {
     const copyCategoryIds = res.body.categories.map((c: { id: string }) => c.id);
     expect(copySets.map((s) => s.categoryId).sort()).toEqual([...copyCategoryIds].sort());
     for (const copySet of copySets) {
-      // 6 per Individual round, plus one pooled question.
-      expect(copySet.questions).toHaveLength(13);
-      expect(copySet.questions[12]!.roundId).toBeNull();
+      // 6 + 6 assigned to the Individual rounds, 10 + 3 to the Team rounds (BLD-040,
+      // revised 2026-10-19), plus the one pooled question, which sorts last because its
+      // `sequence` is above every assigned one's.
+      expect(copySet.questions).toHaveLength(26);
+      expect(copySet.questions[25]!.roundId).toBeNull();
       const round1Questions = copySet.questions.filter((q) => q.roundId === copyRound1.id);
       const round2Questions = copySet.questions.filter((q) => q.roundId === copyRound2.id);
       expect(round1Questions).toHaveLength(6);
       expect(round2Questions).toHaveLength(6);
+      const teamRounds = res.body.stages[1].rounds;
+      const teamRound1Questions = copySet.questions.filter(
+        (q) => q.roundId === teamRounds[0].id,
+      );
+      const teamRound2Questions = copySet.questions.filter(
+        (q) => q.roundId === teamRounds[1].id,
+      );
+      expect(teamRound1Questions).toHaveLength(10);
+      expect(teamRound2Questions).toHaveLength(3);
     }
     const sourceSets = await prisma.questionSet.findMany({
       where: { competitionId: sourceId },

@@ -1,24 +1,24 @@
 /**
- * Fixtures maison pour les tests de l'Unit 04 (import des participants).
+ * Hand-made fixtures for Unit 04's tests (participant import).
  *
- * Aucun fichier réel rempli n'existe et aucun n'arrivera : `context/samples/选手信息.xlsx`
- * est un modèle vide (une ligne d'en-tête, zéro ligne de données). Ce fichier construit
- * donc un classeur `.xlsx` valide à la main, exactement comme `question-fixture.ts` le fait
- * pour l'Unit 05 : une archive OPC minimale (`[Content_Types].xml`, un classeur, une
- * feuille, une table de chaînes partagées), sans aucune dépendance — la même forme que
- * `participant-xlsx.ts` lit avec `node:zlib`.
+ * No real populated file exists and none is coming: `context/samples/选手信息.xlsx`
+ * is an empty template (one header row, zero data rows). This file therefore builds
+ * a valid `.xlsx` workbook by hand, exactly as `question-fixture.ts` does for
+ * Unit 05: a minimal OPC archive (`[Content_Types].xml`, a workbook, one
+ * sheet, one shared-string table), with no dependency at all — the same shape that
+ * `participant-xlsx.ts` reads with `node:zlib`.
  *
- * Les en-têtes sont ceux du vrai fichier, dans son ordre réel. Deux points comptent pour
- * les tests :
- * - une cellule écrite comme **nombre** (`<v>1</v>`) et la même écrite comme **chaîne
- *   partagée** (`t="s"`) doivent donner le même texte au parser — d'où le `number` vs
- *   `string` dans `FixtureRow` ;
- * - `年龄`, `省`, `市`, `区（县）`, `备注` et `选手编号` sont présentes mais ne sont jamais
- *   lues (`participant-parse.ts`'s `COLUMNS`), ce que les tests vérifient en les remplissant.
+ * The headers are the real file's, in its real order. Two points matter for
+ * the tests:
+ * - a cell written as a **number** (`<v>1</v>`) and the same one written as a
+ *   **shared string** (`t="s"`) must give the parser the same text — hence the
+ *   `number` vs `string` in `FixtureRow`;
+ * - `年龄`, `省`, `市`, `区（县）`, `备注` and `选手编号` are present but are never
+ *   read (`participant-parse.ts`'s `COLUMNS`), which the tests verify by filling them in.
  */
 import { deflateRawSync } from "node:zlib";
 
-/** Les en-têtes du vrai fichier, dans leur ordre réel. */
+/** The real file's headers, in their real order. */
 export const FIXTURE_HEADERS = [
   "比赛名称",
   "选手编号",
@@ -37,12 +37,12 @@ export const FIXTURE_HEADERS = [
 export type FixtureHeader = (typeof FIXTURE_HEADERS)[number];
 
 /**
- * Une ligne de données. Seules les clés fournies sont écrites ; `null` (ou une clé
- * absente) laisse la cellule hors de la feuille, ce qui est la façon dont Excel
- * représente une cellule vide — la forme que doit prendre un drapeau « non renseigné ».
+ * A data row. Only the keys supplied are written; `null` (or a missing key) leaves the
+ * cell out of the sheet, which is how Excel represents an empty cell — the shape an
+ * "unfilled" flag must take.
  *
- * Un `number` produit une cellule numérique, une `string` une chaîne partagée : c'est
- * ainsi qu'un test force les deux représentations d'une même valeur.
+ * A `number` produces a numeric cell, a `string` a shared string: that is how a test
+ * forces both representations of the same value.
  */
 export type FixtureRow = Partial<Record<FixtureHeader, string | number | null>>;
 
@@ -71,7 +71,7 @@ interface ZipFile {
   content: string;
 }
 
-/** Écrit une archive zip deflate à partir d'une liste de fichiers texte. */
+/** Writes a deflate zip archive from a list of text files. */
 function buildZip(files: ZipFile[]): Buffer {
   const localParts: Buffer[] = [];
   const centralParts: Buffer[] = [];
@@ -154,9 +154,8 @@ function columnLabel(index: number): string {
 }
 
 /**
- * Le XML d'une feuille. Une chaîne passe par la table des chaînes partagées (comme le
- * fait Excel) ; un nombre est écrit comme une simple cellule `<v>`. Une valeur `null`
- * n'émet aucune cellule.
+ * The sheet's XML. A string goes through the shared-string table (as Excel does); a
+ * number is written as a plain `<v>` cell. A `null` value emits no cell at all.
  */
 function buildSheet(rows: (string | number | null)[][]): { xml: string; shared: string } {
   const strings: string[] = [];
@@ -201,7 +200,7 @@ function buildSheet(rows: (string | number | null)[][]): { xml: string; shared: 
   };
 }
 
-/** Construit un classeur `.xlsx` de participants complet et lisible. */
+/** Builds a complete, readable `.xlsx` participant workbook. */
 export function buildParticipantWorkbook(
   rows: FixtureRow[],
   headers: readonly string[] = FIXTURE_HEADERS,
@@ -245,8 +244,8 @@ export function buildParticipantWorkbook(
 const BOUNDARY = "----unit04participantfixture";
 
 /**
- * Enveloppe un classeur dans le corps `multipart/form-data` que l'endpoint attend, et
- * renvoie les octets du corps plus la boundary à indiquer au contrôleur.
+ * Wraps a workbook in the `multipart/form-data` body the endpoint expects, and returns
+ * the body's bytes plus the boundary to hand the controller.
  */
 export function buildUploadBody(
   bytes: Buffer,
@@ -264,21 +263,21 @@ export function buildUploadBody(
 }
 
 // ---------------------------------------------------------------------------
-// Lignes réalistes
+// Realistic rows
 // ---------------------------------------------------------------------------
 
 /**
- * La note de la cellule L2 du vrai fichier. La ligne qui la porte n'a aucune des cinq
- * colonnes utilisées renseignée : c'est exactement le cas que `isNoteRow` saute en
- * avertissement plutôt qu'en erreur.
+ * The text of the real file's L2 cell. The row carrying it has none of the five
+ * columns that are actually used filled in: that is exactly the case `isNoteRow` skips
+ * with a warning rather than an error.
  */
 export const FIXTURE_NOTE_TEXT = "个人赛团队赛参加填写1，未参加空白或者是2";
 
-/** Le nom de compétition écrit dans le fichier, quand il correspond à la compétition. */
+/** The competition name written in the file, when it matches the competition. */
 export function validRow(overrides: Partial<FixtureRow> = {}, competitionName = ""): FixtureRow {
   return {
     比赛名称: competitionName,
-    选手编号: 901, // ignoré (PAR-012) : un nombre pré-rempli que le système ne lit jamais
+    选手编号: 901, // ignored (PAR-012): a pre-filled number the system never reads
     姓名: "张三",
     年龄: 9,
     省: "浙江省",
@@ -287,13 +286,13 @@ export function validRow(overrides: Partial<FixtureRow> = {}, competitionName = 
     学校名称: "卖鱼桥小学",
     组别: "一二年级组",
     个人赛: "1",
-    团队赛: null, // cellule vide = ne participe pas
+    团队赛: null, // empty cell = does not take part
     备注: FIXTURE_NOTE_TEXT,
     ...overrides,
   };
 }
 
-/** Une ligne dont aucune des cinq colonnes utilisées n'est renseignée : la ligne de note. */
+/** A row where none of the five columns that are used is filled in: the note row. */
 export function noteRow(noteText = FIXTURE_NOTE_TEXT): FixtureRow {
   return { 备注: noteText };
 }

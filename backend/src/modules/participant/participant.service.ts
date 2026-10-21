@@ -32,6 +32,7 @@ import {
   UnprocessableEntityError,
 } from "../../shared/errors";
 import { translate } from "../../shared/i18n";
+import { playerEntryUrl } from "../../shared/links";
 import { identityService } from "../identity";
 import { readUploadedFile } from "./participant-multipart";
 import { XLSX_MIME_TYPE, writeXlsx } from "../results";
@@ -122,11 +123,9 @@ function candidateUsernames(
   };
 }
 
-/** The player-facing link printed on every slip. Blank when no public base is configured. */
-function entryLink(token: string): string {
-  const base = (process.env.PUBLIC_BASE_URL ?? "").trim().replace(/\/+$/, "");
-  return base === "" ? "" : `${base}/player?token=${encodeURIComponent(token)}`;
-}
+/** The player-facing link printed on every slip — see `shared/links`, the one place the
+ * rule is written, so the slips can never show a different URL from the publish screen. */
+const entryLink = playerEntryUrl;
 
 /**
  * A named seam for the one reading of spec §4.5 this unit takes that its own text does not

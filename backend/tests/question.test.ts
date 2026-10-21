@@ -468,8 +468,14 @@ describe("selecting a round's six questions (AC 5, AC 6)", () => {
   });
 
   it("is recognized as complete by Unit 03's publish-readiness check (AC 5)", async () => {
-    const { id, categoryId, individualRoundIds } = await makeCompetition(`Ready ${suffix}`);
-    const { questions } = await importQuestions(id, categoryId, 12);
+    const { id, categoryId, individualRoundIds, teamRoundIds } = await makeCompetition(
+      `Ready ${suffix}`,
+    );
+    // The readiness check now covers all four rounds (BLD-040, revised 2026-10-19):
+    // 6 + 6 Individual, 10 rotation Team, 3 partition Team = 25 distinct questions, and
+    // a question can't serve two rounds. Import one pool big enough for all of them.
+    const { questions } = await importQuestions(id, categoryId, 25);
+    const ids = questions.map((question) => question.id);
 
     // Before any selection the pool questions don't cover a round, so the condition
     // is unmet.
@@ -478,11 +484,18 @@ describe("selecting a round's six questions (AC 5, AC 6)", () => {
       "competition.readiness.questionsRequired",
     );
 
-    const ids = questions.map((question) => question.id);
-    for (const [index, roundId] of individualRoundIds.entries()) {
+    // Assign each round its own slice: Individual 1 and 2 take 6 each, the rotation Team
+    // round takes 10, the partition Team round takes 3.
+    const plan: Array<[string, number, number]> = [
+      [individualRoundIds[0]!, 0, 6],
+      [individualRoundIds[1]!, 6, 12],
+      [teamRoundIds[0]!, 12, 22],
+      [teamRoundIds[1]!, 22, 25],
+    ];
+    for (const [roundId, from, to] of plan) {
       const res = await authed(
         request(app).post(selectionUrl(id, categoryId, roundId)),
-      ).send({ questionIds: ids.slice(index * 6, index * 6 + 6) });
+      ).send({ questionIds: ids.slice(from, to) });
       expect(res.status).toBe(200);
     }
 
@@ -528,18 +541,29 @@ describe("selecting a round's six questions (AC 5, AC 6)", () => {
     expect(assigned.map((question) => question.id)).toEqual(ids);
   });
 
-  it("rejects a selection that isn't exactly 6, repeats an id, or leaves the pool", async () => {
+  it("rejects a selection with the wrong count, a repeated id, or an id outside the pool", async () => {
     const { id, categoryId, individualRoundIds } = await makeCompetition(`BadSelect ${suffix}`);
     const { questions } = await importQuestions(id, categoryId, 7);
     const roundId = individualRoundIds[0]!;
     const ids = questions.map((question) => question.id);
 
-    // A wrong-shaped body is a 400 from the route's own schema before the service is
-    // reached, so it carries the generic validation code.
+    // The route's schema only checks the *shape* — a non-empty array of ids. The count is
+    // per-round (6 here, but 10 or 3 for the Team rounds), so the service owns it and the
+    // code is its own, naming the count it wanted in `details.expected` (BLD-040, revised
+    // 2026-10-19). A truly shapeless body is what still trips the generic validation code.
     for (const questionIds of [ids.slice(0, 5), ids]) {
       const res = await authed(
         request(app).post(selectionUrl(id, categoryId, roundId)),
       ).send({ questionIds });
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe("question.selection.invalidCount");
+      expect(res.body.error.details).toMatchObject({ expected: 6 });
+    }
+
+    for (const body of [{}, { questionIds: [] }, { questionIds: ["", ""] }]) {
+      const res = await authed(
+        request(app).post(selectionUrl(id, categoryId, roundId)),
+      ).send(body);
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe("VALIDATION_ERROR");
     }
@@ -569,16 +593,98 @@ describe("selecting a round's six questions (AC 5, AC 6)", () => {
     expect(await prisma.question.count({ where: { roundId } })).toBe(0);
   });
 
-  it("refuses a Team round, which never holds a selection (BLD-040)", async () => {
-    const { id, categoryId, teamRoundIds } = await makeCompetition(`TeamRound ${suffix}`);
-    const { questions } = await importQuestions(id, categoryId, 6);
+  it("accepts a Team round's own selection of 10 (BLD-040, revised 2026-10-19)", async () => {
+    const { id, categoryId, teamRoundIds } = await makeCompetition(`TeamSelect ${suffix}`);
+    const { questions } = await importQuestions(id, categoryId, 10);
+    // Team round 1 is the rotation relay, whose count is `teamQuestionCount` (10 by
+    // default), not the Individual round's 6.
+    const rotationRound = teamRoundIds[0]!;
 
     const res = await authed(
-      request(app).post(selectionUrl(id, categoryId, teamRoundIds[0]!)),
+      request(app).post(selectionUrl(id, categoryId, rotationRound)),
     ).send({ questionIds: questions.map((question) => question.id) });
 
+    expect(res.status).toBe(200);
+    expect(await prisma.question.count({ where: { roundId: rotationRound } })).toBe(10);
+  });
+
+  it("rejects a Team round given the Individual count, naming the count it wanted", async () => {
+    const { id, categoryId, teamRoundIds } = await makeCompetition(`TeamCount ${suffix}`);
+    const { questions } = await importQuestions(id, categoryId, 10);
+    const rotationRound = teamRoundIds[0]!;
+
+    const res = await authed(
+      request(app).post(selectionUrl(id, categoryId, rotationRound)),
+    ).send({ questionIds: questions.slice(0, 6).map((question) => question.id) });
+
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe("question.selection.notIndividualRound");
+    expect(res.body.error.code).toBe("question.selection.invalidCount");
+    // The count goes back in `details` too: the message is built in English server-side
+    // while the controller's screen may be Chinese, and the Chinese copy renders this.
+    expect(res.body.error.details).toMatchObject({ expected: 10 });
+    expect(await prisma.question.count({ where: { roundId: rotationRound } })).toBe(0);
+  });
+
+  it("accepts the Team partition round's own selection of 3", async () => {
+    const { id, categoryId, teamRoundIds } = await makeCompetition(`TeamPartitionSelect ${suffix}`);
+    const { questions } = await importQuestions(id, categoryId, 10);
+    // Team round 2 is the partition round (齐心协力), whose count is
+    // `partitionPuzzleCount` (3 by default).
+    const partitionRound = teamRoundIds[1]!;
+
+    const res = await authed(
+      request(app).post(selectionUrl(id, categoryId, partitionRound)),
+    ).send({ questionIds: questions.slice(0, 3).map((question) => question.id) });
+
+    expect(res.status).toBe(200);
+    expect(await prisma.question.count({ where: { roundId: partitionRound } })).toBe(3);
+  });
+
+  it("refuses to move a question already assigned to another round", async () => {
+    const { id, categoryId, individualRoundIds } = await makeCompetition(`Steal ${suffix}`);
+    const { questions } = await importQuestions(id, categoryId, 12);
+    const [firstRound, secondRound] = individualRoundIds as [string, string];
+    const ids = questions.map((question) => question.id);
+
+    const first = await authed(
+      request(app).post(selectionUrl(id, categoryId, firstRound)),
+    ).send({ questionIds: ids.slice(0, 6) });
+    expect(first.status).toBe(200);
+
+    // The second selection overlaps the first by three questions. Silently moving them
+    // used to leave round 1 with 3 instead of 6, a loss that surfaced only much later as
+    // the publish rejection and named no round at all. Six distinct ids, three of them
+    // already taken by round 1 — so `duplicateIds` cannot fire first and mask the rule.
+    const stealing = await authed(
+      request(app).post(selectionUrl(id, categoryId, secondRound)),
+    ).send({ questionIds: ids.slice(3, 9) });
+    expect(stealing.status).toBe(400);
+    expect(stealing.body.error.code).toBe("question.selection.alreadyAssigned");
+
+    // Round 1 kept all 6 of them, and round 2 was left empty rather than half-filled.
+    expect(await prisma.question.count({ where: { roundId: firstRound } })).toBe(6);
+    expect(await prisma.question.count({ where: { roundId: secondRound } })).toBe(0);
+  });
+
+  it("still allows re-selecting the same round, replacing its previous 6", async () => {
+    const { id, categoryId, individualRoundIds } = await makeCompetition(`Reselect ${suffix}`);
+    const { questions } = await importQuestions(id, categoryId, 12);
+    const roundId = individualRoundIds[0]!;
+    const ids = questions.map((question) => question.id);
+
+    await authed(request(app).post(selectionUrl(id, categoryId, roundId))).send({
+      questionIds: ids.slice(0, 6),
+    });
+    const second = await authed(
+      request(app).post(selectionUrl(id, categoryId, roundId)),
+    ).send({ questionIds: ids.slice(6, 12) });
+
+    expect(second.status).toBe(200);
+    const assigned = await prisma.question.findMany({
+      where: { roundId },
+      select: { id: true },
+    });
+    expect(assigned.map((question) => question.id).sort()).toEqual(ids.slice(6, 12).sort());
   });
 });
 

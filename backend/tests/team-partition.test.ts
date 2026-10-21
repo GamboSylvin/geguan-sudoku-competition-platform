@@ -5,6 +5,7 @@ import { disconnectRedis } from "../src/infra/redis";
 import { identityService } from "../src/modules/identity";
 import { competitionService } from "../src/modules/competition";
 import { roundTimerService } from "../src/modules/round";
+import { seedReadinessQuestions } from "./readiness-questions";
 import { gameplayService, teamPartitionService } from "../src/modules/gameplay";
 import * as partitionRepository from "../src/modules/gameplay/team-partition.repository";
 import type { PartitionState } from "../src/modules/gameplay";
@@ -64,8 +65,6 @@ const GRID_ROWS = 9;
 const GRID_COLUMNS = 3;
 const GRID_SIZE = GRID_ROWS * GRID_COLUMNS;
 const TEAM_SIZE = 4;
-/** More than `partitionPuzzleCount` (3) so the draw is a real draw. */
-const POOL_SIZE = 5;
 const PUZZLE_COUNT = 3;
 const POINTS_PER_PUZZLE = 20;
 
@@ -183,61 +182,15 @@ async function seedPartitionCompetition(
     data: { competitionId: competition.id, categoryId: category.id, name: `Set ${suffix}` },
   });
 
-  // Publish readiness: exactly 6 assigned questions per Individual round. They must
-  // share the team pool's grid shape, because the partition round draws the whole
-  // category `QuestionSet` pool and is deliberately **not** filtered by `roundId`
-  // (BLD-040) — so an Individual-assigned question is legally drawable, and a 4×4 one
-  // would make `dealTeam` compute its bands off the wrong row count.
-  for (const round of individualStage.rounds) {
-    for (let sequence = 1; sequence <= 6; sequence += 1) {
-      await prisma.question.create({
-        data: {
-          questionSetId: questionSet.id,
-          roundId: round.id,
-          sequence,
-          points: 10,
-          gridRows: GRID_ROWS,
-          gridColumns: GRID_COLUMNS,
-          regions: [[0, 1, 2]],
-          startingGrid: STARTING_MATRIX,
-          solution: SOLUTION_MATRIX,
-        },
-      });
-    }
-  }
-  // The team pool: `roundId` null (BLD-040 — a team round never sets it).
-  for (let sequence = 1; sequence <= POOL_SIZE; sequence += 1) {
-    await prisma.question.create({
-      data: {
-        questionSetId: questionSet.id,
-        roundId: null,
-        sequence: 100 + sequence,
-        points: 10,
-        gridRows: GRID_ROWS,
-        gridColumns: GRID_COLUMNS,
-        regions: [[0, 1, 2]],
-        startingGrid: STARTING_MATRIX,
-        solution: SOLUTION_MATRIX,
-      },
-    });
-  }
-
-  const judge = await prisma.judge.create({ data: { name: `Judge ${suffix}` } });
-  await prisma.competitionJudgeAssignment.create({
-    data: {
-      competitionId: competition.id,
-      judgeId: judge.id,
-      fromParticipantNumber: 1,
-      toParticipantNumber: TEAM_SIZE,
-    },
-  });
-
+  // Round 2's own settings (TEM-006 to TEM-008), set **before** the questions are seeded:
+  // since BLD-040's revision (2026-10-19) each Team round holds its own selection, and the
+  // readiness check counts against `partitionPuzzleCount`. Seeding first would read the
+  // schema default and then publish against a different target. The total time is long by
+  // default so no background tick can settle a team mid-test; the two timed tests override it.
   await prisma.roundSettings.update({
     where: { roundId: teamRound1.id },
     data: { durationSeconds: 1200, preparationSeconds: 60 },
   });
-  // Round 2's own settings (TEM-006 to TEM-008). The total time is long by default so
-  // no background tick can settle a team mid-test; the two timed tests override it.
   await prisma.roundSettings.update({
     where: { roundId: teamRound2.id },
     data: {
@@ -246,6 +199,37 @@ async function seedPartitionCompetition(
       partitionPuzzleCount: PUZZLE_COUNT,
       partitionTotalTimeSeconds: 3600,
       partitionPointsPerPuzzle: POINTS_PER_PUZZLE,
+    },
+  });
+
+  // Every round of the competition gets its own selection: 6 per Individual round,
+  // `teamQuestionCount` for the rotation round, `PUZZLE_COUNT` for this partition one.
+  // All of them share the team grid shape (9×3, three bands) because `dealTeam` computes
+  // the bands off `gridRows`, and a round holding a 4×4 question would split a 9-row
+  // band plan over a 4-row grid.
+  const reloaded = await prisma.competition.findUniqueOrThrow({
+    where: { id: competition.id },
+    include: { stages: { include: { rounds: { include: { settings: true } } } } },
+  });
+  await seedReadinessQuestions(prisma, {
+    questionSetId: questionSet.id,
+    stages: reloaded.stages,
+    grid: {
+      gridRows: GRID_ROWS,
+      gridColumns: GRID_COLUMNS,
+      regions: [[0, 1, 2]],
+      startingGrid: STARTING_MATRIX,
+      solution: SOLUTION_MATRIX,
+    },
+  });
+
+  const judge = await prisma.judge.create({ data: { name: `Judge ${suffix}` } });
+  await prisma.competitionJudgeAssignment.create({
+    data: {
+      competitionId: competition.id,
+      judgeId: judge.id,
+      fromParticipantNumber: 1,
+      toParticipantNumber: TEAM_SIZE,
     },
   });
 
@@ -554,21 +538,21 @@ describe("round start and the band split (acceptance criterion 1)", () => {
       expect(member.grid).toEqual(new Array<null>(GRID_SIZE).fill(null));
     }
 
-    // The puzzles come from the category's pool — the whole `QuestionSet`, **not**
-    // filtered by `roundId` (BLD-040) — with no repeats, capped at the configured count.
-    // So an Individual-assigned question is legally drawable, and the assertion checks
-    // pool membership only: filtering on `roundId: null` here would encode a rule the
-    // decision register explicitly rejects.
+    // The puzzles come from *this round's own selection* — not from the whole category
+    // `QuestionSet`, which is what BLD-040 said before its 2026-10-19 revision. The round
+    // now holds `partitionPuzzleCount` assigned questions and deals those, so the assertion
+    // checks membership of the round's selection, not of the pool at large.
     expect(state.puzzles).toHaveLength(PUZZLE_COUNT);
     expect(new Set(state.puzzles.map((p) => p.id)).size).toBe(PUZZLE_COUNT);
-    const inPool = await prisma.question.findMany({
+    const inSelection = await prisma.question.findMany({
       where: {
         id: { in: state.puzzles.map((p) => p.id) },
+        roundId: ctx.teamRound2Id,
         questionSet: { competitionId: ctx.competitionId, categoryId: ctx.categoryId },
       },
       select: { id: true },
     });
-    expect(inPool).toHaveLength(PUZZLE_COUNT);
+    expect(inSelection).toHaveLength(PUZZLE_COUNT);
 
     const mirror = await prisma.teamPartitionState.findUniqueOrThrow({
       where: { roundId_teamId: { roundId: ctx.teamRound2Id, teamId: ctx.teamId } },

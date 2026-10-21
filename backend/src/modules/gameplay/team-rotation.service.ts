@@ -229,7 +229,11 @@ async function dealTeam(input: {
   const existing = await repository.loadRotationState(input.roundId, input.team.teamId);
   if (existing) return existing;
 
-  const pool = await repository.listCategoryPool(input.competitionId, input.team.categoryId);
+  const pool = await repository.listCategoryPool(
+    input.competitionId,
+    input.team.categoryId,
+    input.roundId,
+  );
   const drawn = drawQuestions(pool, input.questionCount);
 
   const members = input.team.members;
@@ -527,7 +531,11 @@ export async function submitRotation(
   }
 
   // The answer check reuses Unit 08's evaluation (all-or-nothing, BLD-010). The
-  // solution is read here, server-side, only for this comparison.
+  // solution is read here, server-side, only for this comparison. It reads the
+  // category's **whole** pool rather than the round's selection: the lookup is by
+  // question id and only that id's solution is used, so the wider pool is a safe
+  // superset — and it still resolves for a round dealt from the no-selection fallback
+  // branch, where the drawn questions carry no `roundId`.
   const pool = await repository.listCategoryPool(state.competitionId, state.categoryId);
   const solution = pool.find((entry) => entry.question.id === input.questionId)?.solution ?? [];
   const correct = scoringService.gridsEqual(input.grid, solution);

@@ -33,6 +33,20 @@ const envSchema = z.object({
   // entirely when this is empty, so no development route changes behaviour.
   FRONTEND_DIST: z.string().default(""),
 
+  // The public address the browser reaches this deployment on, WITHOUT a trailing
+  // slash: `http://localhost:5173` in development (the Vite dev server serves the
+  // frontend on its own port), `http://<public-ip>` in production (BLD-048 — one
+  // Alibaba Cloud ECS instance, reached by bare IP, no domain and no TLS yet, I-39/
+  // I-40). It is the base of every link the platform hands out to a human being —
+  // the player entry link printed on the credential slips and the big-screen link
+  // shown after publish — so it must be the address a *tablet in the room* can
+  // resolve, not `localhost` and not a container hostname.
+  //
+  // Left empty on purpose when unknown: `shared/links` then returns "" rather than a
+  // URL that cannot be opened, and the UI says the link is not configured instead of
+  // showing something misleading.
+  PUBLIC_BASE_URL: z.string().default(""),
+
   // Session length: a fixed window from login, never refreshed on activity
   // (AUTH-001). Kept configurable so the event day's needs can be tuned without a
   // code change; the default is the decided 24 hours.

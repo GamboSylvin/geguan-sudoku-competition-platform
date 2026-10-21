@@ -22,12 +22,31 @@ export function isLocale(value: string): value is Locale {
   return (LOCALES as readonly string[]).includes(value);
 }
 
-export function translate(locale: Locale, key: string): string {
+export function translate(
+  locale: Locale,
+  key: string,
+  params?: Record<string, string | number>,
+): string {
   const parts = key.split(".");
   let current: unknown = catalogues[locale];
   for (const part of parts) {
     if (typeof current !== "object" || current === null) return key;
     current = (current as Record<string, unknown>)[part];
   }
-  return typeof current === "string" ? current : key;
+  if (typeof current !== "string") return key;
+  return interpolate(current, params);
+}
+
+/**
+ * Replace each `{name}` placeholder in a catalogue string with its value. An absent
+ * placeholder keeps its braces so the gap is visible rather than silently blanked.
+ */
+function interpolate(
+  message: string,
+  params?: Record<string, string | number>,
+): string {
+  if (!params) return message;
+  return message.replace(/\{(\w+)\}/g, (whole, name: string) =>
+    name in params ? String(params[name]) : whole,
+  );
 }

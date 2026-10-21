@@ -74,11 +74,12 @@ async function seedReadinessData(
     where: { id: competitionId },
     include: { categories: true, stages: { include: { rounds: true } } },
   });
-  const individualRoundIds = (
-    competition.stages.find((stage) => stage.type === "INDIVIDUAL")?.rounds ?? []
-  ).map((round) => round.id);
+  const individualStage = competition.stages.find((stage) => stage.type === "INDIVIDUAL");
+  const individualRoundIds = (individualStage?.rounds ?? []).map((round) => round.id);
+  const teamRounds = competition.stages.find((stage) => stage.type === "TEAM")?.rounds ?? [];
 
   let participantNumber = 0;
+  let globalQuestionSequence = 0;
   for (const category of competition.categories) {
     const school = await prisma.school.create({
       data: { competitionId, name: `School ${category.code} ${suffix}`, sequence: category.sequence },
@@ -98,15 +99,25 @@ async function seedReadinessData(
     const questionSet = await prisma.questionSet.create({
       data: { competitionId, categoryId: category.id, name: `Set ${category.code} ${suffix}` },
     });
-    // The readiness check requires a complete selection of 6 assigned questions per
-    // Individual round (BLD-040 / Unit 05's round-selection step).
-    for (const [roundIndex, roundId] of individualRoundIds.entries()) {
-      for (let questionIndex = 0; questionIndex < 6; questionIndex += 1) {
+    // The readiness check requires a complete selection per round (BLD-040, revised
+    // 2026-10-19): 6 per Individual round, `teamQuestionCount` (10) for the rotation
+    // Team round and `partitionPuzzleCount` (3) for the partition Team round. Seed all
+    // four so a "ready" expectation genuinely covers every round.
+    const perRound: Array<[string, number]> = [
+      ...individualRoundIds.map((roundId) => [roundId, 6] as [string, number]),
+      ...teamRounds.map(
+        (round) =>
+          [round.id, round.sequence === 2 ? 3 : 10] as [string, number],
+      ),
+    ];
+    for (const [roundId, count] of perRound) {
+      for (let questionIndex = 0; questionIndex < count; questionIndex += 1) {
+        globalQuestionSequence += 1;
         await prisma.question.create({
           data: {
             questionSetId: questionSet.id,
             roundId,
-            sequence: roundIndex * 6 + questionIndex + 1,
+            sequence: globalQuestionSequence,
             points: 10,
             gridRows: 4,
             gridColumns: 4,
@@ -434,6 +445,52 @@ describe("publish readiness (AC 3, AC 4)", () => {
     expect(readiness.unmet.map((c) => c.key)).toContain(
       "competition.readiness.questionsRequired",
     );
+  });
+
+  it("names the category, the round and its count in the question condition", async () => {
+    // The condition used to be one undifferentiated sentence. With two categories and two
+    // Individual rounds each there were four places to inspect and no way to know which
+    // was short, which reads like a missing feature rather than a missing selection.
+    const competition = await makeCompetition(`NamedCulprit ${suffix}`);
+    await seedReadinessData(competition.id);
+
+    // Empty round 2 of the second category, and drop one question from round 1 of the
+    // first, so the message has to name two different categories and two counts.
+    const categories = await prisma.competitionCategory.findMany({
+      where: { competitionId: competition.id },
+      orderBy: { sequence: "asc" },
+    });
+    const rounds = await prisma.round.findMany({
+      where: { stage: { competitionId: competition.id, type: "INDIVIDUAL" } },
+      orderBy: { sequence: "asc" },
+    });
+    await prisma.question.deleteMany({ where: { roundId: rounds[1]!.id } });
+    const oneOfRoundZero = await prisma.question.findFirstOrThrow({
+      where: { roundId: rounds[0]!.id },
+      select: { id: true },
+    });
+    await prisma.question.delete({ where: { id: oneOfRoundZero.id } });
+
+    const readiness = await competitionService.checkPublishReadiness(competition.id);
+    expect(readiness.ready).toBe(false);
+
+    const named = readiness.unmet.find(
+      (c) => c.key === "competition.readiness.questionsRequired",
+    );
+    expect(named).toBeDefined();
+    // Every culprit is listed, not just the first: the second category keeps its own
+    // `Under 12` name and its round is at zero.
+    expect(named!.message).toContain(categories[0]!.name);
+    expect(named!.message).toContain(categories[1]!.name);
+    expect(named!.message).toContain(rounds[0]!.name);
+    expect(named!.message).toContain(rounds[1]!.name);
+    expect(named!.message).toContain("5 / 6");
+    expect(named!.message).toContain("0 / 6");
+    // Exactly one condition carries that key, however many rounds are short — the
+    // controller renders the list keyed by it.
+    expect(
+      readiness.unmet.filter((c) => c.key === "competition.readiness.questionsRequired"),
+    ).toHaveLength(1);
   });
 });
 

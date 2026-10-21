@@ -43,6 +43,31 @@ interface SavedGridEntry {
   savedAtMs: number;
 }
 
+/**
+ * The given cells, flattened. The importer stores `startingGrid` as a row-major
+ * matrix (`number[][]`) with `0` for "blank" (question-parse.ts); this must render
+ * identically to a flat array, the same convention PartitionRoundScreen.tsx uses for
+ * its own `given` grid.
+ */
+function flattenGiven(question: RoundQuestionPayload): (number | null)[] {
+  const stored = question.startingGrid;
+  const rows = question.gridRows;
+  const columns = question.gridColumns;
+  if (!Array.isArray(stored) || rows <= 0 || columns <= 0) return [];
+  const cells: unknown[] = [];
+  const isMatrix = stored.length > 0 && Array.isArray(stored[0]);
+  if (isMatrix) {
+    for (const row of stored) {
+      if (!Array.isArray(row)) return [];
+      cells.push(...row);
+    }
+  } else {
+    cells.push(...stored);
+  }
+  if (cells.length !== rows * columns) return [];
+  return cells.map((v) => (typeof v === "number" && v !== 0 ? v : null));
+}
+
 interface ActiveRoundScreenProps {
   roundId: string;
   competitionId: string;
@@ -89,10 +114,7 @@ export function ActiveRoundScreen({
       if (saved) {
         map.set(question.id, [...saved.grid]);
       } else {
-        const starting = Array.isArray(question.startingGrid)
-          ? (question.startingGrid as (number | null)[])
-          : [];
-        map.set(question.id, [...starting]);
+        map.set(question.id, flattenGiven(question));
       }
     }
     return map;
@@ -189,9 +211,7 @@ export function ActiveRoundScreen({
     (cellIndex: number, value: number | null) => {
       if (!currentQuestion) return;
       // Given cells (non-null in the starting grid) are read-only.
-      const starting = Array.isArray(currentQuestion.startingGrid)
-        ? (currentQuestion.startingGrid as (number | null)[])
-        : [];
+      const starting = flattenGiven(currentQuestion);
       if (starting[cellIndex] != null) return;
 
       setGrids((current) => {
@@ -215,9 +235,7 @@ export function ActiveRoundScreen({
   const onClearAll = useCallback(() => {
     if (!currentQuestion) return;
     if (!window.confirm(t("gameplay.confirmClearAll"))) return;
-    const starting = Array.isArray(currentQuestion.startingGrid)
-      ? (currentQuestion.startingGrid as (number | null)[])
-      : [];
+    const starting = flattenGiven(currentQuestion);
     setGrids((current) => {
       const next = new Map(current);
       const grid = [...(next.get(currentQuestion.id) ?? [])];
@@ -413,9 +431,7 @@ export function ActiveRoundScreen({
     return null;
   }
 
-  const starting = Array.isArray(currentQuestion.startingGrid)
-    ? (currentQuestion.startingGrid as (number | null)[])
-    : [];
+  const starting = flattenGiven(currentQuestion);
   const gridSize = currentQuestion.gridRows;
   const numberPadValues = Array.from({ length: gridSize }, (_, i) => i + 1);
 
@@ -593,9 +609,7 @@ function ReadOnlyGrid({
   question: RoundQuestionPayload;
   grid: (number | null)[];
 }) {
-  const starting = Array.isArray(question.startingGrid)
-    ? (question.startingGrid as (number | null)[])
-    : [];
+  const starting = flattenGiven(question);
   const gridSize = question.gridRows;
   return (
     <div

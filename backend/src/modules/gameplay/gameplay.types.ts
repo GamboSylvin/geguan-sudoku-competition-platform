@@ -66,6 +66,79 @@ export interface GameplayStatePayload {
   participationState: "WAITING" | "ACTIVE" | "SUBMITTED" | "AUTO_SUBMITTED" | "RESTARTED";
 }
 
+/** The three round kinds, named so the client can pick the right reconnect reader. */
+export type RoundKind = "individual" | "rotation" | "partition";
+
+/** A round status as the client sees it. */
+export type RoundStatusValue = "WAITING" | "PREPARATION" | "ACTIVE" | "PAUSED" | "FINISHED";
+
+/**
+ * One stage of the player-facing programme, with the rounds it holds. The player
+ * never sees a round's questions here — only what is coming and how long it lasts,
+ * which is what a waiting screen can honestly say before anything has been dealt.
+ */
+export interface ProgrammeRoundView {
+  roundId: string;
+  name: string;
+  sequence: number;
+  status: RoundStatusValue;
+  kind: RoundKind;
+  /**
+   * The round's total playing time in seconds, resolved for its kind: an
+   * Individual round's `durationSeconds`, a rotation round's
+   * `teamTotalTimeSeconds` and a partition round's `partitionTotalTimeSeconds`.
+   * Null when the round has no settings row yet (competition still being set up).
+   */
+  totalSeconds: number | null;
+}
+
+export interface ProgrammeStageView {
+  stageId: string;
+  stageType: "INDIVIDUAL" | "TEAM";
+  stageSequence: number;
+  stageStatus: "WAITING" | "PREPARATION" | "ACTIVE" | "PAUSED" | "FINISHED";
+  rounds: ProgrammeRoundView[];
+}
+
+/**
+ * What `GET /api/gameplay/competition` returns: **which competition this session
+ * belongs to**, and who the caller is inside it.
+ *
+ * Why this exists (report 2026-10-19, hole A): the player's entry token is
+ * consumed and deleted by exactly one login (`takeEntryToken`), the stored
+ * `Session` carries no `competitionId`, and a PLAYER session may only reach the
+ * gameplay module — so the waiting screen had nothing to name. It rendered two
+ * static strings ("Competition room" / "Waiting for the competition to start…")
+ * with no competition name, no category, no school and no idea of what happens
+ * next. The server always knew the answer (`identity.repository`'s
+ * `findAccountCompetitionIds`, already used to verify the token at login); it was
+ * simply never exposed for reading. This is that exposure: read-only, resolved
+ * from the session alone, no migration.
+ *
+ * `competition` is never null for a real player session — a participant row
+ * always belongs to a competition — but the shape stays nullable so a stale or
+ * half-created account renders as an empty state rather than a 500.
+ */
+export interface MyCompetitionPayload {
+  competition: {
+    id: string;
+    name: string;
+    description: string | null;
+    status: string;
+  } | null;
+  /** The caller's own registration row, scoped to them and nobody else. */
+  participant: {
+    name: string;
+    participantNumber: number;
+    individualEvent: boolean;
+    teamEvent: boolean;
+  } | null;
+  category: { id: string; code: string; name: string } | null;
+  school: { name: string } | null;
+  /** The whole schedule, in running order, with each round's status. */
+  programme: ProgrammeStageView[];
+}
+
 /**
  * What `GET /api/gameplay/current-round` returns: which round — if any — the
  * caller is in right now, and what kind it is.
@@ -83,12 +156,6 @@ export interface GameplayStatePayload {
  * from the category pool and never carry a `roundId` (BLD-040), so
  * `GET /:roundId/state` finds nothing for one.
  */
-/** The three round kinds, named so the client can pick the right reconnect reader. */
-export type RoundKind = "individual" | "rotation" | "partition";
-
-/** A round status as the client sees it. */
-export type RoundStatusValue = "WAITING" | "PREPARATION" | "ACTIVE" | "PAUSED" | "FINISHED";
-
 export interface CurrentRoundPayload {
   /** Null when the caller has no round running — the "waiting" screen is correct. */
   round: {

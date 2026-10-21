@@ -57,6 +57,11 @@ services:
       POSTGRES_HOST: postgres
       REDIS_HOST: redis
       STORAGE_ROOT: /app/storage
+      # Pinned explicitly rather than left to `env_file` alone: this is the base of the
+      # entry/big-screen links the backend hands out (`shared/links`), and an operator
+      # debugging "the published link is blank" must be able to see it here. The value
+      # comes from `.env`; `:-` keeps an unset variable empty rather than literal.
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
     ports:
       - "${BACKEND_PORT:-3000}:${BACKEND_PORT:-3000}"
     volumes:

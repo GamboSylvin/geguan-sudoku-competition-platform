@@ -45,6 +45,95 @@ function stageRoundLabel(
   return t(`competition.duration.${stage.type}${round.sequence}`);
 }
 
+/**
+ * How many questions a round's selection must hold. Not a single constant: an Individual
+ * round uses 6 (BLD-040 revised 2026-10-19 made every round selectable), the Team rotation
+ * relay uses its own `teamQuestionCount`, and the Team partition round its
+ * `partitionPuzzleCount`. The defaults mirror the `RoundSettings` column defaults, and are
+ * the fallback for a round whose settings row has not been created yet.
+ */
+const INDIVIDUAL_ROUND_QUESTION_COUNT = 6;
+const TEAM_ROTATION_QUESTION_COUNT = 10;
+const TEAM_PARTITION_PUZZLE_COUNT = 3;
+
+function roundQuestionCount(stage: StageView, round: RoundView): number {
+  if (stage.type === "INDIVIDUAL") return INDIVIDUAL_ROUND_QUESTION_COUNT;
+  // Team round 2 is the partition round (齐心协力); Team round 1 is the rotation relay —
+  // the same mapping the backend's `app.ts` uses to pick the runtime.
+  if (round.sequence === 2) {
+    return round.settings?.partitionPuzzleCount ?? TEAM_PARTITION_PUZZLE_COUNT;
+  }
+  return round.settings?.teamQuestionCount ?? TEAM_ROTATION_QUESTION_COUNT;
+}
+
+/**
+ * One published link, as a real, openable address (report §9a). The URL is composed by
+ * the backend (`shared/links`) and simply rendered here — this screen never concatenates
+ * a token with a base, which is how the two links it shows stay identical to the ones on
+ * the credential slips.
+ *
+ * The copy button falls back to a hidden textarea + `execCommand` because the deployment
+ * is plain HTTP on an IP address (BLD-048) and `navigator.clipboard` is only available in
+ * a secure context. It is a convenience, not the only path: the link is always selectable.
+ */
+function PublishedLink({ label, url, notConfigured }: {
+  label: string;
+  url: string;
+  notConfigured: string;
+}) {
+  const { t } = useLocale();
+  const [copied, setCopied] = useState(false);
+
+  async function onCopy(): Promise<void> {
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const field = document.createElement("textarea");
+        field.value = url;
+        field.setAttribute("readonly", "");
+        field.style.position = "fixed";
+        field.style.opacity = "0";
+        document.body.appendChild(field);
+        field.select();
+        document.execCommand("copy");
+        document.body.removeChild(field);
+      }
+      setCopied(true);
+    } catch {
+      // Copying is a convenience: a failure leaves the selectable link as the way out.
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="font-medium text-gray-700">{label}</span>
+      {url === "" ? (
+        <p className="text-xs text-amber-700">{notConfigured}</p>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className="break-all font-mono text-xs text-indigo-700 underline hover:text-indigo-600 sm:text-sm"
+          >
+            {url}
+          </a>
+          <button
+            type="button"
+            onClick={onCopy}
+            className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 transition-colors hover:bg-gray-100"
+          >
+            {copied ? t("competition.copied") : t("competition.copyLink")}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CompetitionSetupPage() {
   const { t } = useLocale();
   const navigate = useNavigate();
@@ -64,6 +153,14 @@ export function CompetitionSetupPage() {
 
   const [durationEdits, setDurationEdits] = useState<Record<string, number>>({});
   const [savedRound, setSavedRound] = useState<string | null>(null);
+
+  /**
+   * The category editor's own draft (report §6c). Seeded from the loaded/created
+   * competition whenever it changes, so reopening a competition starts from its real
+   * categories rather than the blank form's single empty row.
+   */
+  const [categoryEdits, setCategoryEdits] = useState<CategoryInput[]>([]);
+  const [categoriesSaved, setCategoriesSaved] = useState(false);
 
   /**
    * Reopen an existing competition (Unit 15). Only runs on the `:id` route; the
@@ -99,6 +196,45 @@ export function CompetitionSetupPage() {
     setCategories((current) =>
       current.map((category, i) => (i === index ? { ...category, ...patch } : category)),
     );
+  }
+
+  /** Seed the category editor from the real competition once it is known (report §6c). */
+  useEffect(() => {
+    if (competition) {
+      setCategoryEdits(competition.categories.map((c) => ({ code: c.code, name: c.name })));
+    }
+  }, [competition]);
+
+  function updateCategoryEdit(index: number, patch: Partial<CategoryInput>): void {
+    setCategoryEdits((current) =>
+      current.map((category, i) => (i === index ? { ...category, ...patch } : category)),
+    );
+  }
+
+  /**
+   * Save the edited category list (report §6c). The backend's `applyCategoryChanges`
+   * matches on `code` to add/remove/reorder, and refuses once the competition is
+   * published (`competition.structureLocked`) — this form is not offered past that
+   * point, so that refusal should never actually fire here.
+   */
+  async function onSaveCategories(event: FormEvent): Promise<void> {
+    event.preventDefault();
+    if (!competition) return;
+    setError(null);
+    setCategoriesSaved(false);
+    setBusy(true);
+    try {
+      const cleaned = categoryEdits
+        .map((category) => ({ code: category.code.trim(), name: category.name.trim() }))
+        .filter((category) => category.code.length > 0 && category.name.length > 0);
+      const updated = await updateCompetition(competition.id, { categories: cleaned });
+      setCompetition(updated);
+      setCategoriesSaved(true);
+    } catch {
+      setError(t("competition.genericError"));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onCreate(event: FormEvent): Promise<void> {
@@ -163,20 +299,35 @@ export function CompetitionSetupPage() {
     }
   }
 
+  /**
+   * The competition is published when its own status says so — not merely when the Publish
+   * button was clicked in this session. A reopened competition arrives already published,
+   * and its status is what decides whether the links or the Publish button shows.
+   */
+  const isPublished = published !== null || competition?.status !== "CREATED";
+
+  /**
+   * The two links to display. Right after publishing, the publish result is the freshest
+   * source; otherwise the loaded competition carries the same composed URLs.
+   */
+  const entryLinkUrl = published?.entryLinkUrl ?? competition?.entryLinkUrl ?? "";
+  const bigScreenLinkUrl =
+    published?.bigScreenLinkUrl ?? competition?.bigScreenLinkUrl ?? "";
+
   return (
     <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 bg-gray-50 p-4 text-gray-900 sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">
           {t("competition.title")}
         </h1>
-        {id && (
-          <Link
-            to="/controller"
-            className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 sm:text-sm"
-          >
-            {t("competition.backToList")}
-          </Link>
-        )}
+        {/* Unconditional (report §7): the way back is always there, including on the create
+            route where `id` is undefined. */}
+        <Link
+          to="/controller"
+          className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 sm:text-sm"
+        >
+          {t("competition.backToList")}
+        </Link>
       </div>
 
       <p
@@ -280,6 +431,83 @@ export function CompetitionSetupPage() {
             </p>
           </div>
 
+          {/* Category editor (report §6c): editable before publish — the backend already
+              supported PATCHing categories, this screen just never exposed it, which is
+              also why there was no way to add the category a late `选手信息.xlsx` import
+              needed. Read-only with an explanation after publish, not hidden. */}
+          <div className="rounded-xl bg-white p-4 shadow sm:p-6">
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 sm:text-sm">
+              {t("competition.editCategories")}
+            </h3>
+            {isPublished ? (
+              <>
+                <ul className="mb-2 flex flex-col gap-1 text-xs text-gray-700 sm:text-sm">
+                  {competition.categories.map((category) => (
+                    <li key={category.id}>
+                      <span className="font-mono tabular-nums">{category.code}</span> — {category.name}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-gray-500 sm:text-sm">{t("competition.categoriesLockedNote")}</p>
+              </>
+            ) : (
+              <form className="flex flex-col gap-2" onSubmit={onSaveCategories}>
+                {categoryEdits.map((category, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      className="w-28 rounded border border-gray-300 px-3 py-2 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
+                      aria-label={t("competition.categoryCode")}
+                      placeholder={t("competition.categoryCode")}
+                      value={category.code}
+                      onChange={(e) => updateCategoryEdit(index, { code: e.target.value })}
+                    />
+                    <input
+                      className="flex-1 rounded border border-gray-300 px-3 py-2 text-xs text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:text-sm"
+                      aria-label={t("competition.categoryName")}
+                      placeholder={t("competition.categoryName")}
+                      value={category.name}
+                      onChange={(e) => updateCategoryEdit(index, { name: e.target.value })}
+                    />
+                    {categoryEdits.length > 1 && (
+                      <button
+                        type="button"
+                        className="rounded border border-gray-300 px-3 py-2 text-xs text-gray-700 transition-colors hover:bg-gray-100 sm:text-sm"
+                        onClick={() =>
+                          setCategoryEdits((current) => current.filter((_, i) => i !== index))
+                        }
+                      >
+                        {t("competition.removeCategory")}
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="self-start rounded border border-gray-300 px-3 py-1.5 text-xs text-gray-700 transition-colors hover:bg-gray-100 sm:text-sm"
+                    onClick={() =>
+                      setCategoryEdits((current) => [...current, { code: "", name: "" }])
+                    }
+                  >
+                    {t("competition.addCategory")}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={busy}
+                    className="self-start rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
+                  >
+                    {t("competition.saveCategories")}
+                  </button>
+                  {categoriesSaved && (
+                    <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                      {t("competition.saved")}
+                    </span>
+                  )}
+                </div>
+              </form>
+            )}
+          </div>
+
           <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 sm:text-sm">
             {t("competition.structure")}
           </h3>
@@ -368,25 +596,28 @@ export function CompetitionSetupPage() {
             }))}
           />
 
-          {/* Question import, pool and per-round selection (Unit 05, BLD-040). Only
-              Individual rounds hold a selection; Team rounds draw from the pool. */}
+          {/* Question import, pool and per-round selection (Unit 05, BLD-040 revised
+              2026-10-19). Every round now holds a selection — the two Individual rounds
+              and the two Team rounds alike — so the panel gets all four, each with the
+              count its own round uses: 6 for an Individual round, `teamQuestionCount`
+              for the Team rotation relay (round 1 of the Team stage) and
+              `partitionPuzzleCount` for the Team partition round (round 2). */}
           <QuestionPanel
             competitionId={competition.id}
             categories={competition.categories.map((category) => ({
               id: category.id,
               name: category.name,
             }))}
-            individualRounds={competition.stages
-              .filter((stage) => stage.type === "INDIVIDUAL")
-              .flatMap((stage) =>
-                stage.rounds.map((round) => ({
-                  id: round.id,
-                  name: stageRoundLabel(t, stage, round),
-                })),
-              )}
+            rounds={competition.stages.flatMap((stage) =>
+              stage.rounds.map((round) => ({
+                id: round.id,
+                name: stageRoundLabel(t, stage, round),
+                questionCount: roundQuestionCount(stage, round),
+              })),
+            )}
           />
 
-          {!published ? (
+          {!isPublished ? (
             <button
               type="button"
               disabled={busy}
@@ -396,20 +627,40 @@ export function CompetitionSetupPage() {
               {t("competition.publish")}
             </button>
           ) : (
-            <div className="flex flex-col gap-2 rounded-xl border border-green-200 bg-green-50 p-4 text-xs sm:p-6 sm:text-sm">
+            /* The two public links. Rendered for any published competition, not only the
+               one just published in this session: reopening `/controller/competitions/:id/setup`
+               on a competition published earlier used to show nothing at all (report §9a),
+               because the card was keyed on the local `published` state. The tokens alone
+               are not links, so they are no longer shown raw. */
+            <div className="flex flex-col gap-3 rounded-xl border border-green-200 bg-green-50 p-4 text-xs sm:p-6 sm:text-sm">
               <p className="font-medium text-green-700">{t("competition.published")}</p>
-              <p className="text-gray-700">
-                {t("competition.entryLink")}:{" "}
-                <code className="rounded bg-white px-1 font-mono text-gray-900">
-                  {published.entryLinkToken}
-                </code>
-              </p>
-              <p className="text-gray-700">
-                {t("competition.bigScreenLink")}:{" "}
-                <code className="rounded bg-white px-1 font-mono text-gray-900">
-                  {published.bigScreenLinkToken}
-                </code>
-              </p>
+              <PublishedLink
+                label={t("competition.entryLink")}
+                url={entryLinkUrl}
+                notConfigured={t("competition.linkNotConfigured")}
+              />
+              <PublishedLink
+                label={t("competition.bigScreenLink")}
+                url={bigScreenLinkUrl}
+                notConfigured={t("competition.linkNotConfigured")}
+              />
+              {/*
+                Hole C (report 2026-10-19): the published card stopped at the two links and
+                said nothing about what happens next, so there was no visible path to actually
+                *starting* the competition. Starting lives on the controller's live page
+                (CS-022 [C] and J-004 give that power to the controller alone, deliberately not
+                to the judge), so name it and link to it. Text and a link only — no state, no
+                request, nothing about the start sequence itself changed.
+              */}
+              <div className="mt-1 flex flex-col gap-2 border-t border-green-200 pt-3">
+                <p className="text-green-800">{t("competition.nextStep")}</p>
+                <Link
+                  to={`/controller/competitions/${encodeURIComponent(competition.id)}/live`}
+                  className="self-start rounded-lg bg-green-700 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-green-800 sm:text-sm"
+                >
+                  {t("competition.openLive")}
+                </Link>
+              </div>
             </div>
           )}
         </section>

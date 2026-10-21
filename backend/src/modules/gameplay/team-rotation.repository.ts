@@ -202,10 +202,16 @@ export async function findTeamForParticipant(
 // ---------------------------------------------------------------------------
 
 /**
- * A category's whole question pool, with solutions. **Not filtered by `roundId`**
- * (spec Detail 1, BLD-040): `roundId` is the Individual stage's manual
- * round-selection column and a team round never sets it, so filtering on it would
- * find nothing. The pool is everything the category's `QuestionSet`s hold.
+ * A category's question pool for one Team round, with solutions.
+ *
+ * **Filtered by `roundId` when that round holds a selection** (BLD-040, revised
+ * 2026-10-19): the controller now picks each Team round's own questions, and the round
+ * plays those rather than whatever the category imported. A round with *no* question
+ * assigned — a competition set up before that revision, or a seeded test — falls back to
+ * the category's whole pool, which is the behaviour this unit shipped with. The fallback
+ * is deliberate: the publish readiness check requires the full selection, so reaching it
+ * means the round was configured outside the controller's normal path, and dealing the
+ * category's pool is better than dealing nothing.
  *
  * The solution is read here only to be used for the server-side answer check; the
  * draw keeps it in memory for the round's lifetime and never serialises it.
@@ -213,9 +219,27 @@ export async function findTeamForParticipant(
 export async function listCategoryPool(
   competitionId: string,
   categoryId: string,
+  roundId?: string | null,
+): Promise<Array<{ question: RotationQuestion; solution: (number | null)[] }>> {
+  const selected = await selectRoundPool(competitionId, categoryId, roundId ?? null);
+  if (selected.length > 0) return selected;
+  return selectRoundPool(competitionId, categoryId, null);
+}
+
+/**
+ * One read of the pool. `roundId === null` means "every question of this category",
+ * the fallback branch; a real id means "only the questions assigned to this round".
+ */
+async function selectRoundPool(
+  competitionId: string,
+  categoryId: string,
+  roundId: string | null,
 ): Promise<Array<{ question: RotationQuestion; solution: (number | null)[] }>> {
   const rows = await prisma.question.findMany({
-    where: { questionSet: { competitionId, categoryId } },
+    where: {
+      questionSet: { competitionId, categoryId },
+      ...(roundId === null ? {} : { roundId }),
+    },
     orderBy: { sequence: "asc" },
     select: {
       id: true,
