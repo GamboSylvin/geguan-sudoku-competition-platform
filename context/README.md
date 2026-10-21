@@ -1,7 +1,7 @@
-# Context folder — Sudoku Arena (DRAFT v1, 2026-09-26)
+# Context folder — Sudoku Arena (last checked 2026-10-11)
 
 This folder is the single source of truth a coding agent reads before it builds anything. It follows the `building-with-ai` methodology.
-**Every `FILL-BEFORE-CODING` blank is filled and section E is approved by the project owner (2026-09-30); the coding gate is passed.** See `progress-tracker.md`, "Blocked". Anything marked **TBD — to be decided by the project owner** is blank on purpose (today only the event-day hosting, `FILL-BEFORE-DEPLOYMENT`).
+**Every `FILL-BEFORE-CODING` blank is filled and section E is approved by the project owner (2026-09-30); the coding gate is passed.** See `progress-tracker.md`, "Blocked". Anything marked **TBD — to be decided by the project owner** is blank on purpose (the event-day hosting that used to be the last blank, `FILL-BEFORE-DEPLOYMENT` row C1, is now **decided** — BLD-048, 2026-10-09, a single Alibaba Cloud ECS instance; what remains is execution, not a decision).
 
 ## Files
 
@@ -10,18 +10,17 @@ This folder is the single source of truth a coding agent reads before it builds 
 | root `CLAUDE.md` (outside this folder) | The entry point an agent reads first, in order. It also keeps the documentation-phase rules for `context-feeders/requirements/`, `context-feeders/decisions/` and `context-feeders/archive/` | Merged 2026-09-26 |
 | `project-overview.md` | Product, users, flow, features, scope | Mostly written |
 | `competition-rules.md` | The competition and scoring rules that have been decided, and the ones still open | Written from the decisions so far |
-| `architecture.md` | Stack, boundaries, invariants, storage, access model | Mostly written: the backend stack is decided (Node.js with TypeScript, Express.js) with the module-first folder structure (2026-09-30), Prisma (ORM/migrations) and Docker/Docker Compose; the data model is approved (`data-model.md`, 2026-09-30); hosting and the final module list/API are still blank (see `FILL-BEFORE-CODING.md`) |
+| `architecture.md` | Stack, boundaries, invariants, storage, access model | Written: stack, module-first folder structure, module list (ten modules, BLD-032) and the data model are all decided. **Event-day hosting is decided too** (BLD-048, 2026-10-09 — a single Alibaba Cloud ECS instance in a Mainland China region, public IP, no domain, manual redeploy, superseding BLD-031's Railway plan); what is left is execution, plus two follow-ups to revisit before the real event (I-39 bare-IP HTTP without ICP, I-40 no HTTPS while domain-less) |
 | `code-standards.md` | Implementation rules | Skeleton: the stack is decided (Node.js with TypeScript, Express.js, Prisma, Jest); the API and the remaining testing conventions are still to be written |
-| `ai-workflow-rules.md` | How the agent must behave while building | Mostly written; git, CI and review are decided; team roles are recorded; team sync rhythm is open |
-| `ui-context.md` | Screens, states, interaction rules | Partial: look, layouts and sizes are open |
-| `progress-tracker.md` | Phase, blockers, open items, next steps | Written |
-| `FILL-BEFORE-CODING.md` | The checklist of every blank to fill before coding, with owners | Written |
-| `data-model.md` | The data model and schema | Written and **approved** 2026-09-30 (A6); the Prisma schema is its concrete form |
-| `specs/00-build-plan.md` | Units, order, dependencies, definition of done | **Approved** 2026-09-30 (A7): 14 units; a 15th added during the `main`/`louise` merge — team-round-2 (TEM-005) inserted as Unit 14 right after rotation relay; school ranking shifted to Unit 15, now depending on both team rounds |
-| `specs/01-foundation.md` | The spec of Unit 1 (foundation), in the feature-spec structure | **Approved** 2026-09-30 (A7) |
-| `samples/` | Where the sample participant Excel and question PDF are placed | Empty, to be filled |
-
-Not yet written: the specs of the later units (`specs/NN-unit-name.md`). They follow the build plan.
+| `ai-workflow-rules.md` | How the agent must behave while building | Mostly written; git, CI and review are decided; team roles are recorded; team sync rhythm is ~~open~~ **resolved** (I-28, BLD-036) — the row used to say "open", which contradicted `ai-workflow-rules.md`'s own header; corrected 2026-10-11 |
+| `ui-context.md` | Screens, states, interaction rules | Tokens filled with Tailwind defaults; **no dedicated design pass before the event** (UI-008, 2026-10-08) — ships as-is, the look/layout questions (U-65/U-66) stay open to revisit after the event, but don't block building |
+| `progress-tracker.md` | Phase, blockers, open items, next steps | Written — **read this one in full, it's the most current file in the project** |
+| `FILL-BEFORE-CODING.md` | The checklist of every blank to fill before coding, with owners | Written, all rows closed or explicitly deferred past coding |
+| `data-model.md` | The data model and schema | Written and **approved** 2026-09-30 (A6), amended several times since; the Prisma schema is its concrete form (the `Question.roundId` nullable amendment **is migrated** — `20261008000000_nullable_question_round_id_and_question_excel_kinds`, applied 2026-10-08) |
+| `specs/00-build-plan.md` | Units, order, dependencies, definition of done | **Approved** 2026-09-30 (A7): 15 units |
+| `specs/01-foundation.md` through `specs/15-*.md` | Each unit's own spec | **All 15 units now have their code in this tree.** `01,02,03,05,06,07,08,09,10,11,12,13,15` are verified live under Docker. Unit `14` was built 2026-10-09 and **verified 2026-10-12** (migration `20261009000000_add_team_partition_state` applied, `TeamPartitionState` live in Postgres, `tests/team-partition.test.ts` executed for the first time and green inside the backend full suite — **16 suites / 217 tests**). Unit `04` **was specified, approved and built 2026-10-11** (`specs/04-participant-import-teams-and-credentials.md`, now `APPROVED (2026-10-11)`, BLD-049) — backend `modules/participant` and frontend `features/participant`, **verified 2026-10-12 at the compile/lint/test level**: its migration `20261011000000_add_participant_event_flags` is **applied** (`migrate status` reports the schema up to date) and `tests/participant.test.tsx` passes in the green frontend full suite (**10 suites / 55 tests**) — **but it has no backend test at all and its importer has never parsed a populated file**, so running the real roster through it is still open. Specs `12`–`15` were all **approved** 2026-10-08 (BLD-046). See `progress-tracker.md`. |
+| *(merge artifact, superseded 2026-10-12)* | *(the 2026-10-10 merge of the two branches left the row above twice, each version counting a different 13 units: one from `sylvin` after Units 13/14, one from `louise` after Units 12/15. The row above merges both. Kept rather than removed so nothing is silently dropped.)* | — |
+| `samples/` | Real participant/question sample files from the client | Populated 2026-10-07 — see `samples/README.md` |
 
 **Blanks:** search the folder for `FILL-BEFORE-CODING` (needed before the first unit), `FILL-BEFORE-UNIT` (needed before a named unit) and `FILL-BEFORE-DEPLOYMENT`. **Do not write code while a `FILL-BEFORE-CODING` marker remains.**
 

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { healthRouter } from "./health";
-import { competitionRouter } from "./modules/competition";
-import { identityRouter } from "./modules/identity";
+import { competitionRouter, schoolRouter } from "./modules/competition";
+import { identityRouter, judgeRouter, judgeAssignmentRouter, judgeSupervisionRouter } from "./modules/identity";
 import { questionRouter } from "./modules/question";
 import { roundRouter } from "./modules/round";
 import { gameplayRouter } from "./modules/gameplay";
@@ -9,6 +9,8 @@ import { orchestratorRouter } from "./modules/orchestrator";
 import { scoringRouter } from "./modules/scoring";
 import { rankingRouter } from "./modules/ranking";
 import { bigScreenRouter } from "./modules/big-screen";
+import { resultsRouter } from "./modules/results";
+import { participantRouter } from "./modules/participant";
 
 /**
  * Mounts each module's routes under `/api` (BLD-020). Only the health check and the
@@ -25,10 +27,37 @@ apiRouter.use("/", healthRouter);
 apiRouter.use("/auth", identityRouter);
 
 apiRouter.use("/competitions", competitionRouter);
-apiRouter.use("/questions", questionRouter);
+// Judge range assignment lives on the competition path (Unit 06 API contract).
+apiRouter.use("/competitions/:id/judge-assignments", judgeAssignmentRouter);
+// BLD-052: the school CRUD surface. Mounted ahead of the generic `/competitions/:id`
+// routers so its `/schools` paths are never matched by one of their command routes.
+apiRouter.use("/competitions/:id/schools", schoolRouter);
+apiRouter.use("/judges", judgeRouter);
+// Unit 10: the judge's own supervision endpoints live under the singular /judge
+// (the management endpoints under /judges are controller-only).
+apiRouter.use("/judge", judgeSupervisionRouter);
+// Unit 05: question import, the pool listing and the round-selection step all live on
+// the competition+category path of the spec's API contract, so the router is mounted
+// with `mergeParams` reading `:id`/`:categoryId` (the same pattern Unit 09 uses).
+apiRouter.use("/competitions/:id/categories", questionRouter);
 apiRouter.use("/rounds", roundRouter);
 apiRouter.use("/gameplay", gameplayRouter);
-apiRouter.use("/orchestrator", orchestratorRouter);
+// Unit 11: every controller live command is competition-scoped, so the orchestrator's
+// router is mounted on the competition path with `mergeParams` reading `:id` (the same
+// pattern Units 05 and 09 use). Nothing is served at the bare /orchestrator path.
+apiRouter.use("/competitions/:id", orchestratorRouter);
 apiRouter.use("/scoring", scoringRouter);
+// Unit 09: the ranking read lives on the competition path (mergeParams reads `:id`).
+apiRouter.use("/competitions/:id/categories", rankingRouter);
 apiRouter.use("/ranking", rankingRouter);
 apiRouter.use("/big-screen", bigScreenRouter);
+// Unit 12: the results view, the score correction and the export are all
+// competition-scoped and controller-only, so the results router is mounted on the
+// competition path with `mergeParams` reading `:id` (the same pattern Units 05, 09 and
+// 11 use). The purge has no route — it is schedule-driven only.
+apiRouter.use("/competitions/:id", resultsRouter);
+// Unit 04: the participant import, roster, single-row edits and credential slips are all
+// competition-scoped and controller-only, so this router is mounted on the competition
+// path with `mergeParams` reading `:id` (the same pattern Units 05, 09, 11 and 12 use).
+// No route it declares collides with the orchestrator's or the results module's.
+apiRouter.use("/competitions/:id", participantRouter);

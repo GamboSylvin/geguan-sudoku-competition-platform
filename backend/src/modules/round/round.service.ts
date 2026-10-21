@@ -1,12 +1,575 @@
 /**
- * The Round module. Owns: Stage and round definitions, round timing and state, preparation state.
+ * The Round module's domain rules and public interface (Unit 07 — round runtime
+ * and autosave). Other modules call this service, never the repository
+ * (invariant 4).
  *
- * Skeleton only — no feature code (Unit 01, spec 01-foundation). The files follow
- * the decided module layout (BLD-020): controller (HTTP), service (domain rules and
- * the public interface), repository (Prisma access), types, and this barrel.
+ * What lives here:
+ *   - `startStage1Round1Preparation` — the internal dev-only trigger that starts
+ *     stage 1's first round's preparation for a WAITING competition (spec step 7;
+ *     Unit 11 replaces it with the real controller command surface).
+ *   - The preparation → active transition: at the countdown's zero the questions
+ *     are fetched (BLD-006 — never preloaded), the competition/stage/round flip
+ *     to ACTIVE, and the round timer starts. Reached only through the timer
+ *     service's installed hook, so the timer never imports this module (no cycle).
+ *   - `pause()` / `resume()` / `remaining()` — the narrow surface Unit 11 will
+ *     call. They wrap the timer service so the durable-state bookkeeping that
+ *     accompanies the timer stays in one place.
+ *
+ * What does not live here: scoring, submissions, any controller-facing command
+ * (Units 08 and 11).
  */
+import {
+  ConflictError,
+  NotFoundError,
+  UnprocessableEntityError,
+} from "../../shared/errors";
+import { logger } from "../../infra";
+import { now } from "../../shared/clock";
+import { translate } from "../../shared/i18n";
+import * as repository from "./round.repository";
+import {
+  installStartActivePhaseHook,
+  pause as pauseTimer,
+  remaining as timerRemaining,
+  resume as resumeTimer,
+  startPreparationTimer,
+  startRoundTimer,
+  stopRoundEarly,
+  cancelPreparation,
+  restartRoundTimerFullDuration,
+  getActiveRoundId,
+} from "./round-timer.service";
+import {
+  ORCHESTRATOR_COMPETITION_CLOSED,
+  ORCHESTRATOR_STAGE_NOT_FOUND,
+  ORCHESTRATOR_STAGE_NOT_WAITING,
+  ORCHESTRATOR_STAGE_OUT_OF_SEQUENCE,
+} from "../orchestrator/orchestrator.types";
+import type {
+  RoundQuestionPayload,
+  RoundStartedPayload,
+  StartedPreparationResult,
+  TimerSnapshot,
+  TimerState,
+} from "./round.types";
+
 /**
- * The domain rules of the Round module and its public interface. Other modules
- * call this service, never the repository (invariant 4).
+ * Whoever needs to know a round started (the realtime gateway, via the Gameplay
+ * module) installs this hook. Installed once at startup; keeps this module free
+ * of any import from gameplay or realtime (invariant 4, no cycles).
  */
-export const roundService = {};
+type RoundStartedHook = (payload: RoundStartedPayload) => void;
+let roundStartedHook: RoundStartedHook | null = null;
+
+export function installRoundStartedHook(hook: RoundStartedHook): void {
+  roundStartedHook = hook;
+}
+
+/**
+ * The judge's own round-started notification (F3, 2026-10-21), installed the same way —
+ * by the gateway, at startup, so this module keeps importing nothing from realtime.
+ *
+ * It is a **separate** hook rather than a second listener on `roundStartedHook`, for two
+ * reasons. The payload must not carry questions: `RoundStartedPayload` does, and a judge
+ * supervising one category is not entitled to another's puzzles. And it fires **once per
+ * round**, not once per category: the player hook has to fan out because each category
+ * needs its own six questions, while the judge's fact is simply "the round began", which
+ * is true of the competition as a whole and would otherwise be announced N times.
+ */
+export interface JudgeRoundStartedFact {
+  roundId: string;
+  stageId: string;
+  competitionId: string;
+  /**
+   * Which of the round's two beginnings this is. `PREPARATION` is the countdown the
+   * controller started — every tablet leaves the waiting screen; `ACTIVE` is the moment
+   * the puzzles are on screen and answering counts. Both are worth a judge looking up,
+   * and they are seconds apart, so a single event name with this field beats two hooks
+   * and beats one push that arrives too early to mean anything.
+   */
+  phase: "PREPARATION" | "ACTIVE";
+  durationSeconds: number;
+}
+
+type JudgeRoundStartedHook = (fact: JudgeRoundStartedFact) => void;
+let judgeRoundStartedHook: JudgeRoundStartedHook | null = null;
+
+export function installJudgeRoundStartedHook(hook: JudgeRoundStartedHook): void {
+  judgeRoundStartedHook = hook;
+}
+
+/**
+ * Who performs a **team** round's start (the Gameplay module's rotation service,
+ * Unit 13) installs this hook. A team round's questions are not `Question.roundId`
+ * rows — they are drawn per team from the category's pool at deal time (BLD-040,
+ * Unit 13 Detail 1) — so the Individual stage's "fetch all 6 puzzles" step is
+ * replaced rather than extended. Installed at startup from `app.ts`, which keeps
+ * this module free of any import from gameplay (invariant 4, no cycles).
+ */
+export interface TeamRoundStartInput {
+  roundId: string;
+  competitionId: string;
+  stageId: string;
+  /**
+   * Which team round this is: `1` = the rotation relay (Unit 13), `2` = partition
+   * collaboration (Unit 14). The gameplay module dispatches on it, so the Round
+   * module stays free of any import from gameplay (invariant 4).
+   */
+  roundSequence: number;
+  settings: {
+    teamPointsPerQuestion: number;
+    rotationPeriodSeconds: number;
+    teamQuestionCount: number;
+    teamTotalTimeSeconds: number | null;
+  };
+  /**
+   * The partition round's own numeric settings (TEM-006 to TEM-008). Present only
+   * for round 2; kept separate from `settings` so the two team rounds' numbers
+   * never collide, matching how `RoundSettings` names them (`partition*` vs `team*`).
+   */
+  partition?: {
+    puzzleCount: number;
+    totalTimeSeconds: number;
+    pointsPerPuzzle: number;
+  };
+}
+
+type TeamRoundStartHook = (input: TeamRoundStartInput) => Promise<void>;
+let teamRoundStartHook: TeamRoundStartHook | null = null;
+
+export function installTeamRoundStartHook(hook: TeamRoundStartHook): void {
+  teamRoundStartHook = hook;
+}
+
+// ---------------------------------------------------------------------------
+// The dev-only internal trigger (spec step 7)
+// ---------------------------------------------------------------------------
+
+/**
+ * Start a named stage's first round's preparation. **Unit 11's real command**
+ * (`POST /api/competitions/:id/stages/:stageId/start`) — the dev-only trigger
+ * below is a thin special case of it and stays for the tests that use it.
+ *
+ * Because `Stage` rows are per-competition and every category runs against the
+ * same two stages, starting a stage here *is* starting it "for every category at
+ * once" (spec Context, "Start a stage"): there is one `Stage` row, one round 1,
+ * one preparation countdown, and the participants of every category join it.
+ *
+ * Rejections: 404 no such competition; 404 the stage is not this competition's;
+ * 409 the competition is in a terminal state (`FINISHED`/`CANCELLED`); 409 the
+ * stage is not `WAITING` (already started, or already active — spec Error Cases);
+ * 409 a previous stage has not finished (out of sequence); 409 another round is
+ * already running; 422 the stage has no round 1.
+ */
+async function startStagePreparation(
+  competitionId: string,
+  stageId: string,
+): Promise<StartedPreparationResult> {
+  const competition = await repository.findCompetitionWithStructure(competitionId);
+  if (!competition) {
+    throw new NotFoundError(translate("en", "competition.notFound"), {
+      code: "competition.notFound",
+    });
+  }
+  if (competition.status === "CANCELLED" || competition.status === "FINISHED") {
+    throw new ConflictError(translate("en", "orchestrator.competitionClosed"), {
+      code: ORCHESTRATOR_COMPETITION_CLOSED,
+      details: { status: competition.status },
+    });
+  }
+
+  const stage = competition.stages.find((s) => s.id === stageId);
+  if (!stage) {
+    throw new NotFoundError(translate("en", "orchestrator.stageNotFound"), {
+      code: ORCHESTRATOR_STAGE_NOT_FOUND,
+    });
+  }
+  if (stage.status !== "WAITING") {
+    // "Start a stage that's already active, or out of sequence: rejected."
+    throw new ConflictError(translate("en", "orchestrator.stageNotWaiting"), {
+      code: ORCHESTRATOR_STAGE_NOT_WAITING,
+      details: { status: stage.status },
+    });
+  }
+
+  // Out of sequence: every earlier stage must already be finished (RND-006 — a
+  // stage never starts by itself, and the controller may not skip one).
+  const earlierUnfinished = competition.stages.filter(
+    (s) => s.sequence < stage.sequence && s.status !== "FINISHED",
+  );
+  if (earlierUnfinished.length > 0) {
+    throw new ConflictError(translate("en", "orchestrator.stageOutOfSequence"), {
+      code: ORCHESTRATOR_STAGE_OUT_OF_SEQUENCE,
+      details: { status: earlierUnfinished[0]?.status ?? "WAITING" },
+    });
+  }
+
+  const round = stage.rounds.find((r) => r.sequence === 1);
+  if (!round) {
+    throw new UnprocessableEntityError(translate("en", "round.roundMissing"), {
+      code: "round.roundMissing",
+    });
+  }
+
+  const alreadyActive = await getActiveRoundId(competitionId);
+  if (alreadyActive) {
+    throw new ConflictError(translate("en", "round.alreadyActive"), {
+      code: "round.alreadyActive",
+    });
+  }
+
+  // The preparation length is locked the moment preparation starts (RND-002/004):
+  // it is read once, here, and never re-read for this round.
+  const preparationSeconds = round.settings?.preparationSeconds ?? 60;
+  const startedAt = now();
+  // Only the very first stage start opens the competition (Competition.startedAt
+  // is the event's real start, not a per-stage one).
+  const firstStart = competition.startedAt === null;
+
+  await repository.setCompetitionStatus(competitionId, "PREPARATION", {
+    ...(firstStart ? { startedAt } : {}),
+  });
+  await repository.setStageStatus(stage.id, "PREPARATION", { startedAt });
+  await repository.setRoundStatus(round.id, "PREPARATION", { startedAt });
+  await repository.upsertRuntimeState({
+    competitionId,
+    currentStageId: stage.id,
+    currentRoundId: round.id,
+    phase: "PREPARATION",
+  });
+
+  await startPreparationTimer(round.id, competitionId, stage.id, preparationSeconds);
+
+  // The judge's "the round is launched" notification (F3). Fired here rather than at
+  // the active phase below, because this is the moment the event visibly begins: every
+  // player's tablet leaves the waiting screen and starts counting down, which is exactly
+  // when a judge needs to look up. It fires once per round, not once per category.
+  judgeRoundStartedHook?.({
+    roundId: round.id,
+    stageId: stage.id,
+    competitionId,
+    phase: "PREPARATION",
+    durationSeconds: preparationSeconds,
+  });
+
+  return {
+    competitionId,
+    stageId: stage.id,
+    roundId: round.id,
+    status: "PREPARATION",
+    preparationSeconds,
+  };
+}
+
+/**
+ * Start stage 1 round 1's preparation for a WAITING competition. Dev-only: the
+ * HTTP route refuses to run in production and requires a controller session.
+ * Kept as the narrow form Unit 11's `startStagePreparation` generalizes.
+ */
+async function startStage1Round1Preparation(
+  competitionId: string,
+): Promise<StartedPreparationResult> {
+  const competition = await repository.findCompetitionWithStructure(competitionId);
+  if (!competition) {
+    throw new NotFoundError(translate("en", "competition.notFound"), {
+      code: "competition.notFound",
+    });
+  }
+  if (competition.status !== "WAITING") {
+    throw new ConflictError(translate("en", "round.competitionNotWaiting"), {
+      code: "round.competitionNotWaiting",
+    });
+  }
+
+  const stage = competition.stages.find((s) => s.type === "INDIVIDUAL" && s.sequence === 1);
+  if (!stage) {
+    throw new UnprocessableEntityError(translate("en", "round.stageMissing"), {
+      code: "round.stageMissing",
+    });
+  }
+  return startStagePreparation(competitionId, stage.id);
+}
+
+// ---------------------------------------------------------------------------
+// Preparation → active transition (reached via the timer's installed hook)
+// ---------------------------------------------------------------------------
+
+/**
+ * Open (or re-activate) a `RoundParticipation` row for every active participant
+ * of the competition, in state `ACTIVE`. This is the only place the row is
+ * created in application code: `requireParticipation` in the Gameplay module
+ * treats it as "is this account a participant in this round" (data-model,
+ * "Access rules"), so without it autosave and reconnect 403
+ * `gameplay.notAParticipant` for every real player, and Unit 08's round-ended
+ * auto-submit sweep — which looks only for `state: "ACTIVE"` rows — finds nobody
+ * to finalize. Scoped to the Individual stage's participants today; the Team
+ * stage's runtime (Units 13/14) is not wired up yet, so nothing team-specific is
+ * built here.
+ */
+async function openParticipationsForRound(
+  competitionId: string,
+  roundId: string,
+): Promise<number> {
+  const participants = await repository.listActiveParticipants(competitionId);
+  for (const participant of participants) {
+    try {
+      await repository.upsertActiveParticipation({
+        roundId,
+        participantId: participant.id,
+        categoryId: participant.categoryId,
+      });
+    } catch (error) {
+      // Never let one bad row stop the round from starting (same posture as
+      // Unit 08's `handleRoundEnded`): log and continue with the others.
+      logger.error("round.startActive: failed to open a participation row", {
+        roundId,
+        participantId: participant.id,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  return participants.length;
+}
+
+/**
+ * Called by the timer service when a preparation countdown reaches zero. Fetches
+ * the round's questions — only now, never earlier (BLD-006) — flips the durable
+ * state to ACTIVE, starts the round timer, and notifies the installed
+ * round-started hook (which pushes the questions to the clients).
+ */
+async function startActivePhaseFromTimer(state: TimerState): Promise<void> {
+  try {
+    const round = await repository.findRoundWithContext(state.roundId);
+    if (!round || round.stage.competitionId !== state.competitionId) {
+      logger.error("round.startActive: round context mismatch", {
+        roundId: state.roundId,
+        competitionId: state.competitionId,
+      });
+      return;
+    }
+
+    const durationSeconds = round.settings?.durationSeconds ?? 0;
+    const startedAt = now();
+
+    await repository.setCompetitionStatus(state.competitionId, "ROUND_ACTIVE");
+    await repository.setStageStatus(state.stageId, "ACTIVE");
+    await repository.setRoundStatus(state.roundId, "ACTIVE", { startedAt });
+    await repository.upsertRuntimeState({
+      competitionId: state.competitionId,
+      currentStageId: state.stageId,
+      currentRoundId: state.roundId,
+      phase: "ROUND_ACTIVE",
+    });
+
+    // Open a participation row for every active participant of the competition
+    // — across every category, since the round is shared by all of them — in
+    // state ACTIVE. This is what makes the round playable at all: Gameplay's
+    // `requireParticipation` (autosave, reconnect, submit) treats this row as
+    // "is this account a participant in this round", and Unit 08's round-ended
+    // auto-submit sweep only finds rows already `ACTIVE`. No `Attempt` is
+    // written here — those are created at finalize (manual submit or timeout).
+    await openParticipationsForRound(state.competitionId, state.roundId);
+
+    await startRoundTimer(state.roundId, state.competitionId, state.stageId, durationSeconds);
+
+    // The second of the judge's two notifications (F3): the round is now live and
+    // answers count. Fired before the team/individual branches below, so a team round
+    // notifies too — the branch returns early, and a judge supervising a team round
+    // would otherwise never hear anything.
+    judgeRoundStartedHook?.({
+      roundId: state.roundId,
+      stageId: state.stageId,
+      competitionId: state.competitionId,
+      phase: "ACTIVE",
+      durationSeconds,
+    });
+
+    // The Team stage's two rounds each deal their own questions from the category
+    // pool — `listRoundQuestions` finds nothing for either, because a team round
+    // never sets `Question.roundId` (BLD-040). The round's own clock above stays
+    // the authority for pause/resume and for the controller's end-early command
+    // (invariant 3). Round 1 is the rotation relay (Unit 13), round 2 the
+    // partition collaboration (Unit 14); the gameplay module picks which from
+    // `roundSequence`, so no branch-specific service call is needed here.
+    if (round.stage.type === "TEAM" && (round.sequence === 1 || round.sequence === 2)) {
+      await teamRoundStartHook?.({
+        roundId: state.roundId,
+        competitionId: state.competitionId,
+        stageId: state.stageId,
+        roundSequence: round.sequence,
+        settings: {
+          teamPointsPerQuestion: round.settings?.teamPointsPerQuestion ?? 10,
+          rotationPeriodSeconds: round.settings?.rotationPeriodSeconds ?? 60,
+          teamQuestionCount: round.settings?.teamQuestionCount ?? 10,
+          teamTotalTimeSeconds: round.settings?.teamTotalTimeSeconds ?? null,
+        },
+        partition:
+          round.sequence === 2
+            ? {
+                // TEM-06 to TEM-008. The schema's own defaults are 3 / 1800 / 20;
+                // the `??` only covers a round whose settings row is missing.
+                puzzleCount: round.settings?.partitionPuzzleCount ?? 3,
+                totalTimeSeconds: round.settings?.partitionTotalTimeSeconds ?? 1800,
+                pointsPerPuzzle: round.settings?.partitionPointsPerPuzzle ?? 20,
+              }
+            : undefined,
+      });
+      return;
+    }
+
+    // The Individual stage fetches its puzzles here, at countdown zero, and pushes
+    // them on `round:started` (BLD-006 — never preloaded).
+    //
+    // **Once per category, never once for the round.** The `Round` row is shared by
+    // every category of the competition, so it carries `6n` questions for `n`
+    // categories and each category's players must receive only their own 6. The hook
+    // is fired once per category, each payload carrying that category's `categoryId`
+    // so the gateway routes it to that category's room alone — sending one merged
+    // payload to the whole player namespace was the cross-category leak.
+    // A category with no question assigned still gets its own payload with an empty
+    // list — that is a publish-readiness failure (Unit 03 requires exactly 6 per
+    // Individual round per category), not something to paper over here by skipping
+    // the category and leaving its players on the preparation screen forever.
+    const categories = await repository.listCompetitionCategories(state.competitionId);
+    for (const category of categories) {
+      const questionRows = await repository.listRoundQuestions(state.roundId, category.id);
+      const questions: RoundQuestionPayload[] = questionRows.map((q) => ({
+        id: q.id,
+        sequence: q.sequence,
+        type: q.type,
+        gridRows: q.gridRows,
+        gridColumns: q.gridColumns,
+        regions: q.regions,
+        startingGrid: q.startingGrid,
+        points: q.points,
+      }));
+
+      roundStartedHook?.({
+        roundId: state.roundId,
+        stageId: state.stageId,
+        competitionId: state.competitionId,
+        categoryId: category.id,
+        durationSeconds,
+        questions,
+      });
+    }
+  } catch (error) {
+    logger.error("round.startActive: failed to start the active phase", {
+      roundId: state.roundId,
+      competitionId: state.competitionId,
+      error,
+    });
+  }
+}
+
+// Installed at module load: the timer's preparation-zero path lands here. The
+// timer never imports this module, so there is no import cycle.
+installStartActivePhaseHook((state) => startActivePhaseFromTimer(state));
+
+// ---------------------------------------------------------------------------
+// The narrow pause/resume/remaining surface Unit 11 will call
+// ---------------------------------------------------------------------------
+
+/**
+ * Pause the competition's running timer (preparation or round). Idempotent:
+ * pausing an already-paused round returns the current snapshot. 404 if the
+ * competition has no active round timer.
+ */
+async function pause(competitionId: string): Promise<TimerSnapshot> {
+  const roundId = await getActiveRoundId(competitionId);
+  if (!roundId) {
+    throw new NotFoundError(translate("en", "round.noActiveTimer"), {
+      code: "round.noActiveTimer",
+    });
+  }
+  return pauseTimer(roundId);
+}
+
+/**
+ * Resume a paused timer. Plays "3, 2, 1, Start" first (RND-001): the deadline
+ * only moves after the countdown, so the countdown uses neither round nor
+ * preparation time. Resuming a timer that is not paused returns the current
+ * snapshot; 404 if the competition has no active round timer.
+ */
+async function resume(competitionId: string): Promise<TimerSnapshot> {
+  const roundId = await getActiveRoundId(competitionId);
+  if (!roundId) {
+    throw new NotFoundError(translate("en", "round.noActiveTimer"), {
+      code: "round.noActiveTimer",
+    });
+  }
+  return resumeTimer(roundId);
+}
+
+/**
+ * The competition's current timer snapshot, or null when no round timer is
+ * running. The remaining seconds are always computed from the server clock
+ * (invariant 3).
+ */
+async function remaining(competitionId: string): Promise<TimerSnapshot | null> {
+  const roundId = await getActiveRoundId(competitionId);
+  if (!roundId) {
+    return null;
+  }
+  return timerRemaining(roundId);
+}
+
+/** The round id currently in flight for a competition, or null. */
+function getActiveRoundForCompetition(competitionId: string): Promise<string | null> {
+  return getActiveRoundId(competitionId);
+}
+
+/**
+ * End the competition's currently-running round before its deadline (Unit 11's
+ * "end a round early", SUB-004). Thin wrapper over the timer service's stop, so
+ * the durable-state bookkeeping stays in one place; the caller (the Orchestrator)
+ * then drives Unit 08's auto-submit and advance chain. Returns null when nothing
+ * is running — the command is a no-op in that case, not an error, because the
+ * round may have ended on its own between the controller's click and this call.
+ */
+async function stopRoundEarlyForCompetition(
+  competitionId: string,
+): Promise<TimerSnapshot | null> {
+  const roundId = await getActiveRoundId(competitionId);
+  if (!roundId) return null;
+  return stopRoundEarly(roundId);
+}
+
+/**
+ * Abandon a running preparation countdown (Unit 11's finish-early / cancel).
+ * Returns false when no preparation was running.
+ */
+async function cancelPreparationForCompetition(
+  competitionId: string,
+): Promise<boolean> {
+  const roundId = await getActiveRoundId(competitionId);
+  if (!roundId) return false;
+  return cancelPreparation(roundId);
+}
+
+/**
+ * Give a running round its full duration again (Unit 11's reset/rematch,
+ * ROL-005 / resolves U-13 — a rematch grants **full** round time, not remaining).
+ * Returns null when the round has no live timer.
+ */
+async function grantFullRoundDuration(
+  roundId: string,
+  durationSeconds: number,
+): Promise<TimerSnapshot | null> {
+  return restartRoundTimerFullDuration(roundId, durationSeconds);
+}
+
+export const roundService = {
+  startStage1Round1Preparation,
+  startStagePreparation,
+  installRoundStartedHook,
+  installJudgeRoundStartedHook,
+  installTeamRoundStartHook,
+  pause,
+  resume,
+  remaining,
+  getActiveRoundForCompetition,
+  stopRoundEarlyForCompetition,
+  cancelPreparationForCompetition,
+  grantFullRoundDuration,
+};

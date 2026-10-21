@@ -5,7 +5,7 @@
  */
 import type { Competition, Prisma, StageType } from "@prisma/client";
 import { prisma } from "../../infra";
-import type { RoundSettingsPatch } from "./competition.types";
+import type { RoundSettingsPatch, ScoringConfigurationInput } from "./competition.types";
 
 /**
  * The shape every read of a competition uses: its categories, its stages with their
@@ -39,6 +39,35 @@ export function findCompetitionById(
   });
 }
 
+/**
+ * The dashboard's competition picker (Unit 11, spec Detail 10). Newest first, and only
+ * the few columns a list row needs — the full structure is a separate read.
+ */
+export function listCompetitions(): Promise<
+  {
+    id: string;
+    name: string;
+    status: string;
+    createdAt: Date;
+    publishedAt: Date | null;
+    startedAt: Date | null;
+    finishedAt: Date | null;
+  }[]
+> {
+  return prisma.competition.findMany({
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      createdAt: true,
+      publishedAt: true,
+      startedAt: true,
+      finishedAt: true,
+    },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Creation (the structure is computed by the service; this only writes it)
 // ---------------------------------------------------------------------------
@@ -66,23 +95,39 @@ export interface CreateCompetitionData {
   description: string | null;
   categories: CategoryStructureInput[];
   stages: StageStructureInput[];
+  /**
+   * Scoring-configuration overrides (BLD-051). An empty/absent object creates the row
+   * with the schema defaults (coefficient 0.6, ranking cycle 180s), exactly as before
+   * this decision; supplied fields override their default.
+   */
+  scoringConfiguration?: ScoringConfigurationInput;
 }
 
 /**
- * Create the competition, its categories, its 1:1 scoring configuration (schema
- * defaults: coefficient 0.6, ranking cycle 180s) and the fixed stage/round structure
- * with each round's settings — all in one nested write, so a failure creates nothing.
- * The two link tokens come from the schema's `@default(uuid())`, so they exist from
- * this moment.
+ * Create the competition, its categories, its 1:1 scoring configuration (any supplied
+ * value, else the schema defaults: coefficient 0.6, ranking cycle 180s) and the fixed
+ * stage/round structure with each round's settings — all in one nested write, so a
+ * failure creates nothing. The two link tokens come from the schema's
+ * `@default(uuid())`, so they exist from this moment.
  */
 export function createCompetition(
   data: CreateCompetitionData,
 ): Promise<CompetitionWithStructure> {
+  const scoring = data.scoringConfiguration ?? {};
   return prisma.competition.create({
     data: {
       name: data.name,
       description: data.description,
-      scoringConfiguration: { create: {} },
+      scoringConfiguration: {
+        create: {
+          ...(scoring.schoolCoefficient !== undefined
+            ? { schoolCoefficient: scoring.schoolCoefficient }
+            : {}),
+          ...(scoring.rankingCycleSeconds !== undefined
+            ? { rankingCycleSeconds: scoring.rankingCycleSeconds }
+            : {}),
+        },
+      },
       categories: { create: data.categories },
       stages: {
         create: data.stages.map((stage) => ({
@@ -111,6 +156,33 @@ export function updateCompetitionMeta(
   data: { name?: string; description?: string | null },
 ): Promise<Competition> {
   return prisma.competition.update({ where: { id }, data });
+}
+
+/**
+ * Update the 1:1 scoring configuration's supplied fields (BLD-051). The row always
+ * exists (created with the competition), so this is a nested `update`, not an upsert;
+ * only the fields present in `data` change, the rest keep their stored value. The
+ * caller guards against an empty object so this is not run pointlessly.
+ */
+export function updateScoringConfiguration(
+  id: string,
+  data: ScoringConfigurationInput,
+): Promise<Competition> {
+  return prisma.competition.update({
+    where: { id },
+    data: {
+      scoringConfiguration: {
+        update: {
+          ...(data.schoolCoefficient !== undefined
+            ? { schoolCoefficient: data.schoolCoefficient }
+            : {}),
+          ...(data.rankingCycleSeconds !== undefined
+            ? { rankingCycleSeconds: data.rankingCycleSeconds }
+            : {}),
+        },
+      },
+    },
+  });
 }
 
 export interface CategoryChangePlan {
@@ -181,14 +253,30 @@ export function listActiveParticipantCategoryIds(
   });
 }
 
-export function listCategoryQuestionRoundIds(
+/**
+ * Count the questions a category has *assigned* to each round, for the publish
+ * readiness check. Since `Question.roundId` became nullable (BLD-040 — an imported
+ * question sits in the category's pool with `roundId = null` until the controller's
+ * manual round-selection step, Unit 05), an unassigned question no longer implies any
+ * round is covered. This counts only rows with `roundId` set, grouped per round, so the
+ * service can require a complete selection per Individual round rather than a mere
+ * non-empty join.
+ */
+export function countCategoryQuestionsPerRound(
   categoryId: string,
-): Promise<{ roundId: string }[]> {
-  return prisma.question.findMany({
-    where: { questionSet: { categoryId } },
-    select: { roundId: true },
-    distinct: ["roundId"],
-  });
+): Promise<{ roundId: string; count: number }[]> {
+  return prisma.question.groupBy({
+    by: ["roundId"],
+    where: { questionSet: { categoryId }, roundId: { not: null } },
+    _count: { _all: true },
+  }).then((rows) =>
+    // groupBy returns `roundId: string | null`; the `not: null` filter guarantees a
+    // value, so the cast is safe and keeps the return type honest for the service.
+    rows.map((row) => ({
+      roundId: row.roundId as string,
+      count: row._count._all,
+    })),
+  );
 }
 
 export function listActiveParticipantNumbers(

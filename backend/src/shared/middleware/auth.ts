@@ -8,7 +8,7 @@
  * units that introduce them (Units 06/07/08/10), not here.
  */
 import type { NextFunction, Request, Response } from "express";
-import { identityService } from "../../modules/identity";
+import { identityService } from "../../modules/identity/identity.service";
 import type { AuthenticatedAccount } from "../../modules/identity/identity.types";
 import { UnauthorizedError } from "../errors";
 import { translate } from "../i18n";

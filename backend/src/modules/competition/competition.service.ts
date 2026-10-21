@@ -16,6 +16,7 @@
  *   (Unit 03 spec, Implementation Details 4).
  */
 import { now } from "../../shared/clock";
+import { logger } from "../../infra";
 import {
   ConflictError,
   NotFoundError,
@@ -23,13 +24,16 @@ import {
   ValidationError,
 } from "../../shared/errors";
 import { translate } from "../../shared/i18n";
+import { bigScreenUrl, entryUrl } from "../../shared/links";
 import * as repository from "./competition.repository";
 import type { CompetitionWithStructure } from "./competition.repository";
+import * as deleteRepository from "./competition-delete.repository";
 import {
   defaultDurationSeconds,
   isStructureLocked,
   STAGE_SEQUENCE,
   type CategoryInput,
+  type CompetitionLinks,
   type CreateCompetitionInput,
   type PublishResult,
   type ReadinessCondition,
@@ -38,7 +42,74 @@ import {
   type UpdateCompetitionInput,
 } from "./competition.types";
 
+/**
+ * The two public links of a competition, as openable URLs. Composed by the backend
+ * through `shared/links` — the one place the rule is written — so the publish result,
+ * the credential slips and any reopened setup screen all show the same address.
+ *
+ * `entryLinkUrl` is the **unified** link (`/enter?token=…`): the one address the
+ * controller reads out and prints for the room, used by a student and by a judge alike
+ * (hole D, 2026-10-20). The per-student credential slip keeps its own `/player?token=…`
+ * (composed in `participant.service` via `playerEntryUrl`), which opens straight onto
+ * that student's competition room instead of a role choice.
+ */
+function competitionLinks(competition: {
+  entryLinkToken: string;
+  bigScreenLinkToken: string;
+}): CompetitionLinks {
+  return {
+    entryLinkUrl: entryUrl(competition.entryLinkToken),
+    bigScreenLinkUrl: bigScreenUrl(competition.bigScreenLinkToken),
+  };
+}
+
+/**
+ * A competition read with its composed links attached, for the HTTP layer. Every
+ * endpoint that returns a whole competition goes through this, so the setup screen can
+ * show real links for a competition that was published in an earlier session — not just
+ * for the one just published (report §9a: the tokens are UUIDs, not links).
+ */
+export type CompetitionWithLinks = CompetitionWithStructure & CompetitionLinks;
+
+/** Attach the composed links to a competition row. */
+export function withLinks(
+  competition: CompetitionWithStructure,
+): CompetitionWithLinks {
+  return { ...competition, ...competitionLinks(competition) };
+}
+
 const STAGE_ROUND_COUNT = 2;
+
+/**
+ * An Individual round uses exactly 6 selected questions (competition-rules.md §2;
+ * BLD-040). The publish readiness check requires all 6 assigned per Individual round.
+ */
+const INDIVIDUAL_ROUND_QUESTION_COUNT = 6;
+
+/** The Team rounds' default counts, matching the `RoundSettings` column defaults. */
+const TEAM_ROTATION_QUESTION_COUNT = 10;
+const TEAM_PARTITION_PUZZLE_COUNT = 3;
+
+/**
+ * How many questions a round must have assigned before the competition is publish-ready.
+ * It is *not* 6 everywhere: since BLD-040's 2026-10-19 revision a Team round holds a
+ * selection too, and its count is its own — `teamQuestionCount` (default 10) for the
+ * rotation relay, `partitionPuzzleCount` (default 3) for the partition collaboration.
+ * The two Team rounds are told apart by their sequence, the same dispatch `app.ts`'s
+ * team-round hook uses. A round with no settings row yet falls back to the column
+ * defaults, so a missing row can never make the check pass vacuously.
+ */
+function roundQuestionTarget(round: {
+  sequence: number;
+  stageType: string;
+  settings: { teamQuestionCount: number; partitionPuzzleCount: number } | null;
+}): number {
+  if (round.stageType === "INDIVIDUAL") return INDIVIDUAL_ROUND_QUESTION_COUNT;
+  if (round.sequence === 2) {
+    return round.settings?.partitionPuzzleCount ?? TEAM_PARTITION_PUZZLE_COUNT;
+  }
+  return round.settings?.teamQuestionCount ?? TEAM_ROTATION_QUESTION_COUNT;
+}
 
 const ROUND_NAME: Record<string, string> = {
   "INDIVIDUAL:1": "Individual round 1",
@@ -63,6 +134,25 @@ function condition(
   key: ReadinessCondition["key"],
 ): ReadinessCondition {
   return { key, message: translate("en", key) };
+}
+
+/**
+ * The same condition, with the culprit appended to the message. The `key` stays
+ * unchanged so callers keep matching on it; only the human-readable text gains the
+ * concrete detail.
+ *
+ * Why this exists: the question condition used to say only "every category needs a
+ * question set assigned to both of its Individual rounds", naming no category and no
+ * round. With three categories and two rounds each, the controller had six places to
+ * inspect and no way to know which one was short — which reads exactly like a missing
+ * feature rather than a missing selection. Naming the category, the round and its
+ * `n / 6` counter turns that into a one-line instruction.
+ */
+function conditionWith(
+  key: ReadinessCondition["key"],
+  detail: string,
+): ReadinessCondition {
+  return { key, message: `${translate("en", key)} (${detail})` };
 }
 
 // ---------------------------------------------------------------------------
@@ -175,6 +265,9 @@ export async function createCompetition(
     description: input.description ?? null,
     categories: buildCategories(input.categories),
     stages: buildStructure(),
+    ...(input.scoringConfiguration !== undefined
+      ? { scoringConfiguration: input.scoringConfiguration }
+      : {}),
   });
 }
 
@@ -216,6 +309,16 @@ export async function updateCompetition(
   if (input.roundSettings !== undefined) {
     for (const [roundId, patch] of Object.entries(input.roundSettings)) {
       await updateRoundSettings(id, roundId, patch);
+    }
+  }
+
+  // Scoring configuration (BLD-051): a value, not structure, so it is editable at any
+  // status — the same latitude round settings already have. An empty object changes
+  // nothing, so it is skipped rather than issuing a no-op write.
+  if (input.scoringConfiguration !== undefined) {
+    const scoring = input.scoringConfiguration;
+    if (scoring.schoolCoefficient !== undefined || scoring.rankingCycleSeconds !== undefined) {
+      await repository.updateScoringConfiguration(id, scoring);
     }
   }
 
@@ -302,22 +405,55 @@ export async function checkPublishReadiness(
     unmet.push(condition("competition.readiness.participantsRequired"));
   }
 
-  // 3. Every category has a question set assigned to both Individual rounds.
-  const individualStage = competition.stages.find((stage) => stage.type === "INDIVIDUAL");
-  const individualRoundIds = (individualStage?.rounds ?? []).map((round) => round.id);
-  if (individualRoundIds.length < STAGE_ROUND_COUNT) {
+  // 3. Every category has a complete question selection for **every** round — both
+  // Individual rounds *and* both Team rounds (BLD-040, revised 2026-10-19). This used to
+  // look only at `stage.type === "INDIVIDUAL"`, which is exactly what made the Team
+  // stage look like a missing feature: the Questions panel offered two rounds while the
+  // publish rejection was read as being about all four. `Question.roundId` is nullable,
+  // so an imported question sits in the pool unassigned until the controller's selection
+  // step assigns the round's own count (6, 10 or 3 — see `roundQuestionTarget`).
+  // "Covered" therefore means that round's full count is assigned, not merely that some
+  // question references it.
+  const allRounds = competition.stages.flatMap((stage) =>
+    stage.rounds.map((round) => ({
+      id: round.id,
+      name: round.name,
+      sequence: round.sequence,
+      stageType: stage.type as string,
+      settings: round.settings,
+    })),
+  );
+  if (allRounds.length === 0) {
     unmet.push(condition("competition.readiness.questionsRequired"));
   } else {
+    // Collect every short round of every category instead of stopping at the first, so
+    // one rejection names the whole gap. A single condition is pushed, because the
+    // controller renders each condition as a list item keyed by its `key` — pushing one
+    // per incomplete round would repeat that key.
+    const roundNames = new Map(allRounds.map((round) => [round.id, round.name]));
+    const roundTargets = new Map(allRounds.map((round) => [round.id, roundQuestionTarget(round)]));
+    const short: string[] = [];
     for (const category of competition.categories) {
-      const covered = new Set(
-        (await repository.listCategoryQuestionRoundIds(category.id)).map(
-          (row) => row.roundId,
-        ),
+      const countByRound = new Map(
+        (await repository.countCategoryQuestionsPerRound(category.id)).map((row) => [
+          row.roundId,
+          row.count,
+        ]),
       );
-      if (!individualRoundIds.every((roundId) => covered.has(roundId))) {
-        unmet.push(condition("competition.readiness.questionsRequired"));
-        break;
+      for (const round of allRounds) {
+        const target = roundTargets.get(round.id) ?? INDIVIDUAL_ROUND_QUESTION_COUNT;
+        const count = countByRound.get(round.id) ?? 0;
+        if (count !== target) {
+          short.push(
+            `${category.name} · ${roundNames.get(round.id) ?? round.id}: ${count} / ${target}`,
+          );
+        }
       }
+    }
+    if (short.length > 0) {
+      unmet.push(
+        conditionWith("competition.readiness.questionsRequired", short.join("; ")),
+      );
     }
   }
 
@@ -383,7 +519,70 @@ export async function publishCompetition(id: string): Promise<PublishResult> {
     publishedAt: updated.publishedAt?.toISOString() ?? publishedAt.toISOString(),
     entryLinkToken: updated.entryLinkToken,
     bigScreenLinkToken: updated.bigScreenLinkToken,
+    ...competitionLinks(updated),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Reads (Unit 11's controller dashboard needs to pick a competition and then read
+// its structure to know which commands are legal right now)
+// ---------------------------------------------------------------------------
+
+/** Every competition, newest first — the dashboard's picker list. */
+export async function listCompetitions(): Promise<
+  Awaited<ReturnType<typeof repository.listCompetitions>>
+> {
+  return repository.listCompetitions();
+}
+
+/**
+ * One competition with its full structure (categories, stages, rounds, round
+ * settings, scoring configuration) — the same shape create/update return, so the
+ * dashboard reads exactly what it would have gotten when it created the thing.
+ * 404s on an unknown id.
+ */
+export async function getCompetition(id: string): Promise<CompetitionWithStructure> {
+  const competition = await repository.findCompetitionById(id);
+  if (!competition) {
+    throw notFoundError();
+  }
+  return competition;
+}
+
+// ---------------------------------------------------------------------------
+// Hard delete (BLD-050, decided 2026-10-15)
+// ---------------------------------------------------------------------------
+
+/**
+ * Delete a competition and everything in it, permanently. Deliberately available at
+ * any `Competition.status` — the project owner's reason is that a day produces many
+ * throwaway competitions and waiting out the 15-day purge (RES-004) for each is not
+ * workable. That purge still exists and is unchanged; this is a separate, manual,
+ * immediate and total mechanism, and the two must not be confused with each other in
+ * code or in UI copy (architecture.md, Storage model).
+ *
+ * `Judge` rows survive: the judge list is reusable across competitions (Unit 06), so
+ * only this competition's assignments to them are removed.
+ *
+ * Files on disk are unlinked after the transaction commits, best effort — see
+ * `competition-delete.repository.ts`.
+ */
+export async function deleteCompetition(id: string): Promise<deleteRepository.DeleteCounts> {
+  if (!(await deleteRepository.competitionExists(id))) {
+    throw notFoundError();
+  }
+
+  const files = await deleteRepository.readStoredFilePaths(id);
+  const counts = await deleteRepository.deleteCompetitionEverything(id);
+
+  logger.info("competition.delete: competition hard-deleted", {
+    competitionId: id,
+    counts,
+  });
+
+  await deleteRepository.unlinkStoredFiles(id, files);
+
+  return counts;
 }
 
 // ---------------------------------------------------------------------------
@@ -396,4 +595,8 @@ export const competitionService = {
   checkPublishReadiness,
   publishCompetition,
   validateRoundSettingsPatch,
+  listCompetitions,
+  getCompetition,
+  deleteCompetition,
+  withLinks,
 };

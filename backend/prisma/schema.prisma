@@ -9,10 +9,26 @@
 // flagged in this model"). Deliberately omitted here:
 //   - PurgeSchedule.includesArchivedScores / includesCorrectionLog /
 //     includesParticipantExcel   (U-59, U-62 — the 15-day purge scope)
+//     STALE AS OF 2026-10-11: neither item is open any more. U-62's participant-Excel
+//     half is answered yes (RES-009, 2026-10-01), completing RES-005; U-59's protection
+//     question is answered "no special protection needed" (RES-008, 2026-10-01). All three
+//     scopes are therefore always `true`, so they are handled in code and never stored as
+//     columns. The columns are still absent on purpose — adding a constant-`true` flag
+//     would need a migration and a project-owner call, and the comment is corrected here
+//     rather than the schema changed unilaterally. See context/data-model.md's 2026-10-11
+//     note under "Reconciled with the stakeholder pack's Part 2 answers".
 // Account.sessionExpiresAt is now present: I-16 was resolved by AUTH-001 (the
 // session lasts 24 hours from login) and Unit 02 added the column by migration.
-// The second team round (齐心协力 / partition collaboration) is NOT modelled as
-// gameplay (U-05, U-21); only the TeamRotationState state container exists.
+// The second team round (齐心协力 / partition collaboration) IS modelled as gameplay,
+// by Unit 14 (2026-10-09): `TeamPartitionState` holds its row-band split and puzzle
+// progress, mirroring `TeamRotationState` for the first team round. Both are
+// fast-changing state containers whose live copy is Redis (BLD-007); the Postgres row
+// is a best-effort mirror that exists so a judge can read team status (ROL-008). The
+// settled result for either round is durable in `TeamRoundResult`.
+//   NOTE: this contradicts the earlier header claim ("NOT modelled … only
+//   TeamRotationState exists"), which was stale — `context/data-model.md` line 52 has
+//   defined `TeamPartitionState` since its 2026-09-30 approval. The Unit 14 spec's
+//   "this unit adds no new tables" line was a drafting error, corrected the same day.
 
 generator client {
   provider = "prisma-client-js"
@@ -101,14 +117,17 @@ enum RankingScope {
 
 enum StoredFileKind {
   PARTICIPANT_EXCEL
-  QUESTION_PDF
+  // Renamed from QUESTION_PDF: the question import format was corrected to Excel
+  // (BLD-024, resolves U-93; data-model.md, "Amendment").
+  QUESTION_EXCEL
   CREDENTIAL_SLIPS
   EXPORT
 }
 
 enum ImportBatchKind {
   PARTICIPANT_EXCEL
-  QUESTION_PDF
+  // Renamed from QUESTION_PDF (BLD-024, resolves U-93).
+  QUESTION_EXCEL
 }
 
 enum ImportBatchStatus {
@@ -149,8 +168,12 @@ model Competition {
   bigScreenLinkToken  String @unique @default(uuid())
 
   // Copy keeps settings/questions/judges, not results (CMP-100). What exactly a copy
-  // carries is partly open (U-10); kept as a plain reference to avoid inventing a
-  // self-relation's shape before that is answered.
+  // carries ~~is partly open (U-10)~~ **is resolved (CMP-103, 2026-10-01, resolves
+  // U-10): a copy never carries participants over** — student data is always deleted 15
+  // days after the original (RES-004, RES-009), so a copy always re-imports a fresh
+  // participant list. Kept as a plain reference (no self-relation shape invented) since
+  // that reading needed no extra column either way. Comment corrected 2026-10-11; the
+  // field is unchanged. Unit 15 built this (competition copy, verified 2026-10-09).
   copiedFromCompetitionId String?
 
   categories         CompetitionCategory[]
@@ -178,6 +201,12 @@ model CompetitionCategory {
   id            String @id @default(uuid())
   competitionId String
   code          String // e.g. U6 .. U20
+  // STALE EXAMPLE, corrected 2026-10-11: the real category scheme is the **3 age-pair
+  // groups — grades 1–2, 3–4, 5–6** (BLD-041, resolves U-99, confirmed 2026-10-07),
+  // which *supersedes* the "U6 to U20" scheme (BLD-027, 2026-09-30). The field is a free
+  // string either way, so no schema change was ever needed — only this comment's example
+  // was out of date. Whatever codes the controller creates in Unit 03 are what the
+  // question import (Unit 05) attaches files to.
   name          String
   sequence      Int
 
@@ -230,6 +259,7 @@ model Round {
   individualResults   IndividualRoundResult[]
   teamResults         TeamRoundResult[]
   rotationStates      TeamRotationState[]
+  partitionStates     TeamPartitionState[]
 
   @@index([stageId])
 }
@@ -265,8 +295,9 @@ model RoundSettings {
 model QuestionSet {
   id            String  @id @default(uuid())
   competitionId String
-  // required, not nullable: one file per category, not a shared pool
-  // (BLD-028, resolves U-32)
+  // Required, not nullable (BLD-028, resolves U-32): a question set always belongs to
+  // exactly one category and is never shared across categories. A category may hold
+  // several sets — one per imported file (BLD-044).
   categoryId    String
   name          String
   sourceFileId  String?
@@ -282,9 +313,23 @@ model QuestionSet {
 model Question {
   id            String       @id @default(uuid())
   questionSetId String
-  roundId       String
+  // Nullable since BLD-040 (data-model.md): an imported question sits in its
+  // category's pool with `roundId = null` until the controller's manual
+  // round-selection step (Unit 05) assigns it to an Individual round. Team rounds
+  // never set it — the rotation round draws from the pool at random (SCR-015) and
+  // the partition round addresses puzzles by index.
+  roundId       String?
   sequence      Int
-  // Sub-types are OPEN; only the generic kinds are modelled.
+  // Sub-types are OPEN (U-01's "supported shapes and the shape↔type link", IND-4);
+  // only the generic kinds are modelled — `type` stays the two-value STANDARD/VARIANT.
+  // That openness is *narrowed*, not closed, by what Unit 05 actually built (2026-10-08,
+  // BLD-044/BLD-045): one `QuestionSet` per imported file, and the importer computes a
+  // standard box partition for the families standard, diagonal, size-comparison,
+  // fortress and anti-knight, **rejecting an irregular ("不规则") file outright** with a
+  // named reason, because neither the text column (BLD-047) nor any extraction method can
+  // supply a custom non-rectangular region layout. So the real files' variants are known
+  // in practice; no enum value was added for them, and none should be until U-01 is
+  // answered. Corrected/annotated 2026-10-11; field unchanged.
   type          QuestionType @default(STANDARD)
 
   // Generic grid model: rows, columns and regions — never assume 9x9 (BLD-011).
@@ -293,15 +338,23 @@ model Question {
   regions      Json
   startingGrid Json
   // The solution is stored with the question; the answer check compares against it
-  // (BLD-010). This relies on a unique solution (U-90).
+  // (BLD-010). This relies on a unique solution (U-90) — **confirmed 2026-10-01 [C]:
+  // every puzzle has exactly one valid solution**, so U-90 is no longer open (BLD-010's
+  // register row). The companion question, what happens if a *stored* solution is wrong,
+  // is resolved too (RES-010, resolves U-44): use the existing correction mechanism.
   solution     Json
 
   // Points are a whole number >= 1 (SCR-014); they belong to the question, so they
-  // follow the category's set (RND-005). Whether the PDF carries them is OPEN (U-03).
+  // follow the category's set (RND-005). Whether the ~~PDF~~ imported file carries them
+  // ~~is OPEN (U-03)~~ **is resolved (BLD-038, 2026-10-01, resolves U-03): yes** — the
+  // file supplies the starting value (a flat 5 points per question in the real samples,
+  // U-92/BLD-025), and the controller can change it before a round per SCR-005. Note
+  // "PDF" is stale wording too: the format is Excel, not PDF (BLD-024). Corrected
+  // 2026-10-11; the field itself is unchanged — `points Int` was always right.
   points Int
 
   questionSet QuestionSet @relation(fields: [questionSetId], references: [id], onDelete: Cascade)
-  round       Round       @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  round       Round?      @relation(fields: [roundId], references: [id], onDelete: Cascade)
   answers     Answer[]
 
   @@index([questionSetId])
@@ -358,6 +411,7 @@ model Team {
   participants Participant[]
   roundResults TeamRoundResult[]
   rotationStates TeamRotationState[]
+  partitionStates TeamPartitionState[]
 
   // Exactly one team per school per category (SCR-004).
   @@unique([competitionId, categoryId, schoolId])
@@ -377,6 +431,24 @@ model Participant {
   sequence          Int
   // Reflects removal from the active set (§7.2.4).
   active            Boolean @default(true)
+  // The participant file's own two event flags (Unit 04, spec §8 Q3, project owner
+  // 2026-10-11). The file's rule, written in its cell L2, is
+  // `个人赛团队赛参加填写1，未参加空白或者是2` — `1` = taking part, blank or `2` = not.
+  //
+  // `individualEvent` defaults to `true` and `teamEvent` to `false` so every row that
+  // existed before this migration keeps the behaviour the tree was verified with
+  // (before Unit 04 nothing could distinguish the two, and every hand-seeded test
+  // participant was an individual entrant). Both are read, never inferred: team
+  // membership is still `teamId != null`, and these columns say what the student
+  // *registered for*.
+  //
+  // Two queries must filter on `individualEvent` or an Individual round breaks — a
+  // student who never sits the round has no finalized result, so
+  // `ranking.service.ts`'s `isFinal` could never complete, and
+  // `round.repository.ts`'s `listActiveParticipants` would deal them in and let
+  // Unit 08's auto-submit sweep write a zero result for them. See the spec's §8 Q3.
+  individualEvent   Boolean @default(true)
+  teamEvent         Boolean @default(false)
 
   competition Competition         @relation(fields: [competitionId], references: [id], onDelete: Cascade)
   category    CompetitionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -692,8 +764,11 @@ model PurgeSchedule {
   status        String    @default("SCHEDULED")
 
   // The three retention flags (includesArchivedScores, includesCorrectionLog,
-  // includesParticipantExcel) are OPEN (U-59, U-62) and are deliberately NOT
-  // created until the stakeholder answers.
+  // includesParticipantExcel) ~~are OPEN (U-59, U-62)~~ **were resolved, both, on
+  // 2026-10-01** (RES-005/RES-009 for U-62, RES-008 for U-59) — every scope is always
+  // `true`, so the flags are handled in code and are still deliberately NOT stored as
+  // columns (adding a constant-`true` column would need a migration and a project-owner
+  // call). Comment corrected 2026-10-11; see the file header note.
 
   competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
 
@@ -714,4 +789,43 @@ model AuditLog {
   actor       Account?     @relation(fields: [actorAccountId], references: [id], onDelete: SetNull)
 
   @@index([competitionId])
+}
+
+/// The second team round's gameplay state container (Unit 14, 齐心协力 / partition
+/// collaboration, TEM-005). data-model.md line 52 has defined this entity since its
+/// 2026-09-30 approval; Unit 14 creates its concrete form.
+///
+/// Like `TeamRotationState`, the authoritative live copy is Redis
+/// (`gameplay:partition:{roundId}:{teamId}`, BLD-007); this row is a best-effort
+/// mirror, written without ever failing the round, so a judge can read team status
+/// for round 2 (ROL-008). The settled value is `TeamRoundResult`, reused unchanged.
+///
+/// `blockAssignments` is the row-band split: a JSON array of
+/// `{ participantId, startRow, endRow }` (both inclusive), ordered by band, covering
+/// the puzzle's rows exactly once with extra rows going to the first bands
+/// (TEM-005 — a 9-row grid split 4 ways is `[3,2,2,2]`). It is computed once per team
+/// at round start and reused for every puzzle in the round (a flagged Unit 14
+/// assumption, isolated in `team-partition.service.ts`'s `reuseSplitAcrossPuzzles()`).
+model TeamPartitionState {
+  id      String @id @default(uuid())
+  roundId String
+  teamId  String
+
+  /// See the model comment: `[{ participantId, startRow, endRow }]`, band-ordered.
+  blockAssignments Json?
+  /// Zero-based index of the puzzle the team is currently working on.
+  puzzleIndex Int  @default(0)
+  /// Puzzles whose combined grid reached a fully correct state (the round's
+  /// `correctCount`, and the multiplier for `TeamRoundResult.score`).
+  solvedCount Int  @default(0)
+  /// Set when this team's round-2 result has been finalized; stops further edits.
+  finished  Boolean   @default(false)
+  startedAt DateTime?
+  endedAt   DateTime?
+
+  round Round @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  team  Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([roundId, teamId])
+  @@index([roundId])
 }

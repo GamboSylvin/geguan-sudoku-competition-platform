@@ -1,8 +1,7 @@
-# Unit 10: Judge supervision and single-student restart — DRAFT, awaiting approval
+# Unit 10: Judge supervision and single-student restart — APPROVED (2026-10-07)
 
-> **Draft spec, not yet approved.** This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
+> **Approved by the project owner 2026-10-07.** This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
 > This unit has no open item blocking it (not listed in `../specs/00-build-plan.md`, "Units that cannot be specified").
-> Present this spec for review before starting the unit, per the methodology.
 
 ## Goal
 

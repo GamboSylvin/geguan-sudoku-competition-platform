@@ -4,6 +4,8 @@
  * (Units 04-05) and the later lifecycle screens arrive in later units.
  */
 export { CompetitionSetupPage } from "./CompetitionSetupPage";
+// BLD-052: the schools panel, mounted on the setup screen.
+export { SchoolPanel } from "./SchoolPanel";
 export {
   createCompetition,
   updateCompetition,

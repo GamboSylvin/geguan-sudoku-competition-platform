@@ -12,6 +12,7 @@ import { translate } from "../../shared/i18n";
 import { requireAuth } from "../../shared/middleware";
 import { parseInput } from "../../shared/validation";
 import { competitionService } from "./competition.service";
+import { competitionCopyService } from "./competition-copy.service";
 
 export const competitionRouter = Router();
 
@@ -33,10 +34,25 @@ const categorySchema = z.object({
   name: z.string().trim().min(1).max(64),
 });
 
+/**
+ * The scoring configuration (BLD-051, decided 2026-10-15). Both fields optional: a
+ * create or update that omits them leaves the schema defaults (0.6 / 180) alone, so
+ * every existing caller and test behaves exactly as before. `schoolCoefficient` is
+ * accepted as a plain positive number even though it is stored as a Decimal — a
+ * float is what a caller has, and Prisma converts it.
+ */
+const scoringConfigurationSchema = z
+  .object({
+    schoolCoefficient: z.number().positive().optional(),
+    rankingCycleSeconds: z.number().int().positive().optional(),
+  })
+  .strict();
+
 const createSchema = z.object({
   name: z.string().trim().min(1).max(120),
   description: z.string().trim().max(2000).nullish(),
   categories: z.array(categorySchema).min(1),
+  scoringConfiguration: scoringConfigurationSchema.optional(),
 });
 
 /** Every round-settings field is optional; each is a whole number (null clears an optional one). */
@@ -63,6 +79,7 @@ const updateSchema = z
     description: z.string().trim().max(2000).nullish(),
     categories: z.array(categorySchema).min(1).optional(),
     roundSettings: z.record(z.string().min(1), roundSettingsPatchSchema).optional(),
+    scoringConfiguration: scoringConfigurationSchema.optional(),
   })
   .strict();
 
@@ -80,7 +97,44 @@ competitionRouter.post(
     try {
       const input = parseInput(createSchema, req.body);
       const competition = await competitionService.createCompetition(input);
-      res.status(201).json(competition);
+      res.status(201).json(competitionService.withLinks(competition));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * GET /api/competitions — the controller dashboard's picker list (Unit 11, spec
+ * Detail 10). Read-only, newest first. No audit row: a read changes nothing.
+ */
+competitionRouter.get(
+  "/",
+  requireAuth,
+  requireController,
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const competitions = await competitionService.listCompetitions();
+      res.status(200).json({ competitions });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * GET /api/competitions/:id — one competition with its full structure, so the
+ * dashboard can see which stage/round is where and enable only the commands the
+ * current state allows. 404 `competition.notFound` on an unknown id.
+ */
+competitionRouter.get(
+  "/:id",
+  requireAuth,
+  requireController,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = parseInput(idParamSchema, req.params);
+      res.status(200).json(competitionService.withLinks(await competitionService.getCompetition(id)));
     } catch (error) {
       next(error);
     }
@@ -101,7 +155,7 @@ competitionRouter.patch(
       const { id } = parseInput(idParamSchema, req.params);
       const input = parseInput(updateSchema, req.body);
       const competition = await competitionService.updateCompetition(id, input);
-      res.status(200).json(competition);
+      res.status(200).json(competitionService.withLinks(competition));
     } catch (error) {
       next(error);
     }
@@ -122,6 +176,53 @@ competitionRouter.post(
       const { id } = parseInput(idParamSchema, req.params);
       const result = await competitionService.publishCompetition(id);
       res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * DELETE /api/competitions/:id — BLD-050, decided 2026-10-15. Hard-deletes the
+ * competition and everything in it, permanently. Allowed at any status; the frontend
+ * is what makes this deliberate (a typed-name confirmation naming every category of
+ * data being destroyed), not a server-side status gate. 204 on success, 404
+ * `competition.notFound` on an unknown id.
+ *
+ * 204 rather than 200-with-the-row: after this call the row no longer exists, so
+ * there is nothing to return (the convention `judgeAssignmentRouter`'s delete uses).
+ */
+competitionRouter.delete(
+  "/:id",
+  requireAuth,
+  requireController,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = parseInput(idParamSchema, req.params);
+      await competitionService.deleteCompetition(id);
+      res.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * POST /api/competitions/:id/copy — Unit 15 (CMP-100). 201 with the newly created,
+ * unpublished competition: same categories, round settings, scoring configuration,
+ * question sets/questions and judge assignments as the source; zero participants,
+ * teams, accounts, attempts, answers, results, corrections, rankings or files.
+ * 404 `competition.notFound` on an unknown id.
+ */
+competitionRouter.post(
+  "/:id/copy",
+  requireAuth,
+  requireController,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = parseInput(idParamSchema, req.params);
+      const competition = await competitionCopyService.copyCompetition(id);
+      res.status(201).json(competitionService.withLinks(competition));
     } catch (error) {
       next(error);
     }

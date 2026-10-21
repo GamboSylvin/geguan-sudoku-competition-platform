@@ -1,8 +1,9 @@
-# Unit 07: Round runtime and autosave — DRAFT, awaiting approval
+# Unit 07: Round runtime and autosave — APPROVED (2026-10-04)
 
-> **Draft spec, not yet approved.** This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
+> **Approved and built.** This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
+> *(This note used to read "Draft spec, not yet approved", which contradicted the `APPROVED (2026-10-04)` line above it — the header was flipped when the unit was approved and this line was missed. Corrected 2026-10-11. The unit was approved 2026-10-04 and built the same day, builder Sylvin, backend 42/42 green under Docker.)*
 > This unit has no open item blocking it (not listed in `../specs/00-build-plan.md`, "Units that cannot be specified").
-> Present this spec for review before starting the unit, per the methodology.
+> ~~Present this spec for review before starting the unit, per the methodology.~~ — done: reviewed and approved 2026-10-04, then built. The instruction is kept struck through rather than removed so nothing is silently dropped.
 
 ## Goal
 

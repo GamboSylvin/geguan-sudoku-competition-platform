@@ -20,15 +20,23 @@
 
 ## Framework / library
 
-- **Frontend:** React [T]. The **build tool is Vite** [T] (BLD-023, decided 2026-09-30) — the frontend is a Vite project (React with TypeScript); `npm run build` runs Vite's production build and the dev server is Vite's. **Styling is Tailwind CSS** [T] (BLD-023, decided 2026-09-30) — utility-first classes, configured through `tailwind.config` and a global stylesheet; do not introduce a second styling system. Project conventions (routing, state, data fetching): **OPEN**.
+- **Frontend:** React [T]. The **build tool is Vite** [T] (BLD-023, decided 2026-09-30) — the frontend is a Vite project (React with TypeScript); `npm run build` runs Vite's production build and the dev server is Vite's. **Styling is Tailwind CSS** [T] (BLD-023, decided 2026-09-30) — utility-first classes, configured through `tailwind.config` and a global stylesheet; do not introduce a second styling system. Project conventions (routing, state, data fetching): ~~**OPEN**~~ recorded below, under "UI component library" *(filled in 2026-10-11 from what the build actually shipped)*.
 - **Backend framework:** Express.js [T] (I-02).
 - **ORM and migrations:** **Prisma** [T] (I-31, decided 2026-09-29) — the ORM for the PostgreSQL schema and the migration system. Migrations are versioned in the repository and applied in CI and on deployment; the schema is the single source of truth for the database. Do not write raw SQL migrations by hand.
-- **UI component library, icons, fonts:** **Resolved 2026-10-01** [T] (BLD-035, I-20): **Headless UI** (unstyled, accessible interactive components) + **Heroicons** (icon set), both built by the Tailwind team, pairing natively with the decided styling approach (Tailwind CSS, BLD-023). Fonts are decided (U-70). The visual design (colors, layout) comes after the first slice [C] (BLD-009).
+- **UI component library, icons, fonts:** **Resolved 2026-10-01** [T] (BLD-035, I-20): **Headless UI** (unstyled, accessible interactive components) + **Heroicons** (icon set), both built by the Tailwind team, pairing natively with the decided styling approach (Tailwind CSS, BLD-023). Fonts are decided (U-70). The visual design (colors, layout) comes after the first slice [C] (BLD-009) — **that design pass is no longer coming before the MVP/event** (UI-008, 2026-10-08): every screen ships with its functional, Tailwind-default styling as the MVP's look.
+  - **Divergence found 2026-10-11, recorded not silently fixed:** BLD-035 is the *decision*, but neither library is actually **in the tree**. `frontend/package.json`'s dependencies are only `react`, `react-dom`, `react-router-dom` and `socket.io-client` — no `@headlessui/react`, no `@heroicons/react` — and a grep for "headless" across `frontend/src` returns nothing. Every screen built in Units 02–15 therefore uses plain HTML elements plus Tailwind classes, with dialogs and menus hand-rolled rather than taken from Headless UI. This is consistent with UI-008's "no dedicated design pass before the MVP/event", but it means the decision and the implementation disagree. **Adding the two packages now, with the event about a day away and the merged tree unverified (Docker Desktop is down — see `progress-tracker.md`, "Blocked"), would be an unreviewed change to every screen; it is not done unilaterally.** Needs a project-owner call: either ratify the current state (drop BLD-035 to a post-event item) or schedule the swap in after the event.
+- **Project conventions (routing, state, data fetching):** ~~**OPEN**.~~ **settled by what the build actually did** — recorded 2026-10-11 so the next contributor doesn't reinvent them, not decided in advance:
+  - **Routing:** `react-router-dom` v7, declared in the app shell.
+  - **Feature layout:** `frontend/src/features/<area>/` — one folder per domain area (`admin`, `auth`, `big-screen`, `competition`, `controller`, `gameplay`, `judge`, `player`, `question`, `ranking`, `results`), holding that area's screens plus its API module.
+  - **Data fetching:** a per-area `*Api.ts` module wrapping `fetch()` (e.g. `features/judge/judgeApi.ts`, `features/results/resultsApi.ts`). No React Query, no Redux, no Axios.
+  - **State:** no global store library. Local component state, plus one React Context — `i18n/locale-context.tsx`, backing the `LocaleProvider` and the `en.ts`/`zh.ts` catalogues (ARCH-029).
+  - **Realtime:** `socket.io-client`, connected from the gameplay screens.
+  - These are observations of the shipped code, not a new [T] decision — flagging them as such so nobody treats them as approved standards.
 
 ## Error handling
 
 - Never swallow errors silently. Log failures with enough context to diagnose.
-- Error shape and messages: **OPEN.** User-facing messages must exist in both English and Chinese [C]/[T] (ARCH-026).
+- Error shape and messages: ~~**OPEN.**~~ **Settled by practice across all 15 units, reconciled 2026-10-13/14:** every rejection carries a stable, dot-separated error code (e.g. `participant.import.notAllowedAfterPublish`) resolved through `shared/i18n/{en,zh}.ts`; a code with no catalogue entry degrades to a generic message rather than a raw key or a blank screen (every frontend feature's `messageFor` helper follows this). User-facing messages must exist in both English and Chinese [C]/[T] (ARCH-026) — enforced at compile time in `zh.ts`, typed as `MessageCatalogue`, so a missing key fails the build.
 
 ## Naming conventions
 
@@ -37,7 +45,7 @@
 
 ## API conventions
 
-**OPEN.** The API contract is a "Working Position", explicitly a starting point and not final (ARCH-023). Real-time uses WebSocket [T]. Handler order of operations (validate input, then enforce auth and ownership, then run logic, then respond) and response shape: **OPEN.**
+~~**OPEN.** The API contract is a "Working Position"… Handler order of operations… and response shape: **OPEN.**~~ **Settled by practice across all 15 units, reconciled 2026-10-13/14** (the contract itself stays a "Working Position" per unit, ARCH-023 — this is the convention every unit followed, not a frozen final contract): REST under `/api`, resources nested by competition (`/api/competitions/:id/...`); handler order is consistently validate input → enforce auth/ownership (a `requireAuth` + role check, e.g. `requireController`) → run the module's service logic → respond; success responses return the created/updated resource or a small result object, never a bare `{}`; real-time uses WebSocket (Socket.io) [T], one event namespace per module, named `<domain>:<event>`.
 Decided behaviour that affects the API: separate login endpoints per role [T]; a repeated submission never changes the result [C].
 
 ## Testing

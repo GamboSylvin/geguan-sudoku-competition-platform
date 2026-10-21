@@ -23,7 +23,14 @@ export class AppError extends Error {
 
 export class NotFoundError extends AppError {
   constructor(message = "Not found", details?: unknown) {
-    super(message, { statusCode: 404, code: "NOT_FOUND", details });
+    super(message, {
+      statusCode: 404,
+      code:
+        details && typeof details === "object" && "code" in details
+          ? String((details as { code?: unknown }).code ?? "NOT_FOUND")
+          : "NOT_FOUND",
+      details,
+    });
   }
 }
 

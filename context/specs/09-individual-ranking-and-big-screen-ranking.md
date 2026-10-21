@@ -1,8 +1,9 @@
-# Unit 09: Individual ranking and big-screen ranking — DRAFT, awaiting approval
+# Unit 09: Individual ranking and big-screen ranking — APPROVED (2026-10-07)
 
-> **Draft spec, not yet approved.** This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
-> This unit has no open item blocking it. The build plan's own note — tie-break (U-22) — has a usable Working Position (SCR-017); the still-open combined/sum extension is handled explicitly below, not guessed.
-> Present this spec for review before starting the unit, per the methodology.
+> **Approved and built.** This file follows the structure of `building-with-ai/templates/feature-spec.md`. Status tags: [C] confirmed by the client's stakeholder · [T] team decision · [P] blanket-approved proposal · [O] open. See `../README.md`.
+> *(This note used to read "Draft spec, not yet approved", which contradicted the `APPROVED (2026-10-07)` line above it — the same missed header flip as spec 07. Corrected 2026-10-11. The unit was approved 2026-10-07 and built the same day, builder Sylvin per `../progress-tracker-history.md`, backend 64/64 green across 8 suites under Docker.)*
+> This unit has no open item blocking it. **U-22 is now fully resolved** (SCR-020, 2026-10-07, project-owner decision: the tie-break submission-time extension sums across both rounds for an individual) — after this unit was already built and approved. **Resolved in code 2026-10-08:** `breakTie` now implements SCR-020's individual-level tie-break (lower summed submission time across both Individual rounds wins; an equal score *and* an equal summed time is still a genuine shared rank) — done as one of Unit 05's three code-side prerequisites, since it touches this already-built unit's live code. The school-level version (summed over a school's counted players) is a separate function for Unit 15 — **built and verified 2026-10-09**, so both halves of SCR-020 now exist.
+> ~~Present this spec for review before starting the unit, per the methodology.~~ — done: reviewed and approved 2026-10-07, then built. The instruction is kept struck through rather than removed so nothing is silently dropped.
 
 ## Goal
 
@@ -14,10 +15,10 @@ Goal in one testable sentence: **a finalized Individual-round result updates its
 
 - **What already exists:** Unit 03's `Competition`/`CompetitionCategory`/`ScoringConfiguration` (`rankingCycleSeconds`, default 180) and the big-screen link (`bigScreenLinkToken`), and Unit 08's finalized `IndividualRoundResult` rows, which this unit reads. **This unit adds no new tables** — `RankingSnapshot` already exists from Unit 1 (`../data-model.md`).
 - **Where this lives:** cumulative score, tie-breaking and provisional/final ranking belong to the **Ranking** module; the rotating display and the fact that it never calculates belong to the **Big Screen** module (`../architecture.md`, "System boundaries") — backend code goes in `backend/src/modules/ranking/` and `backend/src/modules/big-screen/`.
-- **Scope is Individual-stage only.** The team stage (rotation relay, partition collaboration — Units 13, 14) and the school total/ranking (Unit 15) don't exist yet; this unit ranks participants within a category on their two Individual-round scores only. Team and school ranking are explicitly later units' builds, not this one's.
+- **Scope is Individual-stage only.** ~~The team stage (rotation relay, partition collaboration — Units 13, 14) and the school total/ranking (Unit 15) don't exist yet;~~ *(correct as of 2026-10-07 when this unit was built; superseded — as of 2026-10-11 all three exist in this merged tree: Unit 13 built and verified 2026-10-08, Unit 14 built 2026-10-09 but **not yet verified**, Unit 15 built and verified 2026-10-09.)* this unit ranks participants within a category on their two Individual-round scores only. Team and school ranking are explicitly later units' builds, not this one's.
 - **Categories are ranked separately, never mixed** [P] (EVT-002) — every ranking computation and every big-screen leaderboard is scoped to one category at a time.
 - **Provisional ranking updates immediately per finalized round, not batched** [T] (`../architecture.md`, "Data flow"): "a provisional ranking updates immediately when a round result is finalized, without waiting for every participant." Performance target [C] (U-58): within 2 seconds of the triggering submission.
-- **Tie-break — the confirmed part and the genuinely open part** [T]/[C] (SCR-017, narrows U-22): the stakeholder confirmed that **earlier submission time wins a tie, superseding the client document's "rank by round 1 score" rule** — but *how* "submission time" combines across an individual's **two** rounds is the team's proposed extension, explicitly **not yet confirmed** (sent back to the stakeholder, still open in `unmade-decisions.md` §1, U-22). **This unit does not guess that aggregation.** A genuine tie in cumulative score (after both rounds) receives **shared rank**, and each round's `submittedAt` (already stored by Unit 08's `Attempt`/`IndividualRoundResult`) stays available so the tie-break can be upgraded to use it, in whatever combination gets confirmed, without a rebuild.
+- **Tie-break — the confirmed part and the genuinely open part** [T]/[C] (SCR-017, narrows U-22): the stakeholder confirmed that **earlier submission time wins a tie, superseding the client document's "rank by round 1 score" rule** — but *how* "submission time" combines across an individual's **two** rounds was the team's proposed extension, explicitly **not yet confirmed** at the time this was written *(since resolved — SCR-020, 2026-10-07: it sums across both rounds, see the header note; it is no longer open in `unmade-decisions.md` §1)*. **This unit does not guess that aggregation.** A genuine tie in cumulative score (after both rounds) receives **shared rank**, and each round's `submittedAt` (already stored by Unit 08's `Attempt`/`IndividualRoundResult`) stays available so the tie-break can be upgraded to use it, in whatever combination gets confirmed, without a rebuild.
 - **Students never see their own score or rank before `FINISHED`** [C] (SUB-007, BLD-029) — this unit computes and stores ranking data and pushes it to the **big screen** and (later) the **controller's** view; it does **not** expose any ranking or score to a player-facing endpoint. The player-facing score reveal at competition `FINISHED` is Unit 12's concern (results), not this unit's.
 - **Big screen never computes a rank** [T] (invariant 8): it receives whatever the server pushes and renders it; all computation happens in the Ranking module.
 - **Ranking cycle** [T]/[C] (BSC-002): every `rankingCycleSeconds` (default 180, customizable per competition via `ScoringConfiguration`), the big screen automatically rotates through category leaderboards. After a stage finishes, its final ranking continues to appear in the cycle while the competition waits for the controller to start the next stage [C] (RND-006) — the big screen does not go blank between stages.
@@ -26,7 +27,7 @@ Goal in one testable sentence: **a finalized Individual-round result updates its
 ## Implementation Details
 
 1. **Provisional ranking update.** Triggered by Unit 08 finalizing an `IndividualRoundResult`: recompute the triggering participant's category cumulative score (sum of finalized `IndividualRoundResult.totalScore` for that participant's stage so far) and re-sort that category's provisional ranking. Push the update over WebSocket. Do not wait for any other participant.
-2. **Final stage ranking.** Once every participant in a category has a finalized `IndividualRoundResult` for both Individual rounds, compute that category's final ranking: sort descending by cumulative `totalScore`; a genuine tie (equal cumulative score) gets **shared rank** (see Context — the submission-time tie-break extension is not guessed here). Store as a `RankingSnapshot` (`scope = INDIVIDUAL`, `isFinal = true`) per category.
+2. **Final stage ranking.** Once every participant in a category has a finalized `IndividualRoundResult` for both Individual rounds, compute that category's final ranking: sort descending by cumulative `totalScore`; a genuine tie (equal cumulative score) is broken by **the sum of both rounds' submission times, earlier wins** [T] (SCR-020, resolves U-22, confirmed 2026-10-07 — a project-owner working position, revisable if the stakeholder answers differently). **Not yet implemented in the live code**, which still returns shared rank for every tie — see the header note. Store as a `RankingSnapshot` (`scope = INDIVIDUAL`, `isFinal = true`) per category.
 3. **Big-screen push cycle.** A server-side timer (per competition, length = `ScoringConfiguration.rankingCycleSeconds`) rotates through each category's current ranking (provisional if the stage is still running, final once it's finished) and pushes the next one to every connected big-screen client. Paginate when a category's leaderboard doesn't fit one screen (participant count varies; the exact per-page threshold is an implementation detail, not a decided rule).
 4. **Big-screen client.** Connects via the `bigScreenLinkToken` route (already built, Unit 03), no login [C] (BSC-001); renders exactly what's pushed (rank, player name, score, completion time per `../ui-context.md`, "Big screen" columns) and performs no computation of its own.
 5. **Frontend:** the big-screen ranking display component under `frontend/src/features/big-screen/`.
@@ -67,7 +68,7 @@ Goal in one testable sentence: **a finalized Individual-round result updates its
 ### Constraints
 
 - No schema change — `RankingSnapshot` already exists from Unit 1.
-- Does not implement the unconfirmed submission-time-combination extension to the tie-break (U-22) — ties get shared rank until that extension is confirmed.
+- **Tie-break now confirmed** (SCR-020, resolves U-22, 2026-10-07) — sum of both rounds' submission times, earlier wins. **Implemented in code 2026-10-08.**
 - Does not build team or school ranking — Units 13/14 (team results) and 15 (school total and ranking) build on top of this unit's pattern.
 - Does not build controller-driven big-screen display switching (one-student close-up, team split, paused/finished modes) — Unit 11.
 - Does not reveal any score or rank to a player session — Unit 12.
@@ -75,7 +76,7 @@ Goal in one testable sentence: **a finalized Individual-round result updates its
 
 ### Implementation Notes
 
-- Keep the tie-break as a single, named function (`breakTie(a, b)`) returning "shared" today — so that once U-22's extension is confirmed, only that function changes, not the surrounding ranking computation.
+- The tie-break is a single, named function (`breakTie(a, b)`) — exactly so that implementing SCR-020 (sum of both rounds' submission times) only means changing that one function, not the surrounding ranking computation. **Done 2026-10-08.**
 - At ~800 concurrent clients (U-60), recomputing a whole category's ranking on every single finalized result should stay cheap (sort within one category, not the whole competition) — categories are ranked separately specifically so this stays small.
 
 ### Related Features
@@ -87,7 +88,7 @@ Goal in one testable sentence: **a finalized Individual-round result updates its
 
 1. When one participant's Individual-round result finalizes, their category's provisional ranking updates within 2 seconds, without waiting for other participants in the category.
 2. Once every participant in a category has finished both Individual rounds, that category's final ranking is computed and stored (`RankingSnapshot`, `isFinal = true`).
-3. Two participants with an equal cumulative score after both rounds receive shared rank; no unconfirmed tie-break logic is applied.
+3. Two participants with an equal cumulative score after both rounds are ranked by the sum of their submission times across both rounds, earlier wins (SCR-020) — **currently unmet by the live code**, which still returns shared rank; tracked as a pending follow-up, not a spec gap.
 4. The big screen receives a ranking push every `rankingCycleSeconds` (default 180, controller-customizable) and performs no ranking computation of its own.
 5. Categories are never mixed in a single ranking or leaderboard.
 6. A finished stage's final ranking remains visible in the big-screen cycle while the competition waits for the next stage.
@@ -99,5 +100,5 @@ Goal in one testable sentence: **a finalized Individual-round result updates its
 - Team ranking and school ranking (Units 13, 14, 15).
 - Controller-driven big-screen display switching: one-student close-up, team split view, the paused and finished displays (Unit 11).
 - Revealing any score or rank to a player session before `FINISHED` (Unit 12).
-- The unconfirmed submission-time tie-break extension (U-22) — implemented as shared rank until confirmed.
+- ~~The unconfirmed submission-time tie-break extension (U-22)~~ — now confirmed (SCR-020) and implemented in `breakTie`, 2026-10-08.
 - Any screen's finished visual design (deferred to the design phase, U-66, BLD-009).

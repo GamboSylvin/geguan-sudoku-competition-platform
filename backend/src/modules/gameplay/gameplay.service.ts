@@ -1,12 +1,1015 @@
 /**
- * The Gameplay module. Owns: The current grid, autosave, reconnection, submission state, player runtime state.
+ * The Gameplay module's domain rules and public interface (Unit 07 — autosave
+ * and reconnect; Unit 08 — manual submit and the round-ended auto-submit).
+ * Other modules call this service, never the repository (invariant 4).
  *
- * Skeleton only — no feature code (Unit 01, spec 01-foundation). The files follow
- * the decided module layout (BLD-020): controller (HTTP), service (domain rules and
- * the public interface), repository (Prisma access), types, and this barrel.
+ * Owns: the player's working grid for every puzzle of the active round (in
+ * Redis, BLD-007), the autosave write path, the reconnect path, and the
+ * manual/auto submission path that closes a `RoundParticipation` and asks the
+ * Scoring module to write the score rows.
+ *
+ * Two hard rules this module enforces:
+ *   - **Participant scoping.** A player reads and writes only their own grid
+ *     (spec Security Considerations). Every entry point resolves the caller's
+ *     `participantId` from the session and rejects the request when the caller
+ *     is not a participant in the round.
+ *   - **Active-round gating.** Autosave is accepted only while the round is
+ *     `ACTIVE`. After the timer reaches zero the round flips to `FINISHED` and
+ *     further writes are rejected (spec Error Cases). Autosave never triggers
+ *     scoring (invariant 7); scoring is invoked only from this module's
+ *     `submit` and `handleRoundEnded` paths.
+ *
+ * Question delivery at round start does **not** live here. The Round module
+ * fetches the questions at countdown zero (BLD-006) and the realtime gateway
+ * pushes them via `round:started`; this module's `getState` re-reads them for
+ * the reconnect path only.
  */
+import { prisma } from "../../infra";
+import { logger } from "../../infra";
+import { now, nowMs } from "../../shared/clock";
+import {
+  ForbiddenError,
+  NotFoundError,
+  UnprocessableEntityError,
+} from "../../shared/errors";
+import { translate } from "../../shared/i18n";
+import * as roundRepository from "../round/round.repository";
+import { roundTimerService } from "../round/round-timer.service";
+import { scoringService } from "../scoring/scoring.service";
+import * as repository from "./gameplay.repository";
+import { teamRotationService } from "./team-rotation.service";
+import { teamPartitionService } from "./team-partition.service";
+import type {
+  AutosaveInput,
+  CurrentRoundPayload,
+  GameplayStatePayload,
+  MyCompetitionPayload,
+  ProgrammeStageView,
+  RoundKind,
+  SubmitResult,
+  WorkingGrid,
+} from "./gameplay.types";
+import type { RoundEndedEvent } from "../round/round.types";
+import type { IndividualResultFinalizedEvent } from "../ranking/ranking.types";
+
 /**
- * The domain rules of the Gameplay module and its public interface. Other modules
- * call this service, never the repository (invariant 4).
+ * Whoever needs to know one participant's Individual-round result was finalized
+ * (the Ranking module, Unit 09) installs this hook. Installed once at startup;
+ * keeps this module free of any import from ranking (invariant 4, no cycles). The
+ * signal carries only identifiers — the subscriber re-reads the durable results.
  */
-export const gameplayService = {};
+type IndividualResultFinalizedHook = (event: IndividualResultFinalizedEvent) => void;
+let individualResultFinalizedHook: IndividualResultFinalizedHook | null = null;
+
+export function installIndividualResultFinalizedHook(
+  hook: IndividualResultFinalizedHook,
+): void {
+  individualResultFinalizedHook = hook;
+}
+
+/**
+ * Load the caller's participation row for a round and reject when the caller is
+ * not a participant. The participation row is the single source of truth for
+ * "is this account a participant in this round" (data-model, "Access rules").
+ */
+async function requireParticipation(roundId: string, participantId: string) {
+  const participation = await prisma.roundParticipation.findUnique({
+    where: { roundId_participantId: { roundId, participantId } },
+  });
+  if (!participation) {
+    throw new ForbiddenError(translate("en", "gameplay.notAParticipant"), {
+      code: "gameplay.notAParticipant",
+    });
+  }
+  return participation;
+}
+
+/**
+ * Load the round and reject when it is not currently accepting gameplay
+ * (autosave). Only an `ACTIVE` round accepts writes; `FINISHED` and everything
+ * before `ACTIVE` reject (spec Error Cases: writes after the timer hits zero
+ * are refused; Unit 08 acts on the last saved state).
+ */
+async function requireActiveRound(roundId: string) {
+  const round = await prisma.round.findUnique({
+    where: { id: roundId },
+    select: { id: true, status: true, stageId: true },
+  });
+  if (!round) {
+    throw new NotFoundError(translate("en", "gameplay.roundNotFound"), {
+      code: "gameplay.roundNotFound",
+    });
+  }
+  if (round.status !== "ACTIVE") {
+    throw new UnprocessableEntityError(translate("en", "gameplay.notActive"), {
+      code: "gameplay.notActive",
+    });
+  }
+  return round;
+}
+
+/**
+ * Reject when the question does not belong to this round **and this participant's
+ * category**. Autosave for a question in another round is an error, not a silent
+ * no-op (spec Error Cases).
+ *
+ * The category half is what keeps the write path honest: a `Round` is shared by every
+ * category of the competition, so `{ id, roundId }` alone matches all `6n` questions
+ * and a player could save a grid against another category's puzzle — which scoring
+ * would then count as one of their own answers. Both halves reject with the same
+ * `questionNotInRound` reason: from the caller's point of view "not yours" and "not
+ * in this round" are the same wrong question.
+ */
+async function requireQuestionInRound(
+  roundId: string,
+  questionId: string,
+  categoryId: string,
+) {
+  const question = await prisma.question.findFirst({
+    where: { id: questionId, roundId, questionSet: { categoryId } },
+    select: { id: true },
+  });
+  if (!question) {
+    throw new UnprocessableEntityError(translate("en", "gameplay.notActive"), {
+      code: "gameplay.notActive",
+      details: { reason: "questionNotInRound" },
+    });
+  }
+}
+
+/**
+ * Autosave the player's working grid for one question. Called roughly twice per
+ * second while the player edits (spec Implementation Detail 4). Never calls
+ * into scoring (invariant 7).
+ */
+async function autosave(
+  roundId: string,
+  participantId: string,
+  input: AutosaveInput,
+): Promise<{ savedAtMs: number }> {
+  await requireActiveRound(roundId);
+  const participation = await requireParticipation(roundId, participantId);
+  await requireQuestionInRound(roundId, input.questionId, participation.categoryId);
+
+  const savedAtMs = nowMs();
+  await repository.saveGrid(roundId, participantId, input.questionId, input.grid, savedAtMs);
+  return { savedAtMs };
+}
+
+/**
+ * The reconnect path (spec Implementation Detail 5). Returns the round's
+ * questions, the player's saved grids for the round, and the server-authoritative
+ * timer snapshot — enough for the client to render exactly the state the player
+ * left. A player with no participation in the round is rejected; a participant
+ * with no live round yet gets an empty grid list and a null timer.
+ */
+async function getState(
+  roundId: string,
+  participantId: string,
+): Promise<GameplayStatePayload> {
+  const participation = await requireParticipation(roundId, participantId);
+
+  const round = await roundRepository.findRoundWithContext(roundId);
+  if (!round) {
+    throw new NotFoundError(translate("en", "gameplay.roundNotFound"), {
+      code: "gameplay.roundNotFound",
+    });
+  }
+
+  // Scoped to the caller's own category. The `Round` row is shared by every category
+  // of the competition, so reading by `roundId` alone returns all `6n` questions and
+  // would hand one category's puzzles to another category's player on reconnect. The
+  // participation row already carries the participant's category (written from
+  // `Participant.categoryId` when the round opens), so no extra query is needed.
+  const questionRows = await roundRepository.listRoundQuestions(roundId, participation.categoryId);
+  const questions = questionRows.map((q) => ({
+    id: q.id,
+    sequence: q.sequence,
+    type: q.type,
+    gridRows: q.gridRows,
+    gridColumns: q.gridColumns,
+    regions: q.regions,
+    startingGrid: q.startingGrid,
+    points: q.points,
+  }));
+
+  const savedGrids = await repository.listGridsForRound(roundId, participantId);
+
+  const timer = await roundTimerService.remaining(roundId);
+
+  return {
+    roundId: round.id,
+    competitionId: round.stage.competitionId,
+    stageId: round.stageId,
+    status: round.status,
+    questions,
+    savedGrids,
+    timer: timer
+      ? { remainingSeconds: timer.remainingSeconds, totalSeconds: timer.totalSeconds }
+      : null,
+    participationState: participation.state,
+  };
+}
+
+/**
+ * Which round the caller is in right now, resolved from the session alone — no
+ * `roundId` argument, because the caller does not have one. That is the whole
+ * point: a socket that connects after the round went ACTIVE missed `round:started`
+ * (emitted once, at the transition) and cannot use `round:preparation-tick` to
+ * find its round either, since that push is namespace-wide and therefore also
+ * carries other competitions' countdowns. Every other read here is keyed by
+ * `:roundId`, so the client is stuck on the "waiting" screen without this.
+ *
+ * Scoping: participant → competition → the competition's live round. A `Round` is
+ * shared by every category of its competition, so the participant's competition id
+ * is enough to name the right round, and it can never name another competition's —
+ * the id comes from the database, never from the request.
+ *
+ * Returns `round: null` (not an error) when nothing is running: "you have no round
+ * yet" is a legitimate answer the client renders as the waiting screen, and an
+ * exception there would make every reconnect before the first round a visible failure.
+ */
+async function getCurrentRound(participantId: string): Promise<CurrentRoundPayload> {
+  const participant = await prisma.participant.findUnique({
+    where: { id: participantId },
+    select: { competitionId: true },
+  });
+  if (!participant) {
+    throw new ForbiddenError(translate("en", "gameplay.notAParticipant"), {
+      code: "gameplay.notAParticipant",
+    });
+  }
+
+  const roundId = await roundTimerService.getActiveRoundId(participant.competitionId);
+  if (!roundId) return { round: null };
+
+  const round = await prisma.round.findUnique({
+    where: { id: roundId },
+    select: {
+      id: true,
+      status: true,
+      sequence: true,
+      stage: { select: { competitionId: true, type: true } },
+    },
+  });
+  if (!round || round.stage.competitionId !== participant.competitionId) return { round: null };
+
+  // A round that is already settled is not a round to play: the client keeps
+  // whatever it last rendered rather than being pulled back into a finished one.
+  if (round.status === "FINISHED" || round.status === "WAITING") return { round: null };
+
+  const kind: RoundKind = teamRotationService.isRotationRound(round.stage.type, round.sequence)
+    ? "rotation"
+    : teamPartitionService.isPartitionRound(round.stage.type, round.sequence)
+      ? "partition"
+      : "individual";
+
+  const timer = await roundTimerService.remaining(roundId);
+
+  return {
+    round: {
+      roundId: round.id,
+      competitionId: round.stage.competitionId,
+      kind,
+      status: round.status,
+      timer: timer
+        ? { remainingSeconds: timer.remainingSeconds, totalSeconds: timer.totalSeconds }
+        : null,
+    },
+  };
+}
+
+/**
+ * The round's own playing time, resolved per kind. The three kinds read three
+ * different columns of `RoundSettings`: an Individual round plays for
+ * `durationSeconds`, the rotation relay for `teamTotalTimeSeconds` (which is
+ * nullable — a team round may instead run one fixed `rotationPeriodSeconds` per
+ * question), and the partition round (齐心协力) for `partitionTotalTimeSeconds`.
+ * Null means "not decided yet", which the client renders as no duration rather
+ * than inventing one.
+ */
+function roundTotalSeconds(
+  kind: RoundKind,
+  settings: {
+    durationSeconds: number;
+    teamTotalTimeSeconds: number | null;
+    partitionTotalTimeSeconds: number | null;
+  } | null,
+): number | null {
+  if (!settings) return null;
+  if (kind === "rotation") return settings.teamTotalTimeSeconds;
+  if (kind === "partition") return settings.partitionTotalTimeSeconds;
+  return settings.durationSeconds;
+}
+
+/**
+ * GET /api/gameplay/competition — **which competition this session belongs to**,
+ * and who the caller is inside it.
+ *
+ * Report 2026-10-19, hole A: the waiting screen could only render two static
+ * strings. The player's entry token is consumed and deleted by exactly one login
+ * (`takeEntryToken` in `session.ts`), the stored `Session` carries no
+ * `competitionId`, and a PLAYER session may reach only this module — so nothing
+ * on the client could ever say the competition's name. The server always knew it
+ * (`identity.repository`'s `findAccountCompetitionIds`, already used to verify the
+ * token at login); it was simply never exposed for reading. This is that
+ * exposure: read-only, resolved from the participant row of the session alone,
+ * **no migration and no new session field**.
+ *
+ * Scoping is the same rule as every other route here: the caller reads their own
+ * participant row, their own category and school, and the programme of the one
+ * competition that row belongs to. There is no id in the path to spoof, and a
+ * judge or controller session is rejected by the controller's participant guard
+ * before reaching this function.
+ *
+ * A participant whose row has gone away (a stale session, a removed student) gets
+ * an all-null payload rather than a 403: this is the screen a player sees while
+ * waiting, and turning it into an error page for a row that simply is not there
+ * would be worse than an empty greeting. The programme is empty in that case
+ * too — there is no competition to describe.
+ */
+async function getMyCompetition(participantId: string): Promise<MyCompetitionPayload> {
+  const participant = await prisma.participant.findUnique({
+    where: { id: participantId },
+    select: {
+      name: true,
+      participantNumber: true,
+      individualEvent: true,
+      teamEvent: true,
+      competitionId: true,
+      category: { select: { id: true, code: true, name: true } },
+      school: { select: { name: true } },
+      competition: { select: { id: true, name: true, description: true, status: true } },
+    },
+  });
+  if (!participant) {
+    return {
+      competition: null,
+      participant: null,
+      category: null,
+      school: null,
+      programme: [],
+    };
+  }
+
+  const stages = await prisma.stage.findMany({
+    where: { competitionId: participant.competitionId },
+    orderBy: { sequence: "asc" },
+    select: {
+      id: true,
+      type: true,
+      sequence: true,
+      status: true,
+      rounds: {
+        orderBy: { sequence: "asc" },
+        select: {
+          id: true,
+          name: true,
+          sequence: true,
+          status: true,
+          settings: {
+            select: {
+              durationSeconds: true,
+              teamTotalTimeSeconds: true,
+              partitionTotalTimeSeconds: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const programme: ProgrammeStageView[] = stages.map((stage) => ({
+    stageId: stage.id,
+    stageType: stage.type,
+    stageSequence: stage.sequence,
+    stageStatus: stage.status,
+    rounds: stage.rounds.map((round) => {
+      const kind: RoundKind = teamRotationService.isRotationRound(stage.type, round.sequence)
+        ? "rotation"
+        : teamPartitionService.isPartitionRound(stage.type, round.sequence)
+          ? "partition"
+          : "individual";
+      return {
+        roundId: round.id,
+        name: round.name,
+        sequence: round.sequence,
+        status: round.status,
+        kind,
+        totalSeconds: roundTotalSeconds(kind, round.settings),
+      };
+    }),
+  }));
+
+  return {
+    competition: participant.competition,
+    participant: {
+      name: participant.name,
+      participantNumber: participant.participantNumber,
+      individualEvent: participant.individualEvent,
+      teamEvent: participant.teamEvent,
+    },
+    category: participant.category,
+    school: participant.school,
+    programme,
+  };
+}
+
+/**
+ * The round-start hook the realtime gateway installs. The Round module calls it
+ * after the questions have been fetched and the round timer has started; this
+ * module's only job at round start is to be a stable place to hang that hook.
+ * The actual push lives in the realtime layer (no Socket.io import here, per
+ * the module-first boundary).
+ */
+export type { RoundStartedPayload } from "../round/round.types";
+
+// ---------------------------------------------------------------------------
+// Submission (Unit 08)
+// ---------------------------------------------------------------------------
+
+/**
+ * Read the round with everything scoring needs — the settings (for the bonus
+ * configuration and duration), the stage (for Individual/Team), and the
+ * questions *with* their solutions (BLD-010). The solution is read here, on
+ * the server, only for scoring; it is never serialised to a client payload.
+ *
+ * `categoryId` scopes the questions to the participant being scored. The `Round`
+ * row is shared by every category of the competition, so an unscoped read returns
+ * all `6n` questions; scoring then builds one `Answer` row per question, and the
+ * `6(n-1)` the participant never even saw come back as `submitted = []` →
+ * `correct = false`. Two real consequences, not just untidy data: those rows land
+ * in the export's per-question sheet, and `allCorrect` — which gates the
+ * early-finish bonus (SCR-008–SCR-011) — can never be true for anyone, so the bonus
+ * silently drops to 0 as soon as a competition has more than one category.
+ */
+async function loadRoundForScoring(roundId: string, categoryId: string) {
+  const round = await prisma.round.findUnique({
+    where: { id: roundId },
+    include: {
+      settings: true,
+      stage: { select: { id: true, competitionId: true, type: true, sequence: true } },
+      questions: {
+        where: { questionSet: { categoryId } },
+        orderBy: { sequence: "asc" },
+      },
+    },
+  });
+  if (!round) {
+    throw new NotFoundError(translate("en", "gameplay.roundNotFound"), {
+      code: "gameplay.roundNotFound",
+    });
+  }
+  return round;
+}
+
+/**
+ * Close one participation: write the attempt + answers + settled round result
+ * via the Scoring module, then point `RoundParticipation.currentAttemptId` at
+ * the new attempt and flip the state to `SUBMITTED` (manual) or
+ * `AUTO_SUBMITTED` (anything else). Returns the scoring result so the caller
+ * can decide what (not) to send back to the client.
+ *
+ * Idempotent on a repeated call (PL-009): if the participation is already
+ * `SUBMITTED` or `AUTO_SUBMITTED`, the existing attempt is returned as-is and
+ * no new rows are written. The scoring service's own idempotency is a second
+ * layer underneath this one.
+ */
+async function finalizeParticipation(input: {
+  roundId: string;
+  participantId: string;
+  submissionType: "MANUAL" | "TIMEOUT" | "CONTROLLER_END" | "AUTO";
+  submittedAtMs: number;
+}): Promise<{
+  participationId: string;
+  attemptId: string;
+  submissionType: "MANUAL" | "TIMEOUT" | "CONTROLLER_END" | "AUTO";
+  /** True when this call actually wrote a new attempt; false on a no-op. */
+  wroteNewAttempt: boolean;
+}> {
+  const participation = await requireParticipation(input.roundId, input.participantId);
+
+  if (participation.state === "SUBMITTED" || participation.state === "AUTO_SUBMITTED") {
+    // PL-009: a repeated submission never changes the result. Return the
+    // existing attempt's id without re-scoring.
+    return {
+      participationId: participation.id,
+      attemptId: participation.currentAttemptId ?? "",
+      submissionType: input.submissionType,
+      wroteNewAttempt: false,
+    };
+  }
+
+  const round = await loadRoundForScoring(input.roundId, participation.categoryId);
+  const settings = round.settings;
+  const durationSeconds = settings?.durationSeconds ?? 0;
+  const earlyBonusRate = settings?.earlyBonusRate ?? 3;
+  const earlyBonusCap = settings?.earlyBonusCap ?? null;
+  const isIndividualStage = round.stage.type === "INDIVIDUAL";
+  const roundStartedAtMs = round.startedAt ? round.startedAt.getTime() : input.submittedAtMs;
+
+  const savedGrids = await repository.listGridsForRound(input.roundId, input.participantId);
+  const gridsByQuestionId = new Map<string, (number | null)[]>();
+  for (const entry of savedGrids) {
+    gridsByQuestionId.set(entry.questionId, entry.grid);
+  }
+
+  const scored = await scoringService.finalizeAttempt({
+    roundParticipationId: participation.id,
+    roundId: input.roundId,
+    participantId: input.participantId,
+    categoryId: participation.categoryId,
+    submissionType: input.submissionType,
+    submittedAtMs: input.submittedAtMs,
+    roundStartedAtMs,
+    durationSeconds,
+    earlyBonusRate,
+    earlyBonusCap,
+    isIndividualStage,
+    questions: round.questions.map((q) => ({
+      id: q.id,
+      points: q.points,
+      solution: Array.isArray(q.solution) ? (q.solution as (number | null)[]) : [],
+    })),
+    gridsByQuestionId,
+  });
+
+  const newState = input.submissionType === "MANUAL" ? "SUBMITTED" : "AUTO_SUBMITTED";
+  await prisma.roundParticipation.update({
+    where: { id: participation.id },
+    data: {
+      state: newState,
+      currentAttemptId: scored.attemptId,
+      attemptCount: { increment: 1 },
+    },
+  });
+
+  // Notify the Ranking module (Unit 09) that a fresh Individual-round result is
+  // durable, so the category's provisional ranking recomputes immediately (U-58).
+  // Only a real finalize fires the signal — a PL-009 no-op (wroteNewAttempt false)
+  // writes nothing and stays silent. Team-stage results are a later unit's build,
+  // so the signal fires only for the Individual stage this unit ranks.
+  if (scored.individualRoundResultId !== "" && isIndividualStage) {
+    individualResultFinalizedHook?.({
+      competitionId: round.stage.competitionId,
+      stageId: round.stageId,
+      roundId: input.roundId,
+      participantId: input.participantId,
+      categoryId: participation.categoryId,
+    });
+  }
+
+  return {
+    participationId: participation.id,
+    attemptId: scored.attemptId,
+    submissionType: input.submissionType,
+    wroteNewAttempt: scored.individualRoundResultId !== "",
+  };
+}
+
+/**
+ * Player-facing manual submit (spec Implementation Detail 1). Closes the
+ * caller's `RoundParticipation` for the round and scores it.
+ *
+ * Two subtleties, both per spec:
+ *   - **Late submit (SUB-003):** if the server-authoritative timer has already
+ *     reached zero, the submission is recorded as `TIMEOUT`, not `MANUAL` —
+ *     same outcome as if the timer-expiry path had run. The response is
+ *     indistinguishable from a successful manual submit.
+ *   - **Repeated submit (PL-009):** if the participation is already closed,
+ *     the call is a no-op that returns the same `{ accepted: true }` shape.
+ *
+ * A submit on a round that has not started yet is a 422: there is nothing to
+ * submit, and this is a real error the client should see (unlike a late
+ * submit, which silently degrades to TIMEOUT).
+ */
+async function submit(
+  roundId: string,
+  participantId: string,
+): Promise<SubmitResult> {
+  const round = await prisma.round.findUnique({
+    where: { id: roundId },
+    select: { id: true, status: true },
+  });
+  if (!round) {
+    throw new NotFoundError(translate("en", "gameplay.roundNotFound"), {
+      code: "gameplay.roundNotFound",
+    });
+  }
+  if (round.status === "WAITING" || round.status === "PREPARATION") {
+    throw new UnprocessableEntityError(translate("en", "gameplay.notActive"), {
+      code: "gameplay.notActive",
+    });
+  }
+
+  // Decide the submissionType from the server-authoritative timer (SUB-003).
+  // A round that is no longer ACTIVE on the timer is recorded as TIMEOUT even
+  // if the database status hasn't caught up — the timer is the authority.
+  const snapshot = await roundTimerService.remaining(roundId);
+  const timerExpired = !snapshot || snapshot.status === "FINISHED" || snapshot.remainingSeconds <= 0;
+  const submissionType = timerExpired || round.status === "FINISHED" ? "TIMEOUT" : "MANUAL";
+
+  const result = await finalizeParticipation({
+    roundId,
+    participantId,
+    submissionType,
+    submittedAtMs: nowMs(),
+  });
+
+  return { accepted: true, submissionType: result.submissionType };
+}
+
+/**
+ * The round-ended listener (spec Implementation Detail 2a and step 5). Wired
+ * from `app.ts` to `roundTimerService.onRoundEnded`. For every `ACTIVE`
+ * participation in the round, auto-submit with `TIMEOUT`, then — once every
+ * participation in the round is finalized — call back into the Round module
+ * to advance to the next round's preparation, completing Unit 07's CS-022
+ * sequence. After the stage's last round, the stage is marked FINISHED; no
+ * auto-start of the next stage (RND-006, Unit 11's command).
+ *
+ * Never throws: a single failed participant's scoring is logged and skipped,
+ * so one bad row cannot strand the whole round.
+ */
+async function handleRoundEnded(event: RoundEndedEvent): Promise<void> {
+  // A team round has no `RoundParticipation` rows and no individual result to
+  // write (invariant 7: an autosave/timeout never produces a team score). Its end
+  // settles `TeamRoundResult` instead, so the rotation module owns it — including
+  // the advance to the Team stage's round 2 (Unit 13 Detail 5).
+  const roundRow = await prisma.round.findUnique({
+    where: { id: event.roundId },
+    select: { sequence: true, stage: { select: { type: true } } },
+  });
+  if (roundRow && teamRotationService.isRotationRound(roundRow.stage.type, roundRow.sequence)) {
+    await teamRotationService.handleRotationRoundEnded(event);
+    return;
+  }
+  // Unit 14: the Team stage's round 2 is the partition collaboration. Same reason,
+  // same shape — its end settles `TeamRoundResult` per team, and because it is the
+  // last round of the last stage its settle is what triggers Unit 11's
+  // whole-competition finish check (Unit 14 Detail 5).
+  if (roundRow && teamPartitionService.isPartitionRound(roundRow.stage.type, roundRow.sequence)) {
+    await teamPartitionService.handlePartitionRoundEnded(event);
+    return;
+  }
+
+  const participations = await prisma.roundParticipation.findMany({
+    where: { roundId: event.roundId, state: "ACTIVE" },
+    select: { participantId: true },
+  });
+
+  const submittedAtMs = event.endedAtMs;
+  for (const p of participations) {
+    try {
+      await finalizeParticipation({
+        roundId: event.roundId,
+        participantId: p.participantId,
+        submissionType: "TIMEOUT",
+        submittedAtMs,
+      });
+    } catch (error) {
+      logger.error("gameplay.handleRoundEnded: failed to auto-submit a participant", {
+        roundId: event.roundId,
+        participantId: p.participantId,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  // Now check whether every participation is closed. If yes, advance the
+  // competition (Unit 07's CS-022, completed here per invariant 7).
+  const stillOpen = await prisma.roundParticipation.count({
+    where: {
+      roundId: event.roundId,
+      state: { in: ["WAITING", "ACTIVE"] },
+    },
+  });
+  if (stillOpen > 0) {
+    logger.info("gameplay.handleRoundEnded: round not fully finalized yet", {
+      roundId: event.roundId,
+      stillOpen,
+    });
+    return;
+  }
+
+  await advanceAfterRoundFinalized(event.roundId, event.stageId, event.competitionId);
+}
+
+/**
+ * Who needs to know the whole competition has finished (the BigScreen module,
+ * Unit 11, switches the display to `FINAL`; a results view would subscribe too)
+ * installs this hook. Both finish paths — the automatic one below (Detail 8) and
+ * the controller's "finish early" — go through `notifyCompetitionFinished`, so
+ * there is exactly one place that announces "this competition is done" (spec
+ * Implementation Notes). Installed once at startup; keeps this module free of
+ * any import from big-screen (invariant 4, no cycles).
+ */
+export interface CompetitionFinishedEvent {
+  competitionId: string;
+  /** True only for RND-007's early finish; false for the natural finish. */
+  finishedEarly: boolean;
+}
+
+type CompetitionFinishedHook = (event: CompetitionFinishedEvent) => void | Promise<void>;
+let competitionFinishedHook: CompetitionFinishedHook | null = null;
+
+export function installCompetitionFinishedHook(hook: CompetitionFinishedHook): void {
+  competitionFinishedHook = hook;
+}
+
+/** Fire the "competition is done" signal. Never throws. */
+export async function notifyCompetitionFinished(
+  event: CompetitionFinishedEvent,
+): Promise<void> {
+  if (!competitionFinishedHook) return;
+  try {
+    await competitionFinishedHook(event);
+  } catch (error) {
+    logger.error("gameplay: a competition-finished listener threw", {
+      competitionId: event.competitionId,
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * Unit 11's extension of Unit 08's per-stage check (spec Implementation Detail
+ * 8). Called from `advanceAfterRoundFinalized` when the stage that just finished
+ * is the competition's last one by `sequence`.
+ *
+ * **Finding (Unit 11, spec wording vs. as-built schema):** the spec says "once a
+ * category's last stage finishes, and every category has reached that point".
+ * `Stage` rows are per-*competition*, not per-category (`Stage` has no
+ * `categoryId`; `competition.service.buildStructure` creates exactly one
+ * INDIVIDUAL and one TEAM stage that every category runs against in parallel).
+ * So "every category has reached that point" is not a separate condition to
+ * check — it is the same single row. This implementation marks the competition
+ * `FINISHED` when the last stage by sequence finishes, which is the spec's
+ * intent and cannot be satisfied differently without changing the schema, which
+ * the spec forbids ("No schema change").
+ */
+async function markCompetitionFinishedNaturally(competitionId: string): Promise<void> {
+  await prisma.competition.update({
+    where: { id: competitionId },
+    data: { status: "FINISHED", finishedEarly: false, finishedAt: now() },
+  });
+  await notifyCompetitionFinished({ competitionId, finishedEarly: false });
+}
+
+/**
+ * Pick the round that follows `roundId` inside its stage (sequence + 1), or
+ * null when this was the stage's last round. Only Individual-stage rounds
+ * advance automatically; Team-stage advance is Unit 11's surface.
+ */
+async function findNextRoundInStage(stageId: string, afterSequence: number) {
+  return prisma.round.findFirst({
+    where: { stageId, sequence: { gt: afterSequence } },
+    orderBy: { sequence: "asc" },
+    include: { settings: true },
+  });
+}
+
+/**
+ * Mark a stage finished, then apply the whole-competition finish check (Detail 8).
+ * The competition only finishes when this was its last stage by `sequence`; and a
+ * competition already in a terminal state (`FINISHED`/`CANCELLED`) is left alone,
+ * so a late-arriving round-ended signal can never resurrect or re-cancel it.
+ */
+async function finishStageAndMaybeCompetition(
+  stageId: string,
+  competitionId: string,
+  roundId: string,
+): Promise<void> {
+  await prisma.stage.update({
+    where: { id: stageId },
+    data: { status: "FINISHED", endedAt: now() },
+  });
+
+  const [competition, lastStage] = await Promise.all([
+    prisma.competition.findUnique({
+      where: { id: competitionId },
+      select: { status: true },
+    }),
+    prisma.stage.findFirst({
+      where: { competitionId },
+      orderBy: { sequence: "desc" },
+      select: { id: true, sequence: true },
+    }),
+  ]);
+
+  const isLastStage = lastStage !== null && lastStage.id === stageId;
+
+  if (competition?.status === "CANCELLED" || competition?.status === "FINISHED") {
+    await roundRepository.upsertRuntimeState({
+      competitionId,
+      currentStageId: stageId,
+      currentRoundId: roundId,
+      phase: "STAGE_FINISHED",
+    });
+    return;
+  }
+
+  if (isLastStage) {
+    await markCompetitionFinishedNaturally(competitionId);
+    await roundRepository.upsertRuntimeState({
+      competitionId,
+      currentStageId: stageId,
+      currentRoundId: roundId,
+      phase: "FINISHED",
+    });
+    return;
+  }
+
+  // Not the last stage: the next one waits for the controller's start command
+  // (RND-006 — a stage never starts by itself).
+  await prisma.competition.update({
+    where: { id: competitionId },
+    data: { status: "STAGE_FINISHED" },
+  });
+  await roundRepository.upsertRuntimeState({
+    competitionId,
+    currentStageId: stageId,
+    currentRoundId: roundId,
+    phase: "STAGE_FINISHED",
+  });
+}
+
+/**
+ * The auto-advance step (spec Implementation Detail 5). Either kicks off the
+ * next round's preparation, or — when this was the stage's last round — marks
+ * the stage finished and, from Unit 11 on, the competition finished too when it
+ * was the last stage (Detail 8). No auto-start of the next stage (RND-006).
+ */
+async function advanceAfterRoundFinalized(
+  roundId: string,
+  stageId: string,
+  competitionId: string,
+): Promise<void> {
+  const finished = await prisma.round.findUnique({
+    where: { id: roundId },
+    select: { sequence: true, stage: { select: { type: true } } },
+  });
+  if (!finished) return;
+
+  // Both stages auto-advance between their own rounds. The Individual stage does
+  // so by CS-022; the Team stage's round 1 → round 2 transition is Unit 13's
+  // Detail 5, reusing this exact path — the next round goes into preparation and
+  // the controller's start command is still what begins a *stage* (RND-006).
+  // Round 2 is Unit 14's partition collaboration, built 2026-10-09: it installs the
+  // same hook, and because it is the Team stage's last round the `!next` branch below
+  // is where its settle reaches Unit 11's whole-competition finish check.
+  const next = await findNextRoundInStage(stageId, finished.sequence);
+  if (!next) {
+    await finishStageAndMaybeCompetition(stageId, competitionId, roundId);
+    return;
+  }
+
+  const preparationSeconds = next.settings?.preparationSeconds ?? 60;
+  const startedAt = now();
+  await prisma.round.update({
+    where: { id: next.id },
+    data: { status: "PREPARATION", startedAt },
+  });
+  await prisma.competition.update({
+    where: { id: competitionId },
+    data: { status: "PREPARATION" },
+  });
+  await roundRepository.upsertRuntimeState({
+    competitionId,
+    currentStageId: stageId,
+    currentRoundId: next.id,
+    phase: "PREPARATION",
+  });
+
+  // Hand off to the Round module's timer service — the same path the dev
+  // trigger uses. The round-started hook fires when the countdown reaches
+  // zero, completing the loop this unit exists to close.
+  await roundTimerService.startPreparationTimer(
+    next.id,
+    competitionId,
+    stageId,
+    preparationSeconds,
+  );
+}
+
+/**
+ * Close every still-open `RoundParticipation` in one round (Unit 11's "end a
+ * round early", SUB-004). The scoring outcome differs from the timer-expiry path
+ * only in the `submissionType`: `CONTROLLER_END` earns no early bonus, because
+ * `computeEarlyBonus` pays the bonus for a `MANUAL` submit only — so "no bonus"
+ * needs no change in the Scoring module at all.
+ *
+ * Never throws for one participant: a failed finalize is logged and skipped, the
+ * same way `handleRoundEnded` behaves, so one bad row cannot strand the command.
+ * Returns how many participations this call actually finalized.
+ */
+async function closeAllActiveParticipations(input: {
+  roundId: string;
+  submissionType: "CONTROLLER_END" | "TIMEOUT";
+  submittedAtMs: number;
+}): Promise<{ finalizedCount: number }> {
+  const participations = await prisma.roundParticipation.findMany({
+    where: { roundId: input.roundId, state: { in: ["WAITING", "ACTIVE"] } },
+    select: { participantId: true },
+  });
+
+  let finalizedCount = 0;
+  for (const participation of participations) {
+    try {
+      const result = await finalizeParticipation({
+        roundId: input.roundId,
+        participantId: participation.participantId,
+        submissionType: input.submissionType,
+        submittedAtMs: input.submittedAtMs,
+      });
+      if (result.wroteNewAttempt) finalizedCount += 1;
+    } catch (error) {
+      logger.error("gameplay.closeAllActiveParticipations: failed to close a participant", {
+        roundId: input.roundId,
+        participantId: participation.participantId,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return { finalizedCount };
+}
+
+/**
+ * Record that the player navigated away from the answer page during an active
+ * round (Unit 10, "leftAnswerPageCount"). The counter is information-only —
+ * no penalty, no effect on scoring (PAR-005).
+ *
+ * Accepted only while the round is `ACTIVE`; a signal arriving at any other
+ * time (preparation, paused, finished) is a silent no-op so the client does not
+ * have to time the event perfectly. The client is trusted for the *signal* (we
+ * cannot observe page visibility server-side) but never for the *value* — the
+ * count is owned and incremented server-side, never overwritten from the wire.
+ *
+ * Idempotency is the caller's problem: a client that double-fires the event
+ * will see the counter go up by two. The gameplay client debounces at the
+ * source.
+ */
+async function recordLeftAnswerPage(
+  roundId: string,
+  participantId: string,
+): Promise<{ leftAnswerPageCount: number }> {
+  const round = await prisma.round.findUnique({
+    where: { id: roundId },
+    select: { id: true, status: true },
+  });
+  if (!round) {
+    throw new NotFoundError(translate("en", "gameplay.roundNotFound"), {
+      code: "gameplay.roundNotFound",
+    });
+  }
+
+  const participation = await requireParticipation(roundId, participantId);
+
+  if (round.status !== "ACTIVE") {
+    // Not an error — the client cannot perfectly time the visibility event.
+    return { leftAnswerPageCount: participation.leftAnswerPageCount };
+  }
+
+  const updated = await prisma.roundParticipation.update({
+    where: { id: participation.id },
+    data: { leftAnswerPageCount: { increment: 1 } },
+    select: { leftAnswerPageCount: true },
+  });
+  return { leftAnswerPageCount: updated.leftAnswerPageCount };
+}
+
+// Installed at module load: when a team rotation round settles itself (every
+// team's `TeamRoundResult` written), the advance chain here starts the Team
+// stage's round 2 preparation — Unit 13's Detail 5. The rotation service never
+// imports this file, so there is no cycle (invariant 4).
+teamRotationService.installRotationRoundEndedHook((event) =>
+  advanceAfterRoundFinalized(event.roundId, event.stageId, event.competitionId),
+);
+
+// Unit 14: the same hook for the partition round. It is the Team stage's **last**
+// round, so this call is what carries the advance into
+// `finishStageAndMaybeCompetition` → Unit 11's whole-competition finish check
+// (Detail 5). Nothing about that check is re-implemented in Unit 14.
+teamPartitionService.installPartitionRoundEndedHook((event) =>
+  advanceAfterRoundFinalized(event.roundId, event.stageId, event.competitionId),
+);
+
+export const gameplayService = {
+  autosave,
+  getState,
+  getCurrentRound,
+  getMyCompetition,
+  submit,
+  handleRoundEnded,
+  recordLeftAnswerPage,
+  // Unit 11's command surface: the Orchestrator closes a round early through
+  // these two, so the auto-submit/scoring path and the finalize-and-advance
+  // chain stay in exactly one place (spec Context, "End a round early" — reuse
+  // Unit 08's path, do not duplicate it).
+  closeAllActiveParticipations,
+  advanceAfterRoundFinalized,
+  notifyCompetitionFinished,
+};
+
+export type { WorkingGrid };

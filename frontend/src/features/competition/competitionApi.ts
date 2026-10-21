@@ -57,6 +57,14 @@ export interface CompetitionView {
   status: string;
   entryLinkToken: string;
   bigScreenLinkToken: string;
+  /**
+   * The two links as complete, openable URLs, composed by the backend (`shared/links`)
+   * so the rule is written in exactly one place. Empty when the server has no
+   * `PUBLIC_BASE_URL` configured — the UI then says "not configured" rather than showing
+   * a raw token that cannot be opened (report §9).
+   */
+  entryLinkUrl: string;
+  bigScreenLinkUrl: string;
   categories: CategoryView[];
   stages: StageView[];
   scoringConfiguration: {
@@ -76,6 +84,15 @@ export interface PublishResultView {
   publishedAt: string | null;
   entryLinkToken: string;
   bigScreenLinkToken: string;
+  /**
+   * The two links as complete, openable URLs, composed by the backend (`shared/links`)
+   * rather than by this screen: the composition rule is written in exactly one place, so
+   * the publish result and the credential slips cannot drift apart. Empty when the server
+   * has no `PUBLIC_BASE_URL` configured — the UI then says "not configured" instead of
+   * showing a raw token that cannot be opened (report §9a).
+   */
+  entryLinkUrl: string;
+  bigScreenLinkUrl: string;
 }
 
 /** A rejection carrying the HTTP status, the machine code and any structured details. */
@@ -129,7 +146,11 @@ export function createCompetition(input: {
 
 export function updateCompetition(
   id: string,
-  input: { roundSettings?: Record<string, { durationSeconds?: number }> },
+  input: {
+    roundSettings?: Record<string, { durationSeconds?: number }>;
+    /** Editable only before publish (report §6c) — the backend 409s otherwise. */
+    categories?: CategoryInput[];
+  },
 ): Promise<CompetitionView> {
   return request<CompetitionView>(`/api/competitions/${id}`, {
     method: "PATCH",
@@ -140,6 +161,46 @@ export function updateCompetition(
 export function publishCompetition(id: string): Promise<PublishResultView> {
   return request<PublishResultView>(`/api/competitions/${id}/publish`, {
     method: "POST",
+  });
+}
+
+/**
+ * Read one competition with its full structure (Unit 03's read). The setup screen
+ * uses it to reopen an existing competition — which is how a copy lands back on the
+ * setup screen (Unit 15) instead of starting from a blank form.
+ */
+export function fetchCompetition(id: string): Promise<CompetitionView> {
+  return request<CompetitionView>(`/api/competitions/${encodeURIComponent(id)}`, {
+    method: "GET",
+  });
+}
+
+/**
+ * `POST /api/competitions/:id/copy` — Unit 15's deep copy. The server creates a new
+ * `CREATED` competition carrying the source's categories, round settings, scoring
+ * configuration, question sets/questions and judge assignments, and **nothing else**:
+ * no participant, team, account, attempt, answer, result, correction, ranking or
+ * file. The copy therefore has to be published again through the normal flow.
+ * The response is the new competition, in the same shape `createCompetition` returns.
+ */
+export function copyCompetition(id: string): Promise<CompetitionView> {
+  return request<CompetitionView>(
+    `/api/competitions/${encodeURIComponent(id)}/copy`,
+    { method: "POST" },
+  );
+}
+
+/**
+ * `DELETE /api/competitions/:id` — BLD-050's hard delete. Permanent and total: the
+ * competition, its structure, its questions, its participants and their accounts, its
+ * results, rankings, corrections, audit rows and uploaded files all go. Only this
+ * competition's judge *assignments* are removed; the judge list itself is reusable
+ * across competitions and survives. The server accepts it at any status and answers
+ * 204 with no body, hence `void`.
+ */
+export async function deleteCompetition(id: string): Promise<void> {
+  await request<null>(`/api/competitions/${encodeURIComponent(id)}`, {
+    method: "DELETE",
   });
 }
 

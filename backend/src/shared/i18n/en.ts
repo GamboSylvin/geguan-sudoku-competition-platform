@@ -23,6 +23,10 @@ export const en = {
     noSession: "Not signed in",
     sessionExpired: "Your session has ended. Please log in again.",
     deviceTakenOver: "This account was signed in on another device.",
+    // Hole D (2026-10-20). The public entry-link lookup: a token no competition carries.
+    // Deliberately not `invalidCredentials` — nobody has typed a password yet, so saying
+    // "incorrect username or password" here would misdescribe what went wrong.
+    entryLinkUnknown: "This competition link is not valid.",
   },
   competition: {
     // Unit 03. Only a controller may create, edit or publish (ROL-002); the
@@ -36,10 +40,223 @@ export const en = {
       participantsRequired:
         "Every category needs at least one participant.",
       questionsRequired:
-        "Every category needs a question set assigned to both of its Individual rounds.",
+        "Every category needs its questions assigned to every round — both Individual rounds and both Team rounds.",
       judgeRangesRequired:
         "Judge ranges must cover every participant number.",
     },
+  },
+  school: {
+    // BLD-052. The school CRUD surface is controller-only, and a school cannot be
+    // removed while anything still points at it — the guard names which.
+    forbidden: "Only a controller can manage schools.",
+    notFound: "School not found.",
+    nameTaken: "A school with this name already exists in this competition.",
+    hasParticipants: "This school still has participants. Remove them first.",
+    hasTeam: "This school still has a team. Remove it first.",
+  },
+  judge: {
+    // Unit 06. Judge list management and range assignment are controller-only
+    // (ROL-002); the removal guard names the unfinished competition (ROL-010).
+    forbidden: "Only a controller can manage judges.",
+    // Distinct from `forbidden` because it says the opposite thing: `forbidden` is
+    // "you are not a controller", this one is "you are not a judge". `/api/judges/me`
+    // is the judge's own landing, so a controller session hitting it gets this, not
+    // the management guard's message.
+    meRequiresJudgeRole: "Only a judge can view their own assignments.",
+    notFound: "Judge not found.",
+    assignmentNotFound: "Judge assignment not found.",
+    hasActiveAssignment:
+      "This judge is still assigned to an unfinished competition.",
+  },
+  round: {
+    // Unit 07. The dev trigger is controller-only and non-production; the pause
+    // and resume surface will be wired to the controller commands in Unit 11.
+    forbidden: "Only a controller can run this round command.",
+    devOnly: "This trigger is available only outside production.",
+    competitionNotWaiting:
+      "The competition is not waiting to start; the first round cannot be triggered.",
+    stageMissing: "The competition's stage 1 is missing.",
+    roundMissing: "The stage's round 1 is missing.",
+    alreadyActive: "Another round is already running for this competition.",
+    noActiveTimer: "No round timer is running for this competition.",
+  },
+  gameplay: {
+    // Unit 07. Autosave and grid restore are participant-scoped: a participant
+    // reads and writes only their own grid, only while the round is active.
+    forbidden: "You cannot access this round's working grid.",
+    roundNotFound: "Round not found.",
+    notActive: "The round is not active.",
+    notAParticipant: "You are not a participant in this round.",
+  },
+  rotation: {
+    // Unit 13. The team rotation relay: a submit is scoped to the member's own
+    // team and to the question their tablet currently holds (spec Security).
+    notATeamMember: "You are not an active member of a team in this round.",
+    rotationNotStarted: "This team round has not been dealt yet.",
+    roundEnded: "This team round has already ended.",
+    staleHold: "That question has already moved to another teammate.",
+    notARotationRound: "This round is not a team rotation round.",
+  },
+  partition: {
+    // Unit 14. The team partition round (齐心协力): an autosave is scoped to the
+    // member's own row-band, per cell, and only while the round is active.
+    notATeamMember: "You are not an active member of a team in this round.",
+    partitionNotStarted: "This team round has not been dealt yet.",
+    roundEnded: "This team round has already ended.",
+    notAPartitionRound: "This round is not a team partition round.",
+    stalePuzzle: "Your team has already moved on to the next puzzle.",
+    outsideBand: "You can only edit the rows assigned to you.",
+    invalidGrid: "The grid you sent does not match this puzzle.",
+    noBand: "You have no assigned rows in this round.",
+  },
+  scoring: {
+    // Unit 08. The scoring module is invoked server-side only; these strings are
+    // for the few places it surfaces a failure to log.
+    noQuestions: "The round has no questions to score.",
+  },
+  ranking: {
+    // Unit 09. The controller-facing ranking read is controller-only (ROL-002).
+    forbidden: "Only a controller can read a ranking.",
+    notFound: "Ranking not found.",
+  },
+  bigScreen: {
+    // Unit 09. The big screen has no login; its link token is the only gate
+    // (BSC-001). The rejection is generic — it never hints at why the token failed.
+    unauthorized: "This big-screen link is not valid.",
+    // Unit 11: the controller sets the display mode (BSC-002).
+    invalidMode: "This display mode is not supported.",
+  },
+  orchestrator: {
+    // Unit 10. The restart is rejected when the round is not currently running
+    // (spec: restart is allowed only while the round is ACTIVE or PAUSED).
+    roundNotRunning: "The round is not running.",
+    participantNotFound: "The participant is not on this round.",
+    // Unit 11. Every command below is controller-only and writes an AuditLog row.
+    forbidden: "Only a controller can run this command.",
+    competitionClosed:
+      "This competition has already finished or been cancelled; no further command is accepted.",
+    stageNotFound: "The stage is not part of this competition.",
+    stageNotWaiting: "This stage has already started.",
+    stageOutOfSequence: "An earlier stage has not finished yet.",
+    roundNotFound: "Round not found.",
+    roundNotInCompetition: "The round is not part of this competition.",
+    nothingToPause: "There is no running timer to pause.",
+    nothingToResume: "There is no paused timer to resume.",
+    resetNotAllowed: "A finished or cancelled competition cannot be reset.",
+    teamNotFound: "Team not found.",
+    bigScreenForbidden: "A big screen cannot send display commands.",
+  },
+  judgeSupervision: {
+    // Unit 10. Every judge-facing endpoint is JUDGE-only and range-scoped by
+    // Unit 06's authority check. Unit 11 admits the CONTROLLER role on the same
+    // endpoints (spec Detail 6 — not a separate code path), so the message names
+    // both roles.
+    forbidden: "Only a judge or the controller can use this endpoint.",
+    outOfRange: "This participant is outside your assigned range.",
+  },
+  participant: {
+    // Unit 04. Every endpoint is controller-only (ROL-002): this module mints player
+    // logins. The `import.*` keys are the row-level rejection reasons a 422 lists, so
+    // each names the problem plainly beside the row number the API returns. `slips.*`
+    // are the column headers of the generated credential workbook, which prints.
+    forbidden: "Only a controller can manage participants.",
+    notFound: "Participant not found.",
+    import: {
+      noFile: "Choose an Excel file to upload.",
+      notAnExcelFile: "This is not a readable .xlsx file.",
+      emptyFile: "The file has no participant rows.",
+      missingRequiredColumn: "The file is missing a required column.",
+      nameRequired: "The name (姓名) is empty.",
+      schoolRequired: "The school (学校名称) is empty.",
+      // Report 2026-10-19 §6b: this used to read "This group (组别) does not exist",
+      // which reads as "the 组别 COLUMN is missing" rather than "this cell's VALUE
+      // matches no category". The frontend appends the rejected value itself.
+      unknownCategory: "This group does not exist in this competition.",
+      invalidIndividualFlag:
+        "The individual event (个人赛) cell must be 1, 2 or blank.",
+      invalidTeamFlag: "The team event (团队赛) cell must be 1, 2 or blank.",
+      duplicateParticipant:
+        "This participant appears more than once in the file (same name, school and group).",
+      competitionNameMismatch:
+        "The competition name in this file does not match this competition.",
+      noteRowSkipped: "An instruction row was skipped.",
+      notAllowedAfterPublish:
+        "Participants can only be imported while the competition is still being set up. Use the single-participant edit instead.",
+    },
+    edit: {
+      unknownCategory: "This group does not exist in this competition.",
+      unknownSchool: "This school does not exist in this competition.",
+      numberTaken: "Another participant already has this number.",
+    },
+    add: {
+      nameRequired: "A name is required.",
+      schoolRequired: "A school is required.",
+      unknownCategory: "This group does not exist in this competition.",
+      duplicate: "This participant already exists (same name, school and group).",
+    },
+    credentials: {
+      none: "There are no participants to export credentials for.",
+    },
+    slips: {
+      number: "Number",
+      name: "Name",
+      school: "School",
+      category: "Group",
+      username: "Username",
+      password: "Password",
+      entryLink: "Entry link",
+    },
+  },
+  question: {
+    // Unit 05. Every endpoint is controller-only (ROL-002). The `import.*` keys are
+    // the row-level rejection reasons a 422 lists, so each names the problem plainly;
+    // the client shows it beside the row number the API returns.
+    forbidden: "Only a controller can manage questions.",
+    notFound: "Question set not found.",
+    import: {
+      noFile: "Choose an Excel file to upload.",
+      notAnExcelFile: "This is not a readable .xlsx file.",
+      emptyFile: "The file has no question rows.",
+      missingRequiredColumn: "The file is missing a required column.",
+      variantRequired: "The variant (*类目) is empty.",
+      irregularVariantUnsupported:
+        "Irregular (不规则) variant files cannot be imported yet.",
+      unknownVariant: "This variant is not recognized.",
+      invalidPoints: "Points must be a whole number of 1 or more.",
+      invalidGridWidth: "Grid width must be a positive whole number.",
+      invalidGridHeight: "Grid height must be a positive whole number.",
+      unsupportedGridShape: "These grid dimensions cannot form a box partition.",
+      givenColumnMissing: "The given-cells column is missing.",
+      invalidGivenGrid: "The given-cells grid is not a well-formed array.",
+      invalidAnswerGrid: "The answer grid is not a well-formed array.",
+      gridsNotComplementary:
+        "The given cells and the answers do not cover the grid exactly once.",
+      mixedVariants: "One file may only hold a single variant; this file mixes several.",
+    },
+    selection: {
+      notIndividualRound: "Only an Individual round holds a question selection.",
+      locked:
+        "This round's preparation has begun; its question selection can no longer change.",
+      invalidCount: "Select exactly the number of questions this round uses.",
+      duplicateIds: "The same question cannot be selected twice.",
+      notInPool: "One of the selected questions is not in this category's pool.",
+      alreadyAssigned:
+        "One of the selected questions is already assigned to another round. Remove it from that round first.",
+    },
+  },
+  results: {
+    // The results screen, the correction form and the export action are all
+    // controller-only surfaces, so each message names what went wrong plainly.
+    forbidden: "Only a controller can view results, correct a score or export.",
+    competitionNotFound: "Competition not found.",
+    competitionCancelled:
+      "This competition was cancelled; its results are never released.",
+    reasonRequired: "A reason is required to correct a score.",
+    unsupportedTargetType:
+      "Only a participant's score can be corrected; team and school results do not exist yet.",
+    resultNotFound: "There is no result for that participant in that round.",
+    roundNotFound: "That round does not belong to this competition.",
+    invalidScore: "The corrected score must be a whole number of 0 or more.",
   },
 } as const;
 
