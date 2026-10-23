@@ -12,7 +12,10 @@
  *   - **Participant scoping.** A player reads and writes only their own grid
  *     (spec Security Considerations). Every entry point resolves the caller's
  *     `participantId` from the session and rejects the request when the caller
- *     is not a participant in the round.
+ *     is not a participant in the round. One nuance, on the read path only: a
+ *     round still in PREPARATION has no participation row yet, so "is this
+ *     caller a participant" is answered there from the population the round will
+ *     open rows for (`isIndividualParticipantOfRound`), not from the table.
  *   - **Active-round gating.** Autosave is accepted only while the round is
  *     `ACTIVE`. After the timer reaches zero the round flips to `FINISHED` and
  *     further writes are rejected (spec Error Cases). Autosave never triggers
@@ -82,6 +85,34 @@ async function requireParticipation(roundId: string, participantId: string) {
     });
   }
   return participation;
+}
+
+/**
+ * Whether the caller is one of the participants this round will open a
+ * participation row for when it goes ACTIVE — i.e. an `active`, `individualEvent`
+ * participant of the round's own competition. That is exactly the population
+ * `openParticipationsForRound` enumerates (via `round.repository`'s
+ * `listActiveParticipants`), so the two lists can never disagree.
+ *
+ * The read path uses this to answer a PREPARATION round honestly instead of
+ * rejecting it. Creating the row early is **not** an option: `handleRoundEnded`
+ * counts `WAITING` rows as still open, so a row that exists before the round is
+ * playable would stop the competition from advancing past it.
+ */
+async function isIndividualParticipantOfRound(
+  participantId: string,
+  competitionId: string,
+): Promise<boolean> {
+  const participant = await prisma.participant.findFirst({
+    where: {
+      id: participantId,
+      competitionId,
+      active: true,
+      individualEvent: true,
+    },
+    select: { id: true },
+  });
+  return participant !== null;
 }
 
 /**
@@ -162,19 +193,61 @@ async function autosave(
  * timer snapshot — enough for the client to render exactly the state the player
  * left. A player with no participation in the round is rejected; a participant
  * with no live round yet gets an empty grid list and a null timer.
+ *
+ * A round in PREPARATION is a real, renderable state, not a rejection: the client
+ * answers with the countdown and no questions. See the branch inside.
  */
 async function getState(
   roundId: string,
   participantId: string,
 ): Promise<GameplayStatePayload> {
-  const participation = await requireParticipation(roundId, participantId);
-
   const round = await roundRepository.findRoundWithContext(roundId);
   if (!round) {
     throw new NotFoundError(translate("en", "gameplay.roundNotFound"), {
       code: "gameplay.roundNotFound",
     });
   }
+
+  const timer = await roundTimerService.remaining(roundId);
+
+  // A round still counting down has no participation row yet — the rows are opened
+  // at the PREPARATION → ACTIVE transition (BLD-06), and opening them earlier would
+  // strand the competition, since `handleRoundEnded` counts `WAITING` rows as still
+  // open. So the "is this caller a participant" question cannot be answered from that
+  // table here. Answer it from the population the round *will* open rows for instead,
+  // and describe the round honestly: no questions yet (they are dealt at countdown
+  // zero), the server-authoritative preparation timer, and a `WAITING` participation
+  // state. This is the read that let a player who reloaded during the countdown sit on
+  // the waiting screen: the old code rejected with 403 `gameplay.notAParticipant`,
+  // which the client discards, so the countdown never rendered.
+  //
+  // Writes are unaffected: `requireActiveRound` still refuses an autosave before the
+  // round is ACTIVE, so this widens a read only.
+  if (round.status === "PREPARATION") {
+    const eligible = await isIndividualParticipantOfRound(
+      participantId,
+      round.stage.competitionId,
+    );
+    if (!eligible) {
+      throw new ForbiddenError(translate("en", "gameplay.notAParticipant"), {
+        code: "gameplay.notAParticipant",
+      });
+    }
+    return {
+      roundId: round.id,
+      competitionId: round.stage.competitionId,
+      stageId: round.stageId,
+      status: round.status,
+      questions: [],
+      savedGrids: [],
+      timer: timer
+        ? { remainingSeconds: timer.remainingSeconds, totalSeconds: timer.totalSeconds }
+        : null,
+      participationState: "WAITING",
+    };
+  }
+
+  const participation = await requireParticipation(roundId, participantId);
 
   // Scoped to the caller's own category. The `Round` row is shared by every category
   // of the competition, so reading by `roundId` alone returns all `6n` questions and
@@ -194,8 +267,6 @@ async function getState(
   }));
 
   const savedGrids = await repository.listGridsForRound(roundId, participantId);
-
-  const timer = await roundTimerService.remaining(roundId);
 
   return {
     roundId: round.id,

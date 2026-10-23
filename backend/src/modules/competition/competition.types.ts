@@ -52,6 +52,7 @@ export type RoundSettingsPatch = Partial<
     | "teamPointsPerQuestion"
     | "rotationPeriodSeconds"
     | "teamQuestionCount"
+    | "individualQuestionCount"
     | "teamTotalTimeSeconds"
     | "individualTotalWarning"
     | "partitionPuzzleCount"

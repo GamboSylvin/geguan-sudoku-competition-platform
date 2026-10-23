@@ -179,6 +179,7 @@ export async function writeCopy(input: {
                     teamPointsPerQuestion: settings.teamPointsPerQuestion,
                     rotationPeriodSeconds: settings.rotationPeriodSeconds,
                     teamQuestionCount: settings.teamQuestionCount,
+                    individualQuestionCount: settings.individualQuestionCount,
                     teamTotalTimeSeconds: settings.teamTotalTimeSeconds,
                     individualTotalWarning: settings.individualTotalWarning,
                     partitionPuzzleCount: settings.partitionPuzzleCount,

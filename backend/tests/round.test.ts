@@ -607,6 +607,169 @@ describe("RoundParticipation is created by the round itself (regression, 2026-10
 });
 
 /**
+ * Anomaly A1 (full-system sweep, 2026-10-22). A player polling the round state
+ * while it is still counting down got 403 `gameplay.notAParticipant`, because the
+ * participation rows only come into existence at the PREPARATION -> ACTIVE
+ * transition. The tablet swallowed the 403 and stayed on the waiting screen until
+ * a socket tick happened to arrive — the reported "elements felt frozen".
+ *
+ * A countdown is a real, renderable state, so the read now answers it: 200, no
+ * questions, `participationState: "WAITING"`, and the timer the client renders.
+ *
+ * What must **not** change is why the fix widens the read instead of creating the
+ * row early: `handleRoundEnded` counts `WAITING` rows as still open, so a row that
+ * exists before the round is playable would stop the competition advancing past it.
+ * The two assertions below pin both halves — no row during PREPARATION, and the
+ * widening is scoped to this competition's own active individual participants.
+ */
+describe("a participant can read the round state during PREPARATION (regression, A1 2026-10-22)", () => {
+  /** Start stage 1 round 1 and hold it in PREPARATION (long countdown, no flip). */
+  async function startPreparation(ctx: { competitionId: string }): Promise<void> {
+    await authedController(request(app).post("/api/rounds/dev/start-stage1-round1")).send({
+      competitionId: ctx.competitionId,
+    });
+  }
+
+  it("answers 200 with the countdown and no questions, and creates no participation row", async () => {
+    const ctx = await makePublishedCompetition(`A1Prep ${suffix}`, {
+      seedParticipation: false,
+      preparationSeconds: 60,
+      durationSeconds: 60,
+    });
+    const username = `it7-player-a1-${suffix}`;
+    await createAccount(username, "PLAYER", ctx.participantId);
+    const loginRes = await login("player", username);
+    const playerHeaders = {
+      "x-session-token": loginRes.body.token as string,
+      "x-device-id": loginRes.body.deviceId as string,
+    };
+
+    await startPreparation(ctx);
+    const round = await prisma.round.findUniqueOrThrow({ where: { id: ctx.roundId } });
+    expect(round.status).toBe("PREPARATION");
+
+    const state = await request(app)
+      .get(`/api/gameplay/${ctx.roundId}/state`)
+      .set(playerHeaders);
+    expect(state.status).toBe(200);
+    expect(state.body.status).toBe("PREPARATION");
+    expect(state.body.questions).toEqual([]);
+    expect(state.body.savedGrids).toEqual([]);
+    expect(state.body.participationState).toBe("WAITING");
+    expect(state.body.timer?.totalSeconds).toBe(60);
+    expect(state.body.timer?.remainingSeconds).toBeGreaterThan(0);
+    expect(JSON.stringify(state.body)).not.toContain('"solution"');
+
+    // The read must not have created anything: a WAITING row here would be counted
+    // as still open by the round-ended sweep and stall the whole competition.
+    const rows = await prisma.roundParticipation.count({ where: { roundId: ctx.roundId } });
+    expect(rows).toBe(0);
+
+    // Widening the read did not widen the write path.
+    const autosave = await request(app)
+      .post(`/api/gameplay/${ctx.roundId}/autosave`)
+      .set(playerHeaders)
+      .send({ questionId: "00000000-0000-0000-0000-000000000000", grid: [] });
+    expect(autosave.status).toBe(422);
+    expect(autosave.body.error.code).toBe("gameplay.notActive");
+
+    const submit = await request(app)
+      .post(`/api/gameplay/${ctx.roundId}/submit`)
+      .set(playerHeaders)
+      .send({ submissionType: "MANUAL" });
+    expect(submit.status).toBe(422);
+    expect(submit.body.error.code).toBe("gameplay.notActive");
+
+    await roundTimerService.releaseTimer(ctx.roundId).catch(() => undefined);
+  }, 20000);
+
+  it("still rejects a player who is not one of this round's own participants", async () => {
+    const ctx = await makePublishedCompetition(`A1Own ${suffix}`, {
+      seedParticipation: false,
+      preparationSeconds: 60,
+      durationSeconds: 60,
+    });
+    // A second, *other* competition: its player is a real active individual
+    // participant, just not of this round's competition.
+    const other = await makePublishedCompetition(`A1Other ${suffix}`, {
+      seedParticipation: false,
+      preparationSeconds: 60,
+      durationSeconds: 60,
+    });
+    const outsider = `it7-player-a1-out-${suffix}`;
+    await createAccount(outsider, "PLAYER", other.participantId);
+    const loginRes = await login("player", outsider);
+
+    await startPreparation(ctx);
+
+    const state = await request(app)
+      .get(`/api/gameplay/${ctx.roundId}/state`)
+      .set("x-session-token", loginRes.body.token)
+      .set("x-device-id", loginRes.body.deviceId);
+    expect(state.status).toBe(403);
+    expect(state.body.error.code).toBe("gameplay.notAParticipant");
+
+    // A deactivated participant of this very competition is outside too: the
+    // widening answers from exactly the population the round will open rows for.
+    await prisma.participant.update({ where: { id: ctx.participantId }, data: { active: false } });
+    const mine = `it7-player-a1-inact-${suffix}`;
+    await createAccount(mine, "PLAYER", ctx.participantId);
+    const mineRes = await login("player", mine);
+    const deactivated = await request(app)
+      .get(`/api/gameplay/${ctx.roundId}/state`)
+      .set("x-session-token", mineRes.body.token)
+      .set("x-device-id", mineRes.body.deviceId);
+    expect(deactivated.status).toBe(403);
+    expect(deactivated.body.error.code).toBe("gameplay.notAParticipant");
+    await prisma.participant.update({ where: { id: ctx.participantId }, data: { active: true } });
+
+    // Both competitions armed a 60 s preparation timer; release the two, since
+    // this file's suites have a documented history of leaking them.
+    await roundTimerService.releaseTimer(ctx.roundId).catch(() => undefined);
+    await roundTimerService.releaseTimer(other.roundId).catch(() => undefined);
+  }, 20000);
+
+  it("hands the same player the real questions once the countdown reaches zero", async () => {
+    const ctx = await makePublishedCompetition(`A1Flip ${suffix}`, {
+      seedParticipation: false,
+      preparationSeconds: 1,
+      durationSeconds: 60,
+    });
+    const username = `it7-player-a1-flip-${suffix}`;
+    await createAccount(username, "PLAYER", ctx.participantId);
+    const loginRes = await login("player", username);
+    const playerHeaders = {
+      "x-session-token": loginRes.body.token as string,
+      "x-device-id": loginRes.body.deviceId as string,
+    };
+
+    await startPreparation(ctx);
+    await waitFor("an ACTIVE participation row", () =>
+      prisma.roundParticipation.findUnique({
+        where: { roundId_participantId: { roundId: ctx.roundId, participantId: ctx.participantId } },
+      }),
+    );
+
+    const state = await request(app)
+      .get(`/api/gameplay/${ctx.roundId}/state`)
+      .set(playerHeaders);
+    expect(state.status).toBe(200);
+    expect(state.body.status).toBe("ACTIVE");
+    expect(state.body.participationState).toBe("ACTIVE");
+    expect(state.body.questions.length).toBeGreaterThan(0);
+
+    const openRows = await prisma.roundParticipation.count({ where: { roundId: ctx.roundId } });
+    expect(openRows).toBe(1);
+    const waiting = await prisma.roundParticipation.count({
+      where: { roundId: ctx.roundId, state: "WAITING" },
+    });
+    expect(waiting).toBe(0);
+
+    await roundTimerService.releaseTimer(ctx.roundId).catch(() => undefined);
+  }, 20000);
+});
+
+/**
  * A published competition with **two** categories, each with its own participant,
  * its own question set and its own 6 questions per Individual round.
  *

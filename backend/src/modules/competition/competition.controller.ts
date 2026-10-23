@@ -65,6 +65,8 @@ const roundSettingsPatchSchema = z
     teamPointsPerQuestion: z.number().int().min(1).optional(),
     rotationPeriodSeconds: z.number().int().positive().optional(),
     teamQuestionCount: z.number().int().positive().optional(),
+    /** BLD-057: how many puzzles an Individual round selects. Minimum 1 (SCR-012), no ceiling. */
+    individualQuestionCount: z.number().int().positive().optional(),
     teamTotalTimeSeconds: z.number().int().positive().nullable().optional(),
     individualTotalWarning: z.number().int().nonnegative().nullable().optional(),
     partitionPuzzleCount: z.number().int().positive().optional(),

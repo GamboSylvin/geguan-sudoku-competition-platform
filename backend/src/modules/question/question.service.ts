@@ -43,7 +43,7 @@ import type {
   SelectionResultView,
 } from "./question.types";
 
-/** An Individual round uses exactly 6 questions (competition-rules.md §2, BLD-040). */
+/** An Individual round's default question count (BLD-057: the round's own column now). */
 export const ROUND_QUESTION_COUNT = 6;
 
 /** The Team round's default question counts, matching the `RoundSettings` column defaults. */
@@ -61,9 +61,15 @@ const TEAM_PARTITION_PUZZLE_COUNT = 3;
 export function expectedQuestionCount(round: {
   stageType: string;
   sequence: number;
-  settings: { teamQuestionCount: number; partitionPuzzleCount: number } | null;
+  settings: {
+    individualQuestionCount: number;
+    teamQuestionCount: number;
+    partitionPuzzleCount: number;
+  } | null;
 }): number {
-  if (round.stageType === "INDIVIDUAL") return ROUND_QUESTION_COUNT;
+  if (round.stageType === "INDIVIDUAL") {
+    return round.settings?.individualQuestionCount ?? ROUND_QUESTION_COUNT;
+  }
   if (round.sequence === 2) {
     return round.settings?.partitionPuzzleCount ?? TEAM_PARTITION_PUZZLE_COUNT;
   }

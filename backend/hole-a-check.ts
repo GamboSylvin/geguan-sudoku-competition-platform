@@ -64,8 +64,8 @@ async function main() {
     method: "POST",
     headers: controllerAuth,
     body: JSON.stringify({
-      name: `Test trou A ${suffix}`,
-      description: "Une description lisible par l'élève.",
+      name: `Test hole A ${suffix}`,
+      description: "A description readable by the student.",
       categories: [{ code: "G34", name: "三四年级组" }],
     }),
   });
@@ -81,7 +81,7 @@ async function main() {
     body: JSON.stringify({
       name: "张三",
       categoryId,
-      schoolName: `École ${suffix}`,
+      schoolName: `School ${suffix}`,
       individualEvent: true,
       teamEvent: false,
     }),
@@ -110,14 +110,14 @@ async function main() {
   const mine = await fetch(`${BASE}/gameplay/competition`, { headers: playerAuth });
   const mineBody: any = await mine.json();
   expect("5. GET /gameplay/competition", mine.status, 200);
-  expect("5a. competition name", mineBody.competition?.name, `Test trou A ${suffix}`);
-  expect("5b. description carried", mineBody.competition?.description, "Une description lisible par l'élève.");
+  expect("5a. competition name", mineBody.competition?.name, `Test hole A ${suffix}`);
+  expect("5b. description carried", mineBody.competition?.description, "A description readable by the student.");
   expect("5c. competition id", mineBody.competition?.id, competitionId);
   expect("5d. participant name", mineBody.participant?.name, "张三");
   expect("5e. participant number", mineBody.participant?.participantNumber, credential.participantNumber);
   expect("5f. event flags", [mineBody.participant?.individualEvent, mineBody.participant?.teamEvent], [true, false]);
   expect("5g. category", mineBody.category?.name, "三四年级组");
-  expect("5h. school", mineBody.school?.name, `École ${suffix}`);
+  expect("5h. school", mineBody.school?.name, `School ${suffix}`);
 
   // The programme must be the whole schedule in running order, with each round's kind
   // resolved — INDIVIDUAL 1/2 individual, TEAM 1 rotation, TEAM 2 partition (BLD-40).
@@ -186,7 +186,7 @@ main()
   .finally(async () => {
     // Clean up what this check created, so re-running it does not pile rows up.
     try {
-      const comps = await prisma.competition.findMany({ where: { name: { startsWith: "Test trou A" } }, select: { id: true } });
+      const comps = await prisma.competition.findMany({ where: { name: { startsWith: "Test hole A" } }, select: { id: true } });
       await prisma.competition.deleteMany({ where: { id: { in: comps.map((c) => c.id) } } });
       await prisma.account.deleteMany({ where: { username } });
       say("cleanup done");

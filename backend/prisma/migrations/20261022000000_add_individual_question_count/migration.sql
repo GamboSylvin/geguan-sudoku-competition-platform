@@ -1,0 +1,25 @@
+-- BLD-057 (2026-10-22): make the Individual round's question count a per-round
+-- value the controller can set, instead of a constant hard-coded in two places.
+--
+-- Before this, the number of puzzles an Individual round selects was `6`, written
+-- out as a constant in `competition.service.ts` (`INDIVIDUAL_ROUND_QUESTION_COUNT`)
+-- and again, independently, in the frontend's `CompetitionSetupPage.tsx`
+-- (`roundQuestionCount`). Both Team rounds already read their own column
+-- (`teamQuestionCount` default 10, `partitionPuzzleCount` default 3) and were
+-- therefore editable through `PATCH /api/competitions/:id`; the Individual round
+-- was not, because it had no column at all. The project owner hit exactly that when
+-- trying to set up a quick test competition and asked for the number to become
+-- editable — kept as a default, no longer as a law.
+--
+-- The default is 6, which is the value every existing round already behaves as, so
+-- every `RoundSettings` row written by this migration keeps the tree's verified
+-- behaviour byte for byte. This revises SUB-01 [C] and BLD-040's "exactly 6
+-- questions per Individual round" to "the round's configured count, 6 by default" —
+-- recorded in the decision register as BLD-057 rather than silently overridden.
+--
+-- Purely additive: one new column with a server default, no data rewritten, no
+-- index, no constraint changed. Hand-written to match what `prisma migrate dev`
+-- emits, as every migration in this folder is.
+
+-- AlterTable
+ALTER TABLE "RoundSettings" ADD COLUMN "individualQuestionCount" INTEGER NOT NULL DEFAULT 6;

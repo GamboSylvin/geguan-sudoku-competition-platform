@@ -20,6 +20,8 @@ export interface RoundSettingsView {
   teamPointsPerQuestion: number;
   rotationPeriodSeconds: number;
   teamQuestionCount: number;
+  /** BLD-057: how many puzzles an Individual round selects (6 by default). */
+  individualQuestionCount: number;
   teamTotalTimeSeconds: number | null;
   individualTotalWarning: number | null;
   partitionPuzzleCount: number;
@@ -147,7 +149,15 @@ export function createCompetition(input: {
 export function updateCompetition(
   id: string,
   input: {
-    roundSettings?: Record<string, { durationSeconds?: number }>;
+    roundSettings?: Record<
+      string,
+      {
+        durationSeconds?: number;
+        individualQuestionCount?: number;
+        teamQuestionCount?: number;
+        partitionPuzzleCount?: number;
+      }
+    >;
     /** Editable only before publish (report §6c) — the backend 409s otherwise. */
     categories?: CategoryInput[];
   },

@@ -37,7 +37,7 @@ Stack, for context: React 19.2.7, react-router-dom 7.18.1, Vite 8.1.1, plain Jav
 This is the heart of the report. This 61-line block is **the entirety** of the repository's non-Tailwind CSS. It can be copied as-is:
 
 ```css
-@import "tailwindcss";   /* uniquement si le projet cible est en Tailwind v4 */
+@import "tailwindcss";   /* only if the target project is on Tailwind v4 */
 
 body {
   margin: 0;
@@ -201,13 +201,13 @@ with internal separators `divide-y divide-white/5`, and `border-yellow-50/20` in
 ### 3.6 Buttons — exact recipes
 
 ```
-Primaire   : px-3 py-1.5 bg-indigo-600 text-white rounded text-xs sm:text-sm hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed
-Primaire L : px-4 sm:px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs sm:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed
-Succès     : bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm sm:text-base font-medium transition-colors
-Danger     : bg-red-600 hover:bg-red-500 text-white rounded-lg / rounded text-sm
-Annuler    : px-4 py-2 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300
-Contour    : px-5 py-2 border border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium
-Icône seule: p-2 rounded-lg hover:bg-white/10 transition-colors   (sur fond coloré)
+Primary   : px-3 py-1.5 bg-indigo-600 text-white rounded text-xs sm:text-sm hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed
+Primary L : px-4 sm:px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs sm:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed
+Success   : bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm sm:text-base font-medium transition-colors
+Danger    : bg-red-600 hover:bg-red-500 text-white rounded-lg / rounded text-sm
+Cancel    : px-4 py-2 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300
+Outline   : px-5 py-2 border border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium
+Icon only : p-2 rounded-lg hover:bg-white/10 transition-colors   (on a coloured background)
 ```
 
 `disabled:opacity-50` appears 18 times — **it is the single disabling convention** (sometimes completed by `disabled:cursor-not-allowed`). No button uses `disabled:bg-gray-300`.
@@ -253,7 +253,7 @@ General formula: `px-2 py-0.5 rounded text-xs font-medium` + a colour pair. **Tw
   { PENDING/NOT_STARTED/WAITING: 'bg-gray-500',
     IN_PROGRESS/RUNNING: 'bg-green-500',
     PAUSED: 'bg-yellow-500',
-    FINISHED: 'bg-red-500' (RankingView) | 'bg-blue-500' (les autres) }
+    FINISHED: 'bg-red-500' (RankingView) | 'bg-blue-500' (the others) }
   ```
   ⚠️ **Real inconsistency in the repository**: `FINISHED` is red in `RankingView` and blue in `RoundRankingView`/`DisplayStageRankingView`. In the target project, **pick a single value** (blue recommended, it is the most frequent) and apply it everywhere.
 - Dark dots of the judge header (`JudgeControlPage.jsx:135-14`): solid hue 600 — `bg-yellow-600` (ready to start), `bg-green-600` (running), `bg-orange-600` (paused), `bg-gray-600` (other).

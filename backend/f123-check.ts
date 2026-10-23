@@ -99,7 +99,7 @@ async function main() {
     body: JSON.stringify({
       name: "张三",
       categoryId: catAId,
-      schoolName: `École ${suffix}`,
+      schoolName: `School ${suffix}`,
       individualEvent: true,
       teamEvent: false,
     }),
@@ -113,7 +113,7 @@ async function main() {
   const judgeCreated = await fetch(`${API}/judges`, {
     method: "POST",
     headers: controllerAuth,
-    body: JSON.stringify({ name: `Juge ${suffix}` }),
+    body: JSON.stringify({ name: `Judge ${suffix}` }),
   });
   const judgeBody: any = await judgeCreated.json();
   expect("5. judge created", judgeCreated.status, 201);

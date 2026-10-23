@@ -47,8 +47,9 @@ function stageRoundLabel(
 
 /**
  * How many questions a round's selection must hold. Not a single constant: an Individual
- * round uses 6 (BLD-040 revised 2026-10-19 made every round selectable), the Team rotation
- * relay uses its own `teamQuestionCount`, and the Team partition round its
+ * round reads its own `individualQuestionCount` (BLD-057 — it was hard-coded to 6 before,
+ * which is what stopped the controller setting up a short test competition), the Team
+ * rotation relay its `teamQuestionCount`, and the Team partition round its
  * `partitionPuzzleCount`. The defaults mirror the `RoundSettings` column defaults, and are
  * the fallback for a round whose settings row has not been created yet.
  */
@@ -57,13 +58,28 @@ const TEAM_ROTATION_QUESTION_COUNT = 10;
 const TEAM_PARTITION_PUZZLE_COUNT = 3;
 
 function roundQuestionCount(stage: StageView, round: RoundView): number {
-  if (stage.type === "INDIVIDUAL") return INDIVIDUAL_ROUND_QUESTION_COUNT;
+  if (stage.type === "INDIVIDUAL") {
+    return round.settings?.individualQuestionCount ?? INDIVIDUAL_ROUND_QUESTION_COUNT;
+  }
   // Team round 2 is the partition round (齐心协力); Team round 1 is the rotation relay —
   // the same mapping the backend's `app.ts` uses to pick the runtime.
   if (round.sequence === 2) {
     return round.settings?.partitionPuzzleCount ?? TEAM_PARTITION_PUZZLE_COUNT;
   }
   return round.settings?.teamQuestionCount ?? TEAM_ROTATION_QUESTION_COUNT;
+}
+
+/**
+ * Which `RoundSettings` column a round's count lives in. One field name rather than
+ * three branches at every edit site, so the count input cannot be wired to the wrong
+ * column for one of the three round kinds.
+ */
+function countFieldFor(
+  stage: StageView,
+  round: RoundView,
+): "individualQuestionCount" | "teamQuestionCount" | "partitionPuzzleCount" {
+  if (stage.type === "INDIVIDUAL") return "individualQuestionCount";
+  return round.sequence === 2 ? "partitionPuzzleCount" : "teamQuestionCount";
 }
 
 /**
@@ -152,6 +168,14 @@ export function CompetitionSetupPage() {
   const [busy, setBusy] = useState(false);
 
   const [durationEdits, setDurationEdits] = useState<Record<string, number>>({});
+  /**
+   * BLD-057: the per-round selection size being edited, keyed by round id. Only the
+   * Individual round had no way in — its count was a constant on both sides, so the
+   * controller setting up a short test competition was stuck at 6. The two Team counts
+   * were already stored per round and patchable through the API, but this screen never
+   * offered a field for them either, so all three are editable from here now.
+   */
+  const [countEdits, setCountEdits] = useState<Record<string, number>>({});
   const [savedRound, setSavedRound] = useState<string | null>(null);
 
   /**
@@ -259,15 +283,30 @@ export function CompetitionSetupPage() {
     }
   }
 
-  async function onSaveRound(roundId: string): Promise<void> {
+  async function onSaveRound(
+    stage: StageView,
+    round: RoundView,
+  ): Promise<void> {
     if (!competition) return;
-    const value = durationEdits[roundId];
-    if (value === undefined) return;
+    const roundId = round.id;
+    // Either field alone is a reason to save: the controller may change the count
+    // without touching the duration (BLD-057), and the reverse was already true.
+    const duration = durationEdits[roundId];
+    const count = countEdits[roundId];
+    if (duration === undefined && count === undefined) return;
+    const patch: {
+      durationSeconds?: number;
+      individualQuestionCount?: number;
+      teamQuestionCount?: number;
+      partitionPuzzleCount?: number;
+    } = {};
+    if (duration !== undefined) patch.durationSeconds = duration;
+    if (count !== undefined) patch[countFieldFor(stage, round)] = count;
     setError(null);
     setBusy(true);
     try {
       const updated = await updateCompetition(competition.id, {
-        roundSettings: { [roundId]: { durationSeconds: value } },
+        roundSettings: { [roundId]: patch },
       });
       setCompetition(updated);
       setSavedRound(roundId);
@@ -537,10 +576,31 @@ export function CompetitionSetupPage() {
                         }
                       />
                     </label>
+                    {/* BLD-057: the round's own selection size, editable like its duration.
+                        The panel the controller picks questions in reads this same number,
+                        so changing it here changes how many must be assigned there too. */}
+                    <label className="flex items-center gap-2">
+                      {t("competition.roundQuestionCount")}
+                      <input
+                        type="number"
+                        min={1}
+                        className="w-20 rounded border border-gray-300 px-2 py-1 tabular-nums text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        aria-label={t("competition.roundQuestionCount")}
+                        value={
+                          countEdits[round.id] ?? roundQuestionCount(stage, round)
+                        }
+                        onChange={(e) =>
+                          setCountEdits((current) => ({
+                            ...current,
+                            [round.id]: Number(e.target.value),
+                          }))
+                        }
+                      />
+                    </label>
                     <button
                       type="button"
                       className="rounded bg-indigo-600 px-3 py-1.5 text-xs text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
-                      onClick={() => onSaveRound(round.id)}
+                      onClick={() => onSaveRound(stage, round)}
                     >
                       {t("competition.saveRound")}
                     </button>
