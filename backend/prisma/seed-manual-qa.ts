@@ -45,14 +45,21 @@ const CATEGORIES = [
 const SCHOOLS_PER_CATEGORY = ["QA School Alpha", "QA School Beta"];
 const PLAYERS_PER_SCHOOL = 2;
 
-// Team-stage settings (Units 13/14). A pool bigger than either round's draw
-// count so the draw is a real draw, not a forced duplicate (team-partition
-// .test.ts's own comment on its POOL_SIZE). Rotation period and both rounds'
-// durations are shortened well below their 60s/1800s schema defaults purely so
-// a human tester can see a rotation happen and a round finish without waiting
-// — this is a QA-speed setting, not a claim about the real event's timing.
-const TEAM_POOL_SIZE = 8;
+// Team-stage settings (Units 13/14). Rotation period and both rounds' durations
+// are shortened well below their 60s/1800s schema defaults purely so a human
+// tester can see a rotation happen and a round finish without waiting — this is
+// a QA-speed setting, not a claim about the real event's timing.
+//
+// Since BLD-040's 2026-10-19 revision, the publish-readiness check requires each
+// Team round to have its **own** question selection assigned via `roundId`, the
+// same as an Individual round — a category-wide unassigned pool (`roundId: null`)
+// no longer satisfies it, even though `team-rotation.repository.ts` still falls
+// back to that pool at runtime if a round has nothing assigned. So this seed
+// assigns `TEAM_QUESTION_COUNT` questions straight to the rotation round and
+// `PARTITION_PUZZLE_COUNT` to the partition round, matching
+// `roundQuestionTarget()` exactly, instead of leaving them in the pool.
 const TEAM_QUESTION_COUNT = 6;
+const PARTITION_PUZZLE_COUNT = 3;
 const TEAM_ROTATION_PERIOD_SECONDS = 20;
 const TEAM_ROUND_DURATION_SECONDS = 900;
 const PARTITION_ROUND_DURATION_SECONDS = 900;
@@ -148,6 +155,12 @@ async function main(): Promise<void> {
 
   const individualStage = competition.stages.find((s) => s.type === "INDIVIDUAL");
   const individualRoundIds = (individualStage?.rounds ?? []).map((r) => r.id);
+  // Resolved here, before the per-category question seeding below, because both
+  // Team rounds now need their own assigned questions too (BLD-040, 2026-10-19) —
+  // `Round` rows are per-competition, so this is looked up once, not per category.
+  const teamStageForQuestions = competition.stages.find((s) => s.type === "TEAM");
+  const teamRound1Id = teamStageForQuestions?.rounds.find((r) => r.sequence === 1)?.id ?? null;
+  const teamRound2Id = teamStageForQuestions?.rounds.find((r) => r.sequence === 2)?.id ?? null;
 
   let participantNumber = 0;
   const playerLines: string[] = [];
@@ -235,21 +248,38 @@ async function main(): Promise<void> {
       }
     }
 
-    // The team pool (BLD-040: a team round never sets `Question.roundId`). Both
-    // Team-stage rounds draw from this same per-category pool. Sequence numbers
-    // start at 1000 to stay clear of the Individual rounds' 1-12 above — the
-    // `@@unique([questionSetId, sequence])` constraint is per question set, not
-    // per round, so a collision here would fail the seed outright.
-    for (let q = 0; q < TEAM_POOL_SIZE; q += 1) {
-      await prisma.question.create({
-        data: {
-          questionSetId: questionSet.id,
-          roundId: null,
-          sequence: 1000 + q,
-          points: 10,
-          ...placeholderGrid(q),
-        },
-      });
+    // Each Team round's own selection (BLD-040, revised 2026-10-19): the
+    // publish-readiness check counts questions by `roundId`, so these must be
+    // assigned to the round, not left in an unassigned category pool. Sequence
+    // numbers start at 1000/2000 to stay clear of the Individual rounds' 1-12
+    // above — the `@@unique([questionSetId, sequence])` constraint is per
+    // question set, not per round, so a collision here would fail the seed
+    // outright.
+    if (teamRound1Id) {
+      for (let q = 0; q < TEAM_QUESTION_COUNT; q += 1) {
+        await prisma.question.create({
+          data: {
+            questionSetId: questionSet.id,
+            roundId: teamRound1Id,
+            sequence: 1000 + q,
+            points: 10,
+            ...placeholderGrid(q),
+          },
+        });
+      }
+    }
+    if (teamRound2Id) {
+      for (let q = 0; q < PARTITION_PUZZLE_COUNT; q += 1) {
+        await prisma.question.create({
+          data: {
+            questionSetId: questionSet.id,
+            roundId: teamRound2Id,
+            sequence: 2000 + q,
+            points: 10,
+            ...placeholderGrid(q),
+          },
+        });
+      }
     }
   }
 

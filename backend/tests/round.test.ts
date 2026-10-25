@@ -1,4 +1,5 @@
 import request from "supertest";
+import type { Prisma } from "@prisma/client";
 import { createApp } from "../src/app";
 import { prisma, disconnectPrisma } from "../src/infra/prisma";
 import { disconnectRedis } from "../src/infra/redis";
@@ -78,6 +79,11 @@ function login(role: "controller" | "judge" | "player", username: string) {
  *     itself through the real timer path.
  *   - `preparationSeconds` / `durationSeconds` — shorten the two timers so a
  *     test can watch a whole round start *and* end in a couple of seconds.
+ *   - `solutionShape` (default `"flat"`) — `"matrix"` seeds `solution` as the
+ *     row-major `number[][]` the real Excel importer writes (`question-parse.ts`'s
+ *     `mergeGrids`), instead of the already-flat array every other suite uses.
+ *     Needed for the A2 regression below: the bug (I-53) only reproduces when the
+ *     stored shape is a matrix, which `startingGrid.map(...)` here never was.
  */
 async function makePublishedCompetition(
   name: string,
@@ -85,9 +91,10 @@ async function makePublishedCompetition(
     seedParticipation?: boolean;
     preparationSeconds?: number;
     durationSeconds?: number;
+    solutionShape?: "flat" | "matrix";
   } = {},
 ) {
-  const { seedParticipation = true, preparationSeconds, durationSeconds } = options;
+  const { seedParticipation = true, preparationSeconds, durationSeconds, solutionShape = "flat" } = options;
   const competition = await competitionService.createCompetition({
     name,
     categories: [{ code: "U8", name: "Under 8" }],
@@ -132,6 +139,19 @@ async function makePublishedCompetition(
     null, null, null, null,
     4, null, null, 1,
   ];
+  const flatSolution = startingGrid.map((v) => v ?? 1);
+  // `solutionShape: "matrix"` reproduces exactly what the real Excel importer writes
+  // (`question-parse.ts`'s `mergeGrids`, row-major `number[][]`) — the shape that
+  // exposed I-53 (anomaly A2), which every other suite's flat seed cannot reproduce.
+  const solution: Prisma.InputJsonValue =
+    solutionShape === "matrix"
+      ? [
+          flatSolution.slice(0, 4),
+          flatSolution.slice(4, 8),
+          flatSolution.slice(8, 12),
+          flatSolution.slice(12, 16),
+        ]
+      : flatSolution;
   await seedReadinessQuestions(prisma, {
     questionSetId: questionSet.id,
     stages: full.stages,
@@ -140,7 +160,7 @@ async function makePublishedCompetition(
       gridColumns: 4,
       regions: [[0, 1, 4, 5]],
       startingGrid,
-      solution: startingGrid.map((v) => v ?? 1),
+      solution,
     },
   });
 
@@ -342,7 +362,10 @@ describe("autosave (spec Implementation Detail 4, Error Cases)", () => {
     const res = await authedController(
       request(app).post(`/api/gameplay/${ctx.roundId}/autosave`),
     ).send({ questionId: question.id, grid: [1, 2, 3, 4] });
-    expect(res.status).toBe(401); // requireParticipant rejects non-PLAYER roles
+    // 403, not 401 (fixed, anomaly S2 2026-10-22): a valid session with the wrong
+    // role is Forbidden, not Unauthorized — the session itself is fine.
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe("gameplay.forbidden");
   });
 });
 
@@ -604,6 +627,83 @@ describe("RoundParticipation is created by the round itself (regression, 2026-10
     const round = await prisma.round.findUniqueOrThrow({ where: { id: ctx.roundId } });
     expect(round.status).toBe("FINISHED");
   }, 25000);
+});
+
+/**
+ * Anomaly A2 / I-53 (full-system sweep, 2026-10-22-23). Every individually submitted
+ * correct answer scored 0, because `Question.solution` is stored as a row-major matrix
+ * (`number[][]`, the real Excel importer's shape — `question-parse.ts`'s `mergeGrids`)
+ * while the scoring path cast it straight to a flat array instead of flattening it, so
+ * `scoring.service.ts`'s `gridsEqual` compared a 16-length submission against a
+ * 4-length "solution" and always returned false. Fixed by routing the cast through the
+ * shared `flattenStoredGrid` (`grid-shape.ts`, extracted from the one place that was
+ * already correct, `team-partition.repository.ts`) in both `gameplay.service.ts` and
+ * `team-rotation.repository.ts`. This suite only covers the Individual path; the
+ * rotation path's matrix-seeded case lives in `team-rotation.test.ts`.
+ *
+ * `solutionShape: "matrix"` is the whole point — every other test in this file (and in
+ * `scoring.test.ts`, `ranking.test.ts`, `judge-supervision.test.ts`,
+ * `orchestrator-commands.test.ts`, `results.test.ts`) seeds an already-flat solution,
+ * which is exactly why this defect shipped with a fully green suite.
+ */
+describe("a correct submit scores the real points, not 0 (regression, A2/I-53 2026-10-22)", () => {
+  it("scores every question correctly when the stored solution is a matrix", async () => {
+    const ctx = await makePublishedCompetition(`A2Matrix ${suffix}`, {
+      seedParticipation: false,
+      preparationSeconds: 1,
+      durationSeconds: 60,
+      solutionShape: "matrix",
+    });
+    const username = `it7-player-a2-${suffix}`;
+    await createAccount(username, "PLAYER", ctx.participantId);
+    const loginRes = await login("player", username);
+    const playerHeaders = {
+      "x-session-token": loginRes.body.token as string,
+      "x-device-id": loginRes.body.deviceId as string,
+    };
+
+    await authedController(request(app).post("/api/rounds/dev/start-stage1-round1")).send({
+      competitionId: ctx.competitionId,
+    });
+    await waitFor("an ACTIVE participation row", () =>
+      prisma.roundParticipation.findUnique({
+        where: { roundId_participantId: { roundId: ctx.roundId, participantId: ctx.participantId } },
+      }),
+    );
+
+    // seedReadinessQuestions creates 6 identical-shape questions for an Individual
+    // round (questionsForRound's fixed count) — the real correct grid, matching the
+    // matrix solution flattened, submitted for every one of them.
+    const questions = await prisma.question.findMany({
+      where: { roundId: ctx.roundId },
+      orderBy: { sequence: "asc" },
+    });
+    expect(questions.length).toBe(6);
+    const correctGrid: (number | null)[] = [1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1, 1, 4, 1, 1, 1];
+    for (const question of questions) {
+      const autosave = await request(app)
+        .post(`/api/gameplay/${ctx.roundId}/autosave`)
+        .set(playerHeaders)
+        .send({ questionId: question.id, grid: correctGrid });
+      expect(autosave.status).toBe(200);
+    }
+
+    const submit = await request(app)
+      .post(`/api/gameplay/${ctx.roundId}/submit`)
+      .set(playerHeaders)
+      .send({ submissionType: "MANUAL" });
+    expect(submit.status).toBe(200);
+
+    const result = await prisma.individualRoundResult.findFirstOrThrow({
+      where: { roundId: ctx.roundId, participantId: ctx.participantId },
+    });
+    // 6 questions x 10 points (seedReadinessQuestions' fixed `points: 10`) — the
+    // pre-fix value was 0 for every one of them regardless of correctness.
+    expect(result.score).toBe(60);
+    expect(result.totalScore).toBeGreaterThan(0);
+
+    await roundTimerService.releaseTimer(ctx.roundId).catch(() => undefined);
+  }, 20000);
 });
 
 /**

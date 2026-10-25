@@ -536,7 +536,10 @@ describe("submit rejection cases (acceptance criterion 7)", () => {
     const res = await authedController(
       request(app).post(`/api/gameplay/${ctx.roundId}/submit`),
     );
-    expect(res.status).toBe(401); // requireParticipant rejects non-PLAYER roles
+    // 403, not 401 (fixed, anomaly S2 2026-10-22): a valid session with the wrong
+    // role is Forbidden, not Unauthorized — the session itself is fine.
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe("gameplay.forbidden");
   });
 
   it("rejects a submit on a round that has not started", async () => {

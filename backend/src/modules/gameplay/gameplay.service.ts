@@ -40,6 +40,7 @@ import * as roundRepository from "../round/round.repository";
 import { roundTimerService } from "../round/round-timer.service";
 import { scoringService } from "../scoring/scoring.service";
 import * as repository from "./gameplay.repository";
+import { flattenStoredGrid } from "./grid-shape";
 import { teamRotationService } from "./team-rotation.service";
 import { teamPartitionService } from "./team-partition.service";
 import type {
@@ -600,7 +601,7 @@ async function finalizeParticipation(input: {
     questions: round.questions.map((q) => ({
       id: q.id,
       points: q.points,
-      solution: Array.isArray(q.solution) ? (q.solution as (number | null)[]) : [],
+      solution: flattenStoredGrid(q.solution, q.gridRows, q.gridColumns),
     })),
     gridsByQuestionId,
   });

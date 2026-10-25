@@ -1,4 +1,5 @@
 import request from "supertest";
+import type { Prisma } from "@prisma/client";
 import { createApp } from "../src/app";
 import { prisma, disconnectPrisma } from "../src/infra/prisma";
 import { disconnectRedis } from "../src/infra/redis";
@@ -129,7 +130,11 @@ function loginPlayer(username: string) {
     .send({ username, password: PASSWORD });
 }
 
-async function seedTeamCompetition(name: string): Promise<SeededTeamCompetition> {
+async function seedTeamCompetition(
+  name: string,
+  options: { solutionShape?: "flat" | "matrix" } = {},
+): Promise<SeededTeamCompetition> {
+  const { solutionShape = "flat" } = options;
   const competition = await competitionService.createCompetition({
     name,
     categories: [{ code: "U8", name: "Under 8" }],
@@ -218,6 +223,14 @@ async function seedTeamCompetition(name: string): Promise<SeededTeamCompetition>
     where: { id: competition.id },
     include: { stages: { include: { rounds: { include: { settings: true } } } } },
   });
+  // `solutionShape: "matrix"` reproduces the real Excel importer's row-major
+  // `number[][]` shape (`question-parse.ts`'s `mergeGrids`) instead of the already-flat
+  // array this file otherwise seeds — the shape that exposed anomaly A2 / I-53, where
+  // `team-rotation.repository.ts` cast the stored solution instead of flattening it.
+  const solution: Prisma.InputJsonValue =
+    solutionShape === "matrix"
+      ? [SOLUTION.slice(0, 4), SOLUTION.slice(4, 8), SOLUTION.slice(8, 12), SOLUTION.slice(12, 16)]
+      : SOLUTION;
   await seedReadinessQuestions(prisma, {
     questionSetId: questionSet.id,
     stages: reloaded.stages,
@@ -226,7 +239,7 @@ async function seedTeamCompetition(name: string): Promise<SeededTeamCompetition>
       gridColumns: GRID_SIZE,
       regions: [[0, 1, 4, 5]],
       startingGrid: STARTING_GRID,
-      solution: SOLUTION,
+      solution,
     },
   });
 
@@ -669,6 +682,31 @@ describe("submit and immediate check (acceptance criteria 3, 4)", () => {
       where: { roundId: ctx.teamRound1Id },
     });
     expect(results).toHaveLength(0);
+  });
+
+  /**
+   * Regression, anomaly A2 / I-53 (full-system sweep, 2026-10-22-23). Every other test
+   * in this file seeds `Question.solution` as an already-flat array; the real Excel
+   * importer writes a row-major matrix (`question-parse.ts`'s `mergeGrids`), and
+   * `team-rotation.repository.ts` used to cast that matrix straight to a flat array
+   * instead of flattening it, so the length check inside `scoring.service.ts`'s
+   * `gridsEqual` always failed and a correct team submit was scored as wrong. Fixed by
+   * routing the solution through the shared `flattenStoredGrid` (`grid-shape.ts`).
+   */
+  it("a correct submit still scores correctly when the stored solution is a matrix", async () => {
+    const ctx = await seedTeamCompetition(`CorrectMatrix ${suffix}`, { solutionShape: "matrix" });
+    const sessions = await loginTeam(ctx, "correctmatrix");
+    await startTeamRound(ctx);
+
+    const before = await loadState(ctx.teamRound1Id, ctx.teamId);
+    const session = sessions[0]!;
+    const held = before.holds[0]!.question!.id;
+
+    const res = await submitRotation(session, ctx.teamRound1Id, held, SOLUTION);
+    expect(res.status).toBe(200);
+    expect(res.body.correct).toBe(true);
+    expect(res.body.correctCount).toBe(1);
+    expect(res.body.teamScore).toBe(10); // 1 × teamPointsPerQuestion — was 0 before the fix
   });
 
   it("an incorrect submit changes no score and leaves the question circulating", async () => {
