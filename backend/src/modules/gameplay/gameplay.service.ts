@@ -173,6 +173,15 @@ async function requireQuestionInRound(
  * Autosave the player's working grid for one question. Called roughly twice per
  * second while the player edits (spec Implementation Detail 4). Never calls
  * into scoring (invariant 7).
+ *
+ * I-54 (2026-10-26): the round can still be `ACTIVE` for other players while
+ * *this* participant has already submitted (manually or on timeout) — the round
+ * ends for everyone together, not per player. A late autosave that was already
+ * in flight when they submitted must not be accepted once their own
+ * `RoundParticipation.state` has left `ACTIVE`: it would silently rewrite a grid
+ * that no longer affects anything, which is confusing to debug and masks the
+ * race rather than closing it. Rejected the same way a round-ended write is
+ * (422 `gameplay.notActive`).
  */
 async function autosave(
   roundId: string,
@@ -181,6 +190,12 @@ async function autosave(
 ): Promise<{ savedAtMs: number }> {
   await requireActiveRound(roundId);
   const participation = await requireParticipation(roundId, participantId);
+  if (participation.state !== "ACTIVE") {
+    throw new UnprocessableEntityError(translate("en", "gameplay.notActive"), {
+      code: "gameplay.notActive",
+      details: { reason: "participantAlreadySubmitted" },
+    });
+  }
   await requireQuestionInRound(roundId, input.questionId, participation.categoryId);
 
   const savedAtMs = nowMs();

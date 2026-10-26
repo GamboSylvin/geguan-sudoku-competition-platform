@@ -198,12 +198,16 @@ async function makePublishedCompetition(
   if (seedParticipation) {
     // The pre-fix pattern: the round never created a participation row, so the
     // test had to seed the one its player would be scoped to. The regression
-    // tests below deliberately omit this.
+    // tests below deliberately omit this. `state: "ACTIVE"` matches what
+    // `openParticipationsForRound` actually writes once a round goes ACTIVE
+    // (I-54, 2026-10-26) — the schema's own `WAITING` default is only honest
+    // before the round starts, and autosave now rejects anything but `ACTIVE`.
     await prisma.roundParticipation.create({
       data: {
         roundId: round1.id,
         participantId: participant.id,
         categoryId: category.id,
+        state: "ACTIVE",
       },
     });
   }
@@ -567,6 +571,60 @@ describe("RoundParticipation is created by the round itself (regression, 2026-10
       (s) => s.questionId === question.id,
     );
     expect(saved?.grid).toEqual(grid);
+  }, 20000);
+
+  it("rejects a late autosave that arrives after this participant already submitted (I-54, 2026-10-26)", async () => {
+    const ctx = await makePublishedCompetition(`I54LateAutosave ${suffix}`, {
+      seedParticipation: false,
+      preparationSeconds: 1,
+      durationSeconds: 60,
+    });
+    const username = `it7-player-i54-${suffix}`;
+    await createAccount(username, "PLAYER", ctx.participantId);
+    const loginRes = await login("player", username);
+
+    await authedController(request(app).post("/api/rounds/dev/start-stage1-round1")).send({
+      competitionId: ctx.competitionId,
+    });
+    await waitFor("an ACTIVE participation row", () =>
+      prisma.roundParticipation.findUnique({
+        where: { roundId_participantId: { roundId: ctx.roundId, participantId: ctx.participantId } },
+      }),
+    );
+
+    const question = await prisma.question.findFirstOrThrow({
+      where: { roundId: ctx.roundId },
+      orderBy: { sequence: "asc" },
+    });
+    const grid: (number | null)[] = [
+      1, 2, 3, 4,
+      null, null, null, null,
+      null, null, null, null,
+      4, 3, 2, 1,
+    ];
+
+    const submit = await request(app)
+      .post(`/api/gameplay/${ctx.roundId}/submit`)
+      .set("x-session-token", loginRes.body.token)
+      .set("x-device-id", loginRes.body.deviceId)
+      .send({});
+    expect(submit.status).toBe(200);
+
+    // The round is still ACTIVE for everyone else — only this player has
+    // finished. A stray autosave that was already in flight (or simply fired
+    // late) must be rejected now that their own participation has moved past
+    // ACTIVE, not silently accepted just because the round itself is still open.
+    const lateAutosave = await request(app)
+      .post(`/api/gameplay/${ctx.roundId}/autosave`)
+      .set("x-session-token", loginRes.body.token)
+      .set("x-device-id", loginRes.body.deviceId)
+      .send({ questionId: question.id, grid });
+    expect(lateAutosave.status).toBe(422);
+    expect(lateAutosave.body.error.code).toBe("gameplay.notActive");
+    expect(lateAutosave.body.error.details?.reason).toBe("participantAlreadySubmitted");
+
+    const round = await prisma.round.findUniqueOrThrow({ where: { id: ctx.roundId } });
+    expect(round.status).toBe("ACTIVE");
   }, 20000);
 
   it("auto-submits a participant who never submits, once the round's timer expires", async () => {
