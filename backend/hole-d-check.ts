@@ -64,7 +64,7 @@ async function main() {
     method: "POST",
     headers: controllerAuth,
     body: JSON.stringify({
-      name: `Trou D cup A ${suffix}`,
+      name: `Hole D cup A ${suffix}`,
       categories: [{ code: "G34", name: "三四年级组" }],
     }),
   });
@@ -78,7 +78,7 @@ async function main() {
     method: "POST",
     headers: controllerAuth,
     body: JSON.stringify({
-      name: `Trou D cup B ${suffix}`,
+      name: `Hole D cup B ${suffix}`,
       categories: [{ code: "G34", name: "三四年级组" }],
     }),
   });
@@ -95,7 +95,7 @@ async function main() {
   const nameBody = await nameLookup.json();
   expect("4. entry-link names competition A", nameLookup.status, 200);
   expect("4b. it answers the name and NOTHING else", nameBody, {
-    competitionName: `Trou D cup A ${suffix}`,
+    competitionName: `Hole D cup A ${suffix}`,
   });
 
   const unknownLookup = await fetch(`${BASE}/auth/entry-link/not-a-real-token`);
@@ -110,7 +110,7 @@ async function main() {
     body: JSON.stringify({
       name: "张三",
       categoryId: catAId,
-      schoolName: `École ${suffix}`,
+      schoolName: `School ${suffix}`,
       individualEvent: true,
       teamEvent: false,
     }),
@@ -150,7 +150,7 @@ async function main() {
   const judgeCreated = await fetch(`${BASE}/judges`, {
     method: "POST",
     headers: controllerAuth,
-    body: JSON.stringify({ name: `Juge ${suffix}` }),
+    body: JSON.stringify({ name: `Judge ${suffix}` }),
   });
   const judgeBody: any = await judgeCreated.json();
   expect("9. judge created", judgeCreated.status, 201);

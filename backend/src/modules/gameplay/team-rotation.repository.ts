@@ -17,6 +17,7 @@
  * (BLD-010).
  */
 import { prisma, redis } from "../../infra";
+import { flattenStoredGrid } from "./grid-shape";
 import type { RotationQuestion, RotationState } from "./team-rotation.types";
 
 const ROTATION_KEY_PREFIX = "gameplay:rotation:";
@@ -265,7 +266,7 @@ async function selectRoundPool(
       startingGrid: r.startingGrid,
       points: r.points,
     },
-    solution: Array.isArray(r.solution) ? (r.solution as (number | null)[]) : [],
+    solution: flattenStoredGrid(r.solution, r.gridRows, r.gridColumns),
   }));
 }
 

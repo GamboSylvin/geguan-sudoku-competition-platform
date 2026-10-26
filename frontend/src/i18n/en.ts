@@ -57,7 +57,7 @@ export const en = {
     editCategories: "Categories",
     saveCategories: "Save categories",
     categoriesLockedNote:
-      "Categories are locked once the competition is published; only round durations can still change.",
+      "Categories are locked once the competition is published; only round durations and puzzle counts can still change.",
     create: "Create competition",
     wifiNote:
       "Before the event, ask your network/IT team to properly configure the venue Wi-Fi — about 300 tablets connect at once, and the venue Wi-Fi is the biggest real-world risk.",
@@ -65,6 +65,9 @@ export const en = {
     structure: "Structure (created automatically)",
     rounds: "rounds",
     roundDuration: "Duration (seconds)",
+    // BLD-057: the round's own puzzle count, shown next to its duration. Kept short —
+    // it sits in the same row as three other controls.
+    roundQuestionCount: "Puzzles",
     saveRound: "Save",
     saved: "Saved",
     publish: "Publish",
@@ -386,6 +389,10 @@ export const en = {
   player: {
     waitingTitle: "Competition room",
     waitingSubtitle: "Waiting for the competition to start…",
+    // BLD-058: the language control disappears once the round is active, and a student
+    // who notices that mid-grid cannot fix it. Say it while it can still be acted on.
+    languageNotice:
+      "Choose your language now — you will not be able to change it once the round starts.",
     welcomeTitle: "Welcome to",
     yourEntry: "Your entry:",
     programmeTitle: "Today's programme",

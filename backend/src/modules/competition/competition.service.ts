@@ -81,8 +81,11 @@ export function withLinks(
 const STAGE_ROUND_COUNT = 2;
 
 /**
- * An Individual round uses exactly 6 selected questions (competition-rules.md §2;
- * BLD-040). The publish readiness check requires all 6 assigned per Individual round.
+ * An Individual round's default selection size. It was the only round whose count was
+ * a law rather than a setting (competition-rules.md §2, BLD-040): both Team rounds
+ * already read their own column, and the project owner could not set up a quick test
+ * competition without filling exactly 6. Now a per-round value with this as its
+ * default — `RoundSettings.individualQuestionCount`, BLD-057, decided 2026-10-22.
  */
 const INDIVIDUAL_ROUND_QUESTION_COUNT = 6;
 
@@ -96,15 +99,22 @@ const TEAM_PARTITION_PUZZLE_COUNT = 3;
  * selection too, and its count is its own — `teamQuestionCount` (default 10) for the
  * rotation relay, `partitionPuzzleCount` (default 3) for the partition collaboration.
  * The two Team rounds are told apart by their sequence, the same dispatch `app.ts`'s
- * team-round hook uses. A round with no settings row yet falls back to the column
+ * team-round hook uses. An Individual round reads its own `individualQuestionCount`
+ * since BLD-057. A round with no settings row yet falls back to the column
  * defaults, so a missing row can never make the check pass vacuously.
  */
 function roundQuestionTarget(round: {
   sequence: number;
   stageType: string;
-  settings: { teamQuestionCount: number; partitionPuzzleCount: number } | null;
+  settings: {
+    individualQuestionCount: number;
+    teamQuestionCount: number;
+    partitionPuzzleCount: number;
+  } | null;
 }): number {
-  if (round.stageType === "INDIVIDUAL") return INDIVIDUAL_ROUND_QUESTION_COUNT;
+  if (round.stageType === "INDIVIDUAL") {
+    return round.settings?.individualQuestionCount ?? INDIVIDUAL_ROUND_QUESTION_COUNT;
+  }
   if (round.sequence === 2) {
     return round.settings?.partitionPuzzleCount ?? TEAM_PARTITION_PUZZLE_COUNT;
   }
@@ -165,6 +175,7 @@ const POSITIVE_FIELDS: (keyof RoundSettingsPatch)[] = [
   "preparationSeconds",
   "rotationPeriodSeconds",
   "teamQuestionCount",
+  "individualQuestionCount",
   "teamTotalTimeSeconds",
   "partitionPuzzleCount",
   "partitionTotalTimeSeconds",

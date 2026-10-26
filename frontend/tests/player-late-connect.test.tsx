@@ -89,6 +89,11 @@ async function mountPlayerAndConnect(): Promise<void> {
       role: "PLAYER",
       accountId: "acc-1",
       sessionExpiresAt: new Date(Date.now() + 3600_000).toISOString(),
+      // The real event-day login goes through the entry link, which stores the
+      // competition the session is scoped to (BLD-055). That field is the page's
+      // first knowledge of whose countdown a pushed tick is; a session mounted
+      // without it would not be the shape the backend actually issues.
+      competitionId: "comp-1",
     }),
   );
 
@@ -388,5 +393,60 @@ describe("no round running", () => {
     expect(screen.getByText("Competition room")).toBeInTheDocument();
     // `round: null` is an answer, not an error: nothing may be reported.
     expect(screen.queryByText("Something went wrong. Please try again.")).not.toBeInTheDocument();
+  });
+
+  /**
+   * A1b (2026-10-23). The gateway pushes `round:preparation-tick` to **every** player
+   * in the namespace, not per competition (`gateway.ts`), so the payload carries
+   * `competitionId` and the page has to filter on it. Two competitions live at once is
+   * the event-day shape: without the filter, a tablet sitting on competition A's
+   * waiting screen rendered competition B's remaining seconds. This is the automated
+   * half of that proof — the other half is the two genuinely published competitions in
+   * `backend/a1-check.ts`.
+   */
+  it("ignores a preparation tick belonging to another competition", async () => {
+    routes["http://localhost:3000/api/gameplay/current-round"] = { round: null };
+    await mountPlayerAndConnect();
+    expect(screen.getByText("Competition room")).toBeInTheDocument();
+
+    const callsBefore = fetchLog.length;
+    fire("round:preparation-tick", {
+      roundId: "round-other",
+      stageId: "stage-other",
+      competitionId: "comp-OTHER",
+      status: "PREPARATION",
+      remainingSeconds: 45,
+      totalSeconds: 60,
+    });
+
+    // Not rendered: still on waiting, and no discovery read was triggered by it either
+    // (a foreign tick is noise, not a signal that our own round may have started).
+    expect(screen.getByText("Competition room")).toBeInTheDocument();
+    expect(screen.queryByText("Get ready")).not.toBeInTheDocument();
+    expect(fetchLog.length).toBe(callsBefore);
+  });
+
+  it("accepts the tick of its own competition right after ignoring a foreign one", async () => {
+    routes["http://localhost:3000/api/gameplay/current-round"] = { round: null };
+    await mountPlayerAndConnect();
+
+    fire("round:preparation-tick", {
+      roundId: "round-other",
+      stageId: "stage-other",
+      competitionId: "comp-OTHER",
+      status: "PREPARATION",
+      remainingSeconds: 45,
+      totalSeconds: 60,
+    });
+    fire("round:preparation-tick", {
+      roundId: "round-ind",
+      stageId: "stage-1",
+      competitionId: "comp-1",
+      status: "PREPARATION",
+      remainingSeconds: 20,
+      totalSeconds: 60,
+    });
+
+    expect(await screen.findByText("Get ready")).toBeInTheDocument();
   });
 });

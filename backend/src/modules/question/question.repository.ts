@@ -38,7 +38,11 @@ export interface RoundScopeRow {
   /** The round's position inside its stage (1 or 2). */
   sequence: number;
   /** Present only once the round has been given settings; the caller holds the defaults. */
-  settings: { teamQuestionCount: number; partitionPuzzleCount: number } | null;
+  settings: {
+    individualQuestionCount: number;
+    teamQuestionCount: number;
+    partitionPuzzleCount: number;
+  } | null;
 }
 
 /**
@@ -55,7 +59,11 @@ export function findRoundScope(roundId: string): Promise<RoundScopeRow | null> {
       status: true,
       sequence: true,
       settings: {
-        select: { teamQuestionCount: true, partitionPuzzleCount: true },
+        select: {
+          individualQuestionCount: true,
+          teamQuestionCount: true,
+          partitionPuzzleCount: true,
+        },
       },
       stage: { select: { type: true, competitionId: true } },
     },

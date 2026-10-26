@@ -23,6 +23,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { io, type Socket } from "socket.io-client";
 import { API_BASE_URL } from "@/config/env";
 import { useLocale } from "@/i18n/locale-context";
+import { InlineLanguageSwitcher } from "@/i18n/LanguageSwitcher";
 import { loadSession, landingPath, setEntryToken, setEntryRoleHint } from "@/features/auth/session";
 import { ActiveRoundScreen, PartitionRoundScreen, RotationRoundScreen } from "@/features/gameplay";
 import type { PartitionViewState, RotationViewState } from "@/features/gameplay";
@@ -391,6 +392,25 @@ export function PlayerPage() {
   }, [screen]);
 
   /**
+   * A mirror of this session's own competition id, readable from the socket
+   * callbacks. `round:preparation-tick` is pushed to the whole player namespace,
+   * so its payload also carries every *other* competition's countdown — without
+   * this filter a player in competition A renders competition B's "starts in Xs".
+   * Null until something has named it; a null mirror means "we do not know whose
+   * countdown this is yet", so the tick is ignored rather than trusted.
+   *
+   * **Seeded from the session, not waited for over HTTP.** An entry-link login
+   * stores the competition it was scoped to (`session.competitionId`, BLD-055), so
+   * the mirror is known before the first tick can arrive. `GET
+   * /api/gameplay/competition` and the discovery call still refresh it, but they are
+   * now a second source, not the only one — depending on them alone meant a failed
+   * or slow request left every tick unattributable, which reproduces exactly the
+   * symptom A1 was fixed for (a player watching nothing move). A plain login with no
+   * entry link carries `null`, and stays on the discovery fallback.
+   */
+  const myCompetitionIdRef = useRef<string | null>(session?.competitionId ?? null);
+
+  /**
    * The entry link's token (report §9c, ARCH-030: the competition link *identifies the
    * competition*). A player opens `/player?token=…` from the printed slip; the token is
    * remembered in `sessionStorage` so the login screen can pass it along, and the page
@@ -459,6 +479,13 @@ export function PlayerPage() {
         });
         if (!response.ok) return;
         const payload = (await response.json()) as MyCompetitionPayload;
+        // Fill the competition mirror as early as possible: the socket is already
+        // connected, and a countdown tick that arrives before this line is a tick
+        // we cannot attribute to this player. A ref write is not a state update, so
+        // it does not need the `cancelled` guard.
+        if (payload.competition?.id) {
+          myCompetitionIdRef.current = payload.competition.id;
+        }
         if (!cancelled) setMyCompetition(payload);
       } catch {
         // Left on the bare waiting screen; see the comment above.
@@ -607,12 +634,29 @@ export function PlayerPage() {
       const round = payload.round;
       // No round running: the waiting screen is the correct answer, not a failure.
       if (!round) return;
+      // This round is resolved from the session, so it is by construction this
+      // player's own competition. Remember the id: it is what filters the
+      // namespace-wide countdown pushes below.
+      myCompetitionIdRef.current = round.competitionId;
       if (round.kind === "rotation") {
         await refreshRotationState(round.roundId);
         return;
       }
       if (round.kind === "partition") {
         await refreshPartitionState(round.roundId);
+        return;
+      }
+      // A round still counting down has no questions and no participation row yet,
+      // so the state read cannot be the source of the countdown screen. Render it
+      // from the timer this discovery call already carries — otherwise a player who
+      // connects during PREPARATION goes through a read that answers with no
+      // questions and stays on the waiting screen until the round goes ACTIVE.
+      if (round.status === "PREPARATION" && round.timer) {
+        setScreen({
+          kind: "preparation",
+          remainingSeconds: round.timer.remainingSeconds,
+          totalSeconds: round.timer.totalSeconds,
+        });
         return;
       }
       await refreshState(round.roundId);
@@ -633,6 +677,21 @@ export function PlayerPage() {
     socketRef.current = socket;
 
     socket.on("round:preparation-tick", (payload: PreparationTickPayload) => {
+      // The push goes to every connected player, so it also carries other
+      // competitions' countdowns. Rendering one of those would show a player a
+      // countdown that is not theirs. The mirror is filled by
+      // `GET /api/gameplay/competition` and by the discovery call below; until one
+      // of them has answered we do not know whose tick this is, so ignore it.
+      if (myCompetitionIdRef.current === null) {
+        // We cannot attribute this tick yet — neither the mount-time competition
+        // read nor a discovery call has answered. Do not render it (it may belong
+        // to another competition); resolve our own round instead, which fills the
+        // mirror. Guarded against overlaps by `discoveryInFlightRef`, and the tick
+        // arrives four times a second, so this settles on the first one.
+        void discoverCurrentRound();
+        return;
+      }
+      if (myCompetitionIdRef.current !== payload.competitionId) return;
       // One event serves both countdowns, so the payload's `status` is what says
       // which one this is — not this page's current screen. Guessing from the local
       // screen is exactly what stuck a late-connecting player on "the round starts in
@@ -879,7 +938,7 @@ export function PlayerPage() {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [session, refreshState, refreshRotationState, refreshPartitionState, discoverCurrentRound]);
+  }, [session, t, refreshState, refreshRotationState, refreshPartitionState, discoverCurrentRound]);
 
   // After a resume's 3-2-1 has played out, return to the active screen. The
   // countdown is cosmetic; the server's timer is the authority (RND-001).
@@ -1042,6 +1101,7 @@ function WaitingScreen({ competition }: { competition: MyCompetitionPayload | nu
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-900 p-6 text-center text-white">
         <h1 className="text-2xl font-semibold sm:text-3xl">{t("player.waitingTitle")}</h1>
         <p className="text-base text-gray-400 sm:text-lg">{t("player.waitingSubtitle")}</p>
+        <LanguageChoiceBlock />
       </div>
     );
   }
@@ -1097,6 +1157,8 @@ function WaitingScreen({ competition }: { competition: MyCompetitionPayload | nu
         )}
       </div>
 
+      <LanguageChoiceBlock />
+
       <p className="pb-8 text-center text-base text-gray-400 sm:text-lg">
         {t("player.waitingSubtitle")}
       </p>
@@ -1144,6 +1206,30 @@ function PreparationScreen({
           <li>{t("player.preparationRuleFeedback")}</li>
         </ul>
       </div>
+      <LanguageChoiceBlock />
+    </div>
+  );
+}
+
+/**
+ * BLD-058: the player's own language choice, shown only in the two phases where
+ * choosing is still safe — waiting and preparation. Once the round is active the
+ * control is gone, because a student tapping it mid-grid would see every label flip
+ * under their hands. The notice exists precisely for that: it tells them, while they
+ * can still act, that the choice closes.
+ *
+ * Absence rather than disabling, the same reasoning BLD-053 used for the fixed
+ * switcher on this route.
+ */
+function LanguageChoiceBlock() {
+  const { t } = useLocale();
+
+  return (
+    <div className="flex max-w-md flex-col items-center gap-3">
+      <InlineLanguageSwitcher />
+      <p role="note" className="text-center text-sm text-amber-300">
+        {t("player.languageNotice")}
+      </p>
     </div>
   );
 }

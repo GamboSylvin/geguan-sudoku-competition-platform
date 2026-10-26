@@ -22,7 +22,7 @@
  */
 import { Router, type NextFunction, type Request, type Response } from "express";
 import { z } from "zod";
-import { UnauthorizedError } from "../../shared/errors";
+import { ForbiddenError } from "../../shared/errors";
 import { translate } from "../../shared/i18n";
 import { requireAuth } from "../../shared/middleware";
 import { parseInput } from "../../shared/validation";
@@ -32,10 +32,17 @@ import { teamPartitionService } from "./team-partition.service";
 
 export const gameplayRouter = Router();
 
+/**
+ * A valid session that is simply the wrong role (controller/judge on a player-only
+ * route) is a 403, like every other module's role gate — not a 401, which tells the
+ * client its session died when the session is fine (anomaly S2, full-system sweep
+ * 2026-10-22: a frontend that reacts to `auth.sessionExpired`-shaped codes by logging
+ * the caller out would do so here on a role mismatch, not an actual expiry).
+ */
 function requireParticipant(req: Request, _res: Response, next: NextFunction): void {
   if (req.auth?.role !== "PLAYER" || !req.auth.participantId) {
     next(
-      new UnauthorizedError(translate("en", "gameplay.forbidden"), {
+      new ForbiddenError(translate("en", "gameplay.forbidden"), {
         code: "gameplay.forbidden",
       }),
     );

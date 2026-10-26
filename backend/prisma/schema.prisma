@@ -275,6 +275,10 @@ model RoundSettings {
   earlyBonusCap            Int? // empty = no cap (SCR-009)
   teamPointsPerQuestion    Int  @default(10)
   rotationPeriodSeconds    Int  @default(60)
+  // How many puzzles one Individual round selects. Was hard-coded to 6 on both
+  // sides of the app; now a per-round value the controller sets, 6 by default
+  // (BLD-057, decided 2026-10-22 — revises SUB-001's "exactly 6").
+  individualQuestionCount    Int  @default(6)
   teamQuestionCount        Int  @default(10)
   teamTotalTimeSeconds     Int?
   individualTotalWarning   Int? @default(100)

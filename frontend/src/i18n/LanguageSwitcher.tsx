@@ -65,6 +65,53 @@ export function writeStoredLocale(locale: Locale): void {
   }
 }
 
+/**
+ * The same control, in the dark mood C recipe, for the screens where the player is
+ * still allowed to choose their language (BLD-058).
+ *
+ * It is a separate component rather than a prop on the one above because the two
+ * never coexist: the fixed switcher renders `null` on `/player`, so exactly one of
+ * them is on screen at any time, and the player screen's own phases decide which.
+ * The logic — the two locales, the labels in their own language, the persistence,
+ * `aria-pressed` — is the same code, so the two cannot drift apart.
+ */
+export function InlineLanguageSwitcher() {
+  const { locale, setLocale } = useLocale();
+
+  return (
+    <div
+      className="flex gap-1 rounded-lg border border-gray-600 bg-gray-800 p-1"
+      role="group"
+      aria-label="Language / 语言"
+    >
+      {LOCALES.map((candidate) => (
+        <button
+          key={candidate}
+          type="button"
+          aria-pressed={candidate === locale}
+          onClick={() => {
+            writeStoredLocale(candidate);
+            setLocale(candidate);
+          }}
+          className={
+            candidate === locale
+              ? "rounded bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white transition-colors"
+              : "rounded px-3 py-1.5 text-sm font-medium text-gray-300 transition-colors hover:bg-gray-700"
+          }
+        >
+          {LABELS[candidate]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * The fixed, floating switcher for every light screen (BLD-053). It renders nothing on
+ * the gameplay and big-screen routes: the control isn't "disabled" there, it isn't
+ * present. The player route gets its own control instead, in the two phases where
+ * choosing a language is still safe (BLD-058) — see `InlineLanguageSwitcher` above.
+ */
 export function LanguageSwitcher() {
   const { locale, setLocale } = useLocale();
   const { pathname } = useLocation();

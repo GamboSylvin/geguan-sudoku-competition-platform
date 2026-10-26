@@ -48,7 +48,7 @@ export const zh: MessageCatalogue = {
     removeCategory: "移除",
     editCategories: "组别",
     saveCategories: "保存组别",
-    categoriesLockedNote: "比赛发布后组别将被锁定，仅可修改回合时长。",
+    categoriesLockedNote: "比赛发布后组别将被锁定，仅可修改回合时长与题目数。",
     create: "创建比赛",
     wifiNote:
       "赛前请让网络/IT 团队妥善配置赛场 Wi-Fi——约 300 台平板同时连接,赛场 Wi-Fi 是最大的现实风险。",
@@ -56,6 +56,7 @@ export const zh: MessageCatalogue = {
     structure: "结构(自动创建)",
     rounds: "轮次",
     roundDuration: "时长(秒)",
+    roundQuestionCount: "题目数",
     saveRound: "保存",
     saved: "已保存",
     publish: "发布",
@@ -344,6 +345,8 @@ export const zh: MessageCatalogue = {
   player: {
     waitingTitle: "比赛等候室",
     waitingSubtitle: "等待比赛开始…",
+    // BLD-058：与 en.ts 同步新增。回合开始后语言无法再更改，必须在此刻提醒。
+    languageNotice: "请现在选择语言——比赛开始后将无法更改。",
     welcomeTitle: "欢迎参加",
     yourEntry: "你的参赛信息：",
     programmeTitle: "今日赛程",

@@ -8,6 +8,7 @@ import { roundTimerService } from "../src/modules/round";
 import { seedReadinessQuestions } from "./readiness-questions";
 import { gameplayService, teamPartitionService } from "../src/modules/gameplay";
 import * as partitionRepository from "../src/modules/gameplay/team-partition.repository";
+import { flattenStoredGrid } from "../src/modules/gameplay/grid-shape";
 import type { PartitionState } from "../src/modules/gameplay";
 
 /**
@@ -501,7 +502,7 @@ describe("pure partition rules (no I/O)", () => {
   it("flattenStoredGrid reads both stored shapes and maps 0 to blank", () => {
     // The importer's row-major matrix, `0` meaning blank.
     expect(
-      partitionRepository.flattenStoredGrid(
+      flattenStoredGrid(
         [
           [1, 0],
           [0, 4],
@@ -511,11 +512,11 @@ describe("pure partition rules (no I/O)", () => {
       ),
     ).toEqual([1, null, null, 4]);
     // The already-flat shape Unit 13 and every older seed use.
-    expect(partitionRepository.flattenStoredGrid([1, 0, 0, 4], 2, 2)).toEqual([
+    expect(flattenStoredGrid([1, 0, 0, 4], 2, 2)).toEqual([
       1, null, null, 4,
     ]);
     // A grid of the wrong length is returned blank, never silently mis-shaped.
-    expect(partitionRepository.flattenStoredGrid([1, 2], 2, 2)).toEqual([
+    expect(flattenStoredGrid([1, 2], 2, 2)).toEqual([
       null, null, null, null,
     ]);
   });

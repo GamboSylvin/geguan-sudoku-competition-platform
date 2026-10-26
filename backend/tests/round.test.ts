@@ -1,4 +1,5 @@
 import request from "supertest";
+import type { Prisma } from "@prisma/client";
 import { createApp } from "../src/app";
 import { prisma, disconnectPrisma } from "../src/infra/prisma";
 import { disconnectRedis } from "../src/infra/redis";
@@ -78,6 +79,11 @@ function login(role: "controller" | "judge" | "player", username: string) {
  *     itself through the real timer path.
  *   - `preparationSeconds` / `durationSeconds` — shorten the two timers so a
  *     test can watch a whole round start *and* end in a couple of seconds.
+ *   - `solutionShape` (default `"flat"`) — `"matrix"` seeds `solution` as the
+ *     row-major `number[][]` the real Excel importer writes (`question-parse.ts`'s
+ *     `mergeGrids`), instead of the already-flat array every other suite uses.
+ *     Needed for the A2 regression below: the bug (I-53) only reproduces when the
+ *     stored shape is a matrix, which `startingGrid.map(...)` here never was.
  */
 async function makePublishedCompetition(
   name: string,
@@ -85,9 +91,10 @@ async function makePublishedCompetition(
     seedParticipation?: boolean;
     preparationSeconds?: number;
     durationSeconds?: number;
+    solutionShape?: "flat" | "matrix";
   } = {},
 ) {
-  const { seedParticipation = true, preparationSeconds, durationSeconds } = options;
+  const { seedParticipation = true, preparationSeconds, durationSeconds, solutionShape = "flat" } = options;
   const competition = await competitionService.createCompetition({
     name,
     categories: [{ code: "U8", name: "Under 8" }],
@@ -132,6 +139,19 @@ async function makePublishedCompetition(
     null, null, null, null,
     4, null, null, 1,
   ];
+  const flatSolution = startingGrid.map((v) => v ?? 1);
+  // `solutionShape: "matrix"` reproduces exactly what the real Excel importer writes
+  // (`question-parse.ts`'s `mergeGrids`, row-major `number[][]`) — the shape that
+  // exposed I-53 (anomaly A2), which every other suite's flat seed cannot reproduce.
+  const solution: Prisma.InputJsonValue =
+    solutionShape === "matrix"
+      ? [
+          flatSolution.slice(0, 4),
+          flatSolution.slice(4, 8),
+          flatSolution.slice(8, 12),
+          flatSolution.slice(12, 16),
+        ]
+      : flatSolution;
   await seedReadinessQuestions(prisma, {
     questionSetId: questionSet.id,
     stages: full.stages,
@@ -140,7 +160,7 @@ async function makePublishedCompetition(
       gridColumns: 4,
       regions: [[0, 1, 4, 5]],
       startingGrid,
-      solution: startingGrid.map((v) => v ?? 1),
+      solution,
     },
   });
 
@@ -178,12 +198,16 @@ async function makePublishedCompetition(
   if (seedParticipation) {
     // The pre-fix pattern: the round never created a participation row, so the
     // test had to seed the one its player would be scoped to. The regression
-    // tests below deliberately omit this.
+    // tests below deliberately omit this. `state: "ACTIVE"` matches what
+    // `openParticipationsForRound` actually writes once a round goes ACTIVE
+    // (I-54, 2026-10-26) — the schema's own `WAITING` default is only honest
+    // before the round starts, and autosave now rejects anything but `ACTIVE`.
     await prisma.roundParticipation.create({
       data: {
         roundId: round1.id,
         participantId: participant.id,
         categoryId: category.id,
+        state: "ACTIVE",
       },
     });
   }
@@ -342,7 +366,10 @@ describe("autosave (spec Implementation Detail 4, Error Cases)", () => {
     const res = await authedController(
       request(app).post(`/api/gameplay/${ctx.roundId}/autosave`),
     ).send({ questionId: question.id, grid: [1, 2, 3, 4] });
-    expect(res.status).toBe(401); // requireParticipant rejects non-PLAYER roles
+    // 403, not 401 (fixed, anomaly S2 2026-10-22): a valid session with the wrong
+    // role is Forbidden, not Unauthorized — the session itself is fine.
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe("gameplay.forbidden");
   });
 });
 
@@ -546,6 +573,60 @@ describe("RoundParticipation is created by the round itself (regression, 2026-10
     expect(saved?.grid).toEqual(grid);
   }, 20000);
 
+  it("rejects a late autosave that arrives after this participant already submitted (I-54, 2026-10-26)", async () => {
+    const ctx = await makePublishedCompetition(`I54LateAutosave ${suffix}`, {
+      seedParticipation: false,
+      preparationSeconds: 1,
+      durationSeconds: 60,
+    });
+    const username = `it7-player-i54-${suffix}`;
+    await createAccount(username, "PLAYER", ctx.participantId);
+    const loginRes = await login("player", username);
+
+    await authedController(request(app).post("/api/rounds/dev/start-stage1-round1")).send({
+      competitionId: ctx.competitionId,
+    });
+    await waitFor("an ACTIVE participation row", () =>
+      prisma.roundParticipation.findUnique({
+        where: { roundId_participantId: { roundId: ctx.roundId, participantId: ctx.participantId } },
+      }),
+    );
+
+    const question = await prisma.question.findFirstOrThrow({
+      where: { roundId: ctx.roundId },
+      orderBy: { sequence: "asc" },
+    });
+    const grid: (number | null)[] = [
+      1, 2, 3, 4,
+      null, null, null, null,
+      null, null, null, null,
+      4, 3, 2, 1,
+    ];
+
+    const submit = await request(app)
+      .post(`/api/gameplay/${ctx.roundId}/submit`)
+      .set("x-session-token", loginRes.body.token)
+      .set("x-device-id", loginRes.body.deviceId)
+      .send({});
+    expect(submit.status).toBe(200);
+
+    // The round is still ACTIVE for everyone else — only this player has
+    // finished. A stray autosave that was already in flight (or simply fired
+    // late) must be rejected now that their own participation has moved past
+    // ACTIVE, not silently accepted just because the round itself is still open.
+    const lateAutosave = await request(app)
+      .post(`/api/gameplay/${ctx.roundId}/autosave`)
+      .set("x-session-token", loginRes.body.token)
+      .set("x-device-id", loginRes.body.deviceId)
+      .send({ questionId: question.id, grid });
+    expect(lateAutosave.status).toBe(422);
+    expect(lateAutosave.body.error.code).toBe("gameplay.notActive");
+    expect(lateAutosave.body.error.details?.reason).toBe("participantAlreadySubmitted");
+
+    const round = await prisma.round.findUniqueOrThrow({ where: { id: ctx.roundId } });
+    expect(round.status).toBe("ACTIVE");
+  }, 20000);
+
   it("auto-submits a participant who never submits, once the round's timer expires", async () => {
     const ctx = await makePublishedCompetition(`NoSeedTimeout ${suffix}`, {
       seedParticipation: false,
@@ -604,6 +685,246 @@ describe("RoundParticipation is created by the round itself (regression, 2026-10
     const round = await prisma.round.findUniqueOrThrow({ where: { id: ctx.roundId } });
     expect(round.status).toBe("FINISHED");
   }, 25000);
+});
+
+/**
+ * Anomaly A2 / I-53 (full-system sweep, 2026-10-22-23). Every individually submitted
+ * correct answer scored 0, because `Question.solution` is stored as a row-major matrix
+ * (`number[][]`, the real Excel importer's shape — `question-parse.ts`'s `mergeGrids`)
+ * while the scoring path cast it straight to a flat array instead of flattening it, so
+ * `scoring.service.ts`'s `gridsEqual` compared a 16-length submission against a
+ * 4-length "solution" and always returned false. Fixed by routing the cast through the
+ * shared `flattenStoredGrid` (`grid-shape.ts`, extracted from the one place that was
+ * already correct, `team-partition.repository.ts`) in both `gameplay.service.ts` and
+ * `team-rotation.repository.ts`. This suite only covers the Individual path; the
+ * rotation path's matrix-seeded case lives in `team-rotation.test.ts`.
+ *
+ * `solutionShape: "matrix"` is the whole point — every other test in this file (and in
+ * `scoring.test.ts`, `ranking.test.ts`, `judge-supervision.test.ts`,
+ * `orchestrator-commands.test.ts`, `results.test.ts`) seeds an already-flat solution,
+ * which is exactly why this defect shipped with a fully green suite.
+ */
+describe("a correct submit scores the real points, not 0 (regression, A2/I-53 2026-10-22)", () => {
+  it("scores every question correctly when the stored solution is a matrix", async () => {
+    const ctx = await makePublishedCompetition(`A2Matrix ${suffix}`, {
+      seedParticipation: false,
+      preparationSeconds: 1,
+      durationSeconds: 60,
+      solutionShape: "matrix",
+    });
+    const username = `it7-player-a2-${suffix}`;
+    await createAccount(username, "PLAYER", ctx.participantId);
+    const loginRes = await login("player", username);
+    const playerHeaders = {
+      "x-session-token": loginRes.body.token as string,
+      "x-device-id": loginRes.body.deviceId as string,
+    };
+
+    await authedController(request(app).post("/api/rounds/dev/start-stage1-round1")).send({
+      competitionId: ctx.competitionId,
+    });
+    await waitFor("an ACTIVE participation row", () =>
+      prisma.roundParticipation.findUnique({
+        where: { roundId_participantId: { roundId: ctx.roundId, participantId: ctx.participantId } },
+      }),
+    );
+
+    // seedReadinessQuestions creates 6 identical-shape questions for an Individual
+    // round (questionsForRound's fixed count) — the real correct grid, matching the
+    // matrix solution flattened, submitted for every one of them.
+    const questions = await prisma.question.findMany({
+      where: { roundId: ctx.roundId },
+      orderBy: { sequence: "asc" },
+    });
+    expect(questions.length).toBe(6);
+    const correctGrid: (number | null)[] = [1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1, 1, 4, 1, 1, 1];
+    for (const question of questions) {
+      const autosave = await request(app)
+        .post(`/api/gameplay/${ctx.roundId}/autosave`)
+        .set(playerHeaders)
+        .send({ questionId: question.id, grid: correctGrid });
+      expect(autosave.status).toBe(200);
+    }
+
+    const submit = await request(app)
+      .post(`/api/gameplay/${ctx.roundId}/submit`)
+      .set(playerHeaders)
+      .send({ submissionType: "MANUAL" });
+    expect(submit.status).toBe(200);
+
+    const result = await prisma.individualRoundResult.findFirstOrThrow({
+      where: { roundId: ctx.roundId, participantId: ctx.participantId },
+    });
+    // 6 questions x 10 points (seedReadinessQuestions' fixed `points: 10`) — the
+    // pre-fix value was 0 for every one of them regardless of correctness.
+    expect(result.score).toBe(60);
+    expect(result.totalScore).toBeGreaterThan(0);
+
+    await roundTimerService.releaseTimer(ctx.roundId).catch(() => undefined);
+  }, 20000);
+});
+
+/**
+ * Anomaly A1 (full-system sweep, 2026-10-22). A player polling the round state
+ * while it is still counting down got 403 `gameplay.notAParticipant`, because the
+ * participation rows only come into existence at the PREPARATION -> ACTIVE
+ * transition. The tablet swallowed the 403 and stayed on the waiting screen until
+ * a socket tick happened to arrive — the reported "elements felt frozen".
+ *
+ * A countdown is a real, renderable state, so the read now answers it: 200, no
+ * questions, `participationState: "WAITING"`, and the timer the client renders.
+ *
+ * What must **not** change is why the fix widens the read instead of creating the
+ * row early: `handleRoundEnded` counts `WAITING` rows as still open, so a row that
+ * exists before the round is playable would stop the competition advancing past it.
+ * The two assertions below pin both halves — no row during PREPARATION, and the
+ * widening is scoped to this competition's own active individual participants.
+ */
+describe("a participant can read the round state during PREPARATION (regression, A1 2026-10-22)", () => {
+  /** Start stage 1 round 1 and hold it in PREPARATION (long countdown, no flip). */
+  async function startPreparation(ctx: { competitionId: string }): Promise<void> {
+    await authedController(request(app).post("/api/rounds/dev/start-stage1-round1")).send({
+      competitionId: ctx.competitionId,
+    });
+  }
+
+  it("answers 200 with the countdown and no questions, and creates no participation row", async () => {
+    const ctx = await makePublishedCompetition(`A1Prep ${suffix}`, {
+      seedParticipation: false,
+      preparationSeconds: 60,
+      durationSeconds: 60,
+    });
+    const username = `it7-player-a1-${suffix}`;
+    await createAccount(username, "PLAYER", ctx.participantId);
+    const loginRes = await login("player", username);
+    const playerHeaders = {
+      "x-session-token": loginRes.body.token as string,
+      "x-device-id": loginRes.body.deviceId as string,
+    };
+
+    await startPreparation(ctx);
+    const round = await prisma.round.findUniqueOrThrow({ where: { id: ctx.roundId } });
+    expect(round.status).toBe("PREPARATION");
+
+    const state = await request(app)
+      .get(`/api/gameplay/${ctx.roundId}/state`)
+      .set(playerHeaders);
+    expect(state.status).toBe(200);
+    expect(state.body.status).toBe("PREPARATION");
+    expect(state.body.questions).toEqual([]);
+    expect(state.body.savedGrids).toEqual([]);
+    expect(state.body.participationState).toBe("WAITING");
+    expect(state.body.timer?.totalSeconds).toBe(60);
+    expect(state.body.timer?.remainingSeconds).toBeGreaterThan(0);
+    expect(JSON.stringify(state.body)).not.toContain('"solution"');
+
+    // The read must not have created anything: a WAITING row here would be counted
+    // as still open by the round-ended sweep and stall the whole competition.
+    const rows = await prisma.roundParticipation.count({ where: { roundId: ctx.roundId } });
+    expect(rows).toBe(0);
+
+    // Widening the read did not widen the write path.
+    const autosave = await request(app)
+      .post(`/api/gameplay/${ctx.roundId}/autosave`)
+      .set(playerHeaders)
+      .send({ questionId: "00000000-0000-0000-0000-000000000000", grid: [] });
+    expect(autosave.status).toBe(422);
+    expect(autosave.body.error.code).toBe("gameplay.notActive");
+
+    const submit = await request(app)
+      .post(`/api/gameplay/${ctx.roundId}/submit`)
+      .set(playerHeaders)
+      .send({ submissionType: "MANUAL" });
+    expect(submit.status).toBe(422);
+    expect(submit.body.error.code).toBe("gameplay.notActive");
+
+    await roundTimerService.releaseTimer(ctx.roundId).catch(() => undefined);
+  }, 20000);
+
+  it("still rejects a player who is not one of this round's own participants", async () => {
+    const ctx = await makePublishedCompetition(`A1Own ${suffix}`, {
+      seedParticipation: false,
+      preparationSeconds: 60,
+      durationSeconds: 60,
+    });
+    // A second, *other* competition: its player is a real active individual
+    // participant, just not of this round's competition.
+    const other = await makePublishedCompetition(`A1Other ${suffix}`, {
+      seedParticipation: false,
+      preparationSeconds: 60,
+      durationSeconds: 60,
+    });
+    const outsider = `it7-player-a1-out-${suffix}`;
+    await createAccount(outsider, "PLAYER", other.participantId);
+    const loginRes = await login("player", outsider);
+
+    await startPreparation(ctx);
+
+    const state = await request(app)
+      .get(`/api/gameplay/${ctx.roundId}/state`)
+      .set("x-session-token", loginRes.body.token)
+      .set("x-device-id", loginRes.body.deviceId);
+    expect(state.status).toBe(403);
+    expect(state.body.error.code).toBe("gameplay.notAParticipant");
+
+    // A deactivated participant of this very competition is outside too: the
+    // widening answers from exactly the population the round will open rows for.
+    await prisma.participant.update({ where: { id: ctx.participantId }, data: { active: false } });
+    const mine = `it7-player-a1-inact-${suffix}`;
+    await createAccount(mine, "PLAYER", ctx.participantId);
+    const mineRes = await login("player", mine);
+    const deactivated = await request(app)
+      .get(`/api/gameplay/${ctx.roundId}/state`)
+      .set("x-session-token", mineRes.body.token)
+      .set("x-device-id", mineRes.body.deviceId);
+    expect(deactivated.status).toBe(403);
+    expect(deactivated.body.error.code).toBe("gameplay.notAParticipant");
+    await prisma.participant.update({ where: { id: ctx.participantId }, data: { active: true } });
+
+    // Both competitions armed a 60 s preparation timer; release the two, since
+    // this file's suites have a documented history of leaking them.
+    await roundTimerService.releaseTimer(ctx.roundId).catch(() => undefined);
+    await roundTimerService.releaseTimer(other.roundId).catch(() => undefined);
+  }, 20000);
+
+  it("hands the same player the real questions once the countdown reaches zero", async () => {
+    const ctx = await makePublishedCompetition(`A1Flip ${suffix}`, {
+      seedParticipation: false,
+      preparationSeconds: 1,
+      durationSeconds: 60,
+    });
+    const username = `it7-player-a1-flip-${suffix}`;
+    await createAccount(username, "PLAYER", ctx.participantId);
+    const loginRes = await login("player", username);
+    const playerHeaders = {
+      "x-session-token": loginRes.body.token as string,
+      "x-device-id": loginRes.body.deviceId as string,
+    };
+
+    await startPreparation(ctx);
+    await waitFor("an ACTIVE participation row", () =>
+      prisma.roundParticipation.findUnique({
+        where: { roundId_participantId: { roundId: ctx.roundId, participantId: ctx.participantId } },
+      }),
+    );
+
+    const state = await request(app)
+      .get(`/api/gameplay/${ctx.roundId}/state`)
+      .set(playerHeaders);
+    expect(state.status).toBe(200);
+    expect(state.body.status).toBe("ACTIVE");
+    expect(state.body.participationState).toBe("ACTIVE");
+    expect(state.body.questions.length).toBeGreaterThan(0);
+
+    const openRows = await prisma.roundParticipation.count({ where: { roundId: ctx.roundId } });
+    expect(openRows).toBe(1);
+    const waiting = await prisma.roundParticipation.count({
+      where: { roundId: ctx.roundId, state: "WAITING" },
+    });
+    expect(waiting).toBe(0);
+
+    await roundTimerService.releaseTimer(ctx.roundId).catch(() => undefined);
+  }, 20000);
 });
 
 /**

@@ -494,6 +494,91 @@ describe("publish readiness (AC 3, AC 4)", () => {
   });
 });
 
+describe("per-round Individual question count (BLD-057)", () => {
+  /** The Individual round 1 id of a freshly created competition. */
+  function individualRoundOne(competition: { stages: Array<{ type: string; rounds: Array<{ id: string; sequence: number }> }> }): string {
+    const stage = competition.stages.find((s) => s.type === "INDIVIDUAL");
+    return stage!.rounds.find((r) => r.sequence === 1)!.id;
+  }
+
+  async function patchCount(competitionId: string, roundId: string, count: number) {
+    return authed(request(app).patch(`/api/competitions/${competitionId}`)).send({
+      roundSettings: { [roundId]: { individualQuestionCount: count } },
+    });
+  }
+
+  it("defaults to 6, so every round created before this change behaves as it did", async () => {
+    const competition = await makeCompetition(`CountDefault ${suffix}`);
+    const roundId = individualRoundOne(competition);
+    const row = await prisma.roundSettings.findUniqueOrThrow({
+      where: { roundId },
+      select: { individualQuestionCount: true },
+    });
+    expect(row.individualQuestionCount).toBe(6);
+  });
+
+  it("accepts a smaller count and makes the readiness check ask for that many", async () => {
+    const competition = await makeCompetition(`CountSmall ${suffix}`);
+    await seedReadinessData(competition.id); // 6 assigned to each Individual round
+
+    const roundId = individualRoundOne(competition);
+    const res = await patchCount(competition.id, roundId, 3);
+    expect(res.status).toBe(200);
+    expect(res.body.stages[0].rounds[0].settings.individualQuestionCount).toBe(3);
+
+    // 6 assigned against a target of 3 is now *too many*, and the message says so with
+    // the configured number rather than the old constant.
+    const tooMany = await competitionService.checkPublishReadiness(competition.id);
+    expect(tooMany.ready).toBe(false);
+    expect(
+      tooMany.unmet.find((c) => c.key === "competition.readiness.questionsRequired")!.message,
+    ).toContain("6 / 3");
+
+    // Drop three from every category's selection of every Individual round and the
+    // competition becomes publishable: the count drives the real gate, not just the
+    // message. The trim is per question set, not per round, because the readiness check
+    // counts per category·round and `seedReadinessData` seeded 6 in each of the two.
+    const individualRounds = await prisma.round.findMany({
+      where: { stage: { competitionId: competition.id, type: "INDIVIDUAL" } },
+    });
+    for (const round of individualRounds) {
+      const sets = await prisma.question.findMany({
+        where: { roundId: round.id },
+        select: { questionSetId: true },
+        distinct: ["questionSetId"],
+      });
+      for (const set of sets) {
+        const extras = await prisma.question.findMany({
+          where: { roundId: round.id, questionSetId: set.questionSetId },
+          orderBy: { sequence: "desc" },
+          take: 3,
+          select: { id: true },
+        });
+        await prisma.question.deleteMany({ where: { id: { in: extras.map((q) => q.id) } } });
+      }
+    }
+    // Round 2 was never edited, so it still expects its default 6 and now holds 3.
+    await patchCount(competition.id, individualRounds[1]!.id, 3);
+
+    const ready = await competitionService.checkPublishReadiness(competition.id);
+    expect(ready.unmet.map((c) => c.key)).not.toContain(
+      "competition.readiness.questionsRequired",
+    );
+    const published = await authed(
+      request(app).post(`/api/competitions/${competition.id}/publish`),
+    ).send({});
+    expect(published.status).toBe(200);
+  });
+
+  it("rejects a count that is not a whole number above zero (SCR-012)", async () => {
+    const competition = await makeCompetition(`CountBad ${suffix}`);
+    const roundId = individualRoundOne(competition);
+    expect((await patchCount(competition.id, roundId, 0)).status).toBe(400);
+    expect((await patchCount(competition.id, roundId, -2)).status).toBe(400);
+    expect((await patchCount(competition.id, roundId, 1.5)).status).toBe(400);
+  });
+});
+
 describe("structure lock (AC 5)", () => {
   it("rejects a category change after publish but still allows a round-settings edit", async () => {
     const competition = await makeCompetition(`Locked ${suffix}`);
