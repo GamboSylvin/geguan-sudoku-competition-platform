@@ -284,24 +284,35 @@ export function listJudges(): Promise<Judge[]> {
  * Create the judge row and its account (role JUDGE, linked via judgeId) with the
  * hashed password, in one transaction — a judge always comes with login
  * credentials (spec 06, Implementation Details 1).
+ *
+ * `timeout: 40000` (I-58, decided 2026-10-26 by the project owner — option (a), the
+ * same widening already applied to the Jest test budget for the same underlying
+ * cost): Prisma's interactive-transaction default is 5000 ms, and under contention
+ * this measured `Transaction already closed: … timeout for this transaction was
+ * 5000 ms, however 7494 ms passed`, which surfaced as a real `500` on `POST
+ * /api/judges` only under full-suite load, never when called alone. The two writes
+ * inside stay atomic either way; only the ceiling moved.
  */
 export function createJudgeWithAccount(data: {
   name: string;
   username: string;
   passwordHash: string;
 }): Promise<Judge> {
-  return prisma.$transaction(async (tx) => {
-    const judge = await tx.judge.create({ data: { name: data.name } });
-    await tx.account.create({
-      data: {
-        username: data.username,
-        passwordHash: data.passwordHash,
-        role: "JUDGE",
-        judgeId: judge.id,
-      },
-    });
-    return judge;
-  });
+  return prisma.$transaction(
+    async (tx) => {
+      const judge = await tx.judge.create({ data: { name: data.name } });
+      await tx.account.create({
+        data: {
+          username: data.username,
+          passwordHash: data.passwordHash,
+          role: "JUDGE",
+          judgeId: judge.id,
+        },
+      });
+      return judge;
+    },
+    { timeout: 40000 },
+  );
 }
 
 /**
@@ -354,6 +365,37 @@ export async function reactivateJudge(
       data: { active: true },
     });
     return { judge, username: account?.username ?? null };
+  });
+}
+
+/**
+ * Permanently destroy a judge: its login accounts (and, by cascade, their devices),
+ * then the judge row itself. Its competition ranges go with the judge row — the schema
+ * declares `onDelete: Cascade` on `CompetitionJudgeAssignment.judge`.
+ *
+ * The accounts are deleted explicitly rather than left behind. `Account.judgeId` is
+ * `onDelete: SetNull`, so a plain `judge.delete` would keep every login row alive with a
+ * null `judgeId` and `role: "JUDGE"` — an account that can still authenticate and now
+ * points at nothing. Deleting them first is the only reading in which "delete the judge"
+ * also means "that person can no longer log in".
+ *
+ * Returns what was destroyed so the caller can report the consequences.
+ */
+export async function destroyJudge(
+  judgeId: string,
+): Promise<{ accountsDeleted: number; assignmentsDeleted: number }> {
+  return prisma.$transaction(async (tx) => {
+    const accounts = await tx.account.deleteMany({
+      where: { judgeId, role: "JUDGE" },
+    });
+    const assignments = await tx.competitionJudgeAssignment.deleteMany({
+      where: { judgeId },
+    });
+    await tx.judge.delete({ where: { id: judgeId } });
+    return {
+      accountsDeleted: accounts.count,
+      assignmentsDeleted: assignments.count,
+    };
   });
 }
 

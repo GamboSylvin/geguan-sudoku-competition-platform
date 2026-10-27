@@ -261,7 +261,11 @@ which the response returns **once**.
 credential list, which is printed"). Format is Q8. Content per slip: participant
 number, name, school, category, username, password, and the entry link/QR the publish
 step generates. Written to `StoredFile` with `kind: CREDENTIAL_SLIPS` and streamed
-back. **This is the only place a plaintext password is ever retrievable**, and it is
+back. **(2026-10-26: what the built slips carry is the entry **URL as text**, never a QR
+image — no QR code exists anywhere in the codebase; see **I-57** in
+`context-feeders/decisions/unmade-decisions.md`. The slip's link line is also emitted only
+when `PUBLIC_BASE_URL` is configured, by design: a slip with a linkless URL would be
+useless, so `writeCredentialSlips` drops the line entirely instead.)** **This is the only place a plaintext password is ever retrievable**, and it is
 controller-only.
 
 ### 4.8 Publish readiness

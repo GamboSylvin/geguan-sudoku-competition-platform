@@ -128,6 +128,47 @@ judgeRouter.patch(
 );
 
 /**
+ * GET /api/judges/:id/assignments — this judge's ranges, competition names included. The
+ * permanent-deletion dialog reads it so it can name what the deletion will destroy before
+ * the controller confirms, rather than warning in the abstract (2026-10-26).
+ */
+judgeRouter.get(
+  "/:id/assignments",
+  requireAuth,
+  requireController,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = parseInput(judgeIdParamSchema, req.params);
+      const assignments = await judgeService.listAssignmentsForController(id);
+      res.status(200).json({ assignments });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * DELETE /api/judges/:id/permanent — destroy the judge row, its accounts and every range
+ * it holds (2026-10-26). Separate from `DELETE /:id` on purpose: that one deactivates and
+ * is guarded by ROL-010, this one deletes and is not. 200 with what was destroyed, so the
+ * screen can report the consequences of an operation that cannot be undone.
+ */
+judgeRouter.delete(
+  "/:id/permanent",
+  requireAuth,
+  requireController,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = parseInput(judgeIdParamSchema, req.params);
+      const destroyed = await judgeService.destroyJudge(id);
+      res.status(200).json(destroyed);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
  * GET /api/judges/me — the minimal judge landing: the calling judge's own
  * assignments (which competition, which participant-number range), so the judge
  * sees confirmation after login. Requires a JUDGE session, not a controller one.

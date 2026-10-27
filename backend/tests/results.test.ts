@@ -46,6 +46,13 @@ let controllerAccountId = "";
 
 const createdCompetitionIds: string[] = [];
 const createdAccountUsernames: string[] = [];
+/**
+ * Every judge row this file creates, so `afterAll` can delete them. `seedCompetition`
+ * makes one judge per competition and used to release none of them — one of the sources
+ * of the hundreds of leftover `Judge <suffix>` rows found in the shared database
+ * (2026-10-26).
+ */
+const createdJudgeIds: string[] = [];
 
 const GRID_SIZE = 4;
 const STARTING_GRID: (number | null)[] = [
@@ -190,6 +197,7 @@ async function seedCompetition(name: string): Promise<SeededCompetition> {
   }
 
   const judge = await prisma.judge.create({ data: { name: `Judge ${suffix}` } });
+  createdJudgeIds.push(judge.id);
   await prisma.competitionJudgeAssignment.create({
     data: {
       competitionId: competition.id,
@@ -326,6 +334,9 @@ beforeAll(async () => {
 afterAll(async () => {
   await prisma.competition.deleteMany({ where: { id: { in: createdCompetitionIds } } });
   await prisma.account.deleteMany({ where: { username: { in: createdAccountUsernames } } });
+  // Assignments cascade from the competition delete above and any judge account is gone
+  // with the account delete, so nothing references these rows any more.
+  await prisma.judge.deleteMany({ where: { id: { in: createdJudgeIds } } });
   await disconnectRedis().catch(() => undefined);
   await disconnectPrisma().catch(() => undefined);
 });

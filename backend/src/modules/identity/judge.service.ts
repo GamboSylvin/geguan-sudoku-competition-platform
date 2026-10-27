@@ -5,9 +5,10 @@
  *
  * What lives here: creating a judge with its one-time credentials (BLD-037, same
  * pattern participants will later use), listing, removal with the ROL-010 guard,
- * assigning/editing/unassigning a judge's range on a competition (BLD-008 —
- * editable at any time, no cutoff), and the authority-scoping check later units
- * call (the single exported enforcement point, spec 06 Implementation Notes).
+ * permanent deletion without one, assigning/editing/unassigning a judge's range on a
+ * competition (BLD-008 — editable at any time, no cutoff), and the authority-scoping
+ * check later units call (the single exported enforcement point, spec 06 Implementation
+ * Notes).
  */
 import { ConflictError, NotFoundError } from "../../shared/errors";
 import { now } from "../../shared/clock";
@@ -27,6 +28,7 @@ import {
   type CompetitionJudgeAssignmentView,
   type CreateJudgeInput,
   type CreatedJudge,
+  type DestroyedJudge,
   type JudgeAssignment,
   type JudgeSummary,
   type ReactivatedJudge,
@@ -158,6 +160,43 @@ export async function reactivateJudge(judgeId: string): Promise<ReactivatedJudge
   return { ...toSummary(reactivated.judge), username: reactivated.username };
 }
 
+/**
+ * Permanently delete a judge (2026-10-26, report §4a's follow-up): destroy the row, its
+ * login accounts and every range it holds on any competition.
+ *
+ * Deliberately *not* guarded by ROL-010. That guard protects `removeJudge`, whose action
+ * is a deactivation — a recoverable state change that must not silently leave an event
+ * unsupervised. A permanent deletion is a different operation with a different contract:
+ * the controller is telling the system this judge should never have existed (a duplicate,
+ * a test row, a typo), and the answer is to do exactly that rather than to refuse. The
+ * protection moves to the interface instead, which names every competition and every range
+ * about to be destroyed and asks for an explicit confirmation before calling this.
+ *
+ * The consequences are returned rather than swallowed so the caller can report what
+ * actually went: `competitions` lists the names the confirmation dialog already showed,
+ * and the counts say how many login accounts were destroyed with it.
+ */
+export async function destroyJudge(judgeId: string): Promise<DestroyedJudge> {
+  const judge = await repository.findJudgeById(judgeId);
+  if (!judge) {
+    throw notFoundError();
+  }
+  const assignments = await repository.listAssignmentsForJudge(judgeId);
+  const destroyed = await repository.destroyJudge(judgeId);
+  return {
+    id: judgeId,
+    name: judge.name,
+    competitions: assignments.map((row) => ({
+      competitionId: row.competitionId,
+      competitionName: row.competition.name,
+      fromParticipantNumber: row.fromParticipantNumber,
+      toParticipantNumber: row.toParticipantNumber,
+    })),
+    assignmentsDeleted: destroyed.assignmentsDeleted,
+    accountsDeleted: destroyed.accountsDeleted,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Range assignment
 // ---------------------------------------------------------------------------
@@ -282,15 +321,35 @@ export async function listCompetitionAssignments(
   }));
 }
 
+/**
+ * One judge's ranges, with each competition's name — the controller-side read the
+ * permanent-deletion confirmation needs so it can name what is about to be destroyed
+ * rather than warning in the abstract. `listJudgeAssignments` above is the judge-side
+ * read of the same rows; this one takes no session scope, because the caller is a
+ * controller, whose role already authorizes the whole event.
+ */
+export async function listAssignmentsForController(
+  judgeId: string,
+): Promise<(JudgeAssignment & { competitionName: string })[]> {
+  const judge = await repository.findJudgeById(judgeId);
+  if (!judge) {
+    throw notFoundError();
+  }
+  const rows = await repository.listAssignmentsForJudge(judgeId);
+  return rows.map((row) => ({ ...toAssignment(row), competitionName: row.competition.name }));
+}
+
 export const judgeService = {
   createJudge,
   listJudges,
   removeJudge,
   reactivateJudge,
+  destroyJudge,
   getOwnName,
   assignJudgeRange,
   unassignJudge,
   isJudgeAuthorizedForParticipant,
   listJudgeAssignments,
   listCompetitionAssignments,
+  listAssignmentsForController,
 };

@@ -95,6 +95,12 @@ const SOLUTION_MATRIX = toMatrix(SOLUTION_FLAT);
 
 const createdCompetitionIds: string[] = [];
 const createdAccountUsernames: string[] = [];
+/**
+ * Every judge row this file creates, so `afterAll` can delete them. The fixture makes one
+ * per seeded competition and used to release none of them — one of the sources of the
+ * hundreds of leftover `Judge <suffix>` rows found in the shared database (2026-10-26).
+ */
+const createdJudgeIds: string[] = [];
 
 interface SeededPartitionCompetition {
   competitionId: string;
@@ -225,6 +231,7 @@ async function seedPartitionCompetition(
   });
 
   const judge = await prisma.judge.create({ data: { name: `Judge ${suffix}` } });
+  createdJudgeIds.push(judge.id);
   await prisma.competitionJudgeAssignment.create({
     data: {
       competitionId: competition.id,
@@ -416,6 +423,9 @@ afterAll(async () => {
   }
   await prisma.competition.deleteMany({ where: { id: { in: createdCompetitionIds } } });
   await prisma.account.deleteMany({ where: { username: { in: createdAccountUsernames } } });
+  // Judges are created without an account by the fixture, and `CompetitionJudgeAssignment`
+  // cascades from the competition delete above, so this is the only remaining reference.
+  await prisma.judge.deleteMany({ where: { id: { in: createdJudgeIds } } });
   await disconnectRedis().catch(() => undefined);
   await disconnectPrisma().catch(() => undefined);
 });

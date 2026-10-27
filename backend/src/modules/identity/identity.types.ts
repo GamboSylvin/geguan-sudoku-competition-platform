@@ -165,3 +165,21 @@ export interface BlockingAssignment {
   competitionId: string;
   competitionName: string;
 }
+
+/**
+ * What a permanent deletion destroyed (2026-10-26). One row per range the judge held,
+ * with its competition's name, so the screen can report exactly what went instead of
+ * answering a bare 204 to an operation that is not reversible.
+ */
+export interface DestroyedJudge {
+  id: string;
+  name: string;
+  competitions: {
+    competitionId: string;
+    competitionName: string;
+    fromParticipantNumber: number;
+    toParticipantNumber: number;
+  }[];
+  assignmentsDeleted: number;
+  accountsDeleted: number;
+}

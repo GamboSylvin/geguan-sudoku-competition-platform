@@ -159,6 +159,40 @@ export const en = {
     columnRecordedBy: "Recorded by",
     columnRecordedAt: "Recorded at",
     judgeInactiveHint: "deactivated",
+    // 2026-10-26: a real permanent deletion, next to the deactivation. It is not guarded
+    // by ROL-010 — the guard protects the recoverable action — so the interface carries
+    // the protection instead: it names every competition and range about to be destroyed
+    // and asks for an explicit confirmation first.
+    destroy: "Delete",
+    destroyTitle: "Permanently delete this judge?",
+    destroyWarning:
+      "This destroys the judge and cannot be undone. The following will be deleted:",
+    destroyListRow: "The judge record “{name}”",
+    destroyListAccounts:
+      "Their login account and every device registered to it — the judge can no longer log in",
+    destroyListRanges:
+      "Every supervision range they hold, on the competitions listed below",
+    destroyListNoRanges: "They hold no supervision range on any competition.",
+    destroyRangesTitle: "Ranges that will be deleted:",
+    destroyRangeRow: "{competition} — participants #{from}–#{to}",
+    destroyHintLive:
+      "A range deleted on a competition that is still running leaves those participants unsupervised. Reassign the range first, or deactivate the judge instead.",
+    destroyConfirm: "Permanently delete",
+    destroying: "Deleting…",
+    destroyCancel: "Back",
+    destroyed: "Judge “{name}” permanently deleted.",
+    destroyFailed: "The judge could not be deleted. Please try again.",
+    // 2026-10-26: the list grew to hundreds of rows with no way to find one. Search,
+    // filter, a visible count and paging — plain React, no new dependency.
+    searchPlaceholder: "Search by name",
+    filterAll: "All",
+    filterActive: "Active",
+    filterInactive: "Deactivated",
+    listCount: "{shown} of {total} judges",
+    noMatch: "No judge matches this search.",
+    previousPage: "Previous",
+    nextPage: "Next",
+    pageOf: "Page {page} of {pages}",
     saveAssignment: "Save assignment",
     unassign: "Unassign",
     assignedTo: "Assigned to",

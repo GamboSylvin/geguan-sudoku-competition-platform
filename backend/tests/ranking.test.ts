@@ -45,6 +45,7 @@ const users = {
   playerB: `it9-player-b-${suffix}`,
   playerC: `it9-player-c-${suffix}`,
   playerD: `it9-player-d-${suffix}`,
+  playerE: `it9-player-e-${suffix}`,
 };
 
 let controllerToken = "";
@@ -705,4 +706,129 @@ describe("big-screen rotation push (acceptance criterion 4)", () => {
       bigScreenService.installBigScreenPushHook(() => undefined);
     }
   }, 15000);
+});
+
+/**
+ * Regression for anomaly A3 / I-55 (2026-10-26): with a big screen connected in
+ * RANKING mode, the composition root's wiring closed a cycle with no exit —
+ * `installRankingUpdateHook` → `bigScreenService.pushCurrentForUpdate` → `runTick` →
+ * `tickOnce` → `getCategoryRanking` (recompute-on-read) → `replaceCurrentSnapshot`
+ * (DELETE + INSERT) → `rankingUpdateHook` → back to the start. Measured live at
+ * ~323 write transactions per second with no client ever asking for a ranking.
+ *
+ * Both tests here drive the **real** wiring `createApp()` installed at module load
+ * (invariant: the app's hook stays in place — installing a counting hook of our own
+ * would replace the cycle and the test would pass even with the bug). The loop is
+ * observed through the one place it becomes visible, the big-screen push hook:
+ * each iteration pushes once, so the push count *is* the iteration count.
+ *
+ * `seedCompetition` creates a single category, which is the shape that made the loop
+ * unbounded rather than self-limiting: with one category the rotation cursor always
+ * lands on it, so `pushCurrentForUpdate`'s "is the updated category the one on
+ * screen?" guard never rejects and the cycle never breaks out.
+ */
+describe("a connected big screen must not recompute in a loop (A3 / I-55)", () => {
+  it("a recompute that changes nothing leaves the stored snapshot untouched", async () => {
+    const ctx = await seedCompetition(`NoLoop ${suffix}`);
+
+    const pushed: { categoryId: string }[] = [];
+    bigScreenService.installBigScreenPushHook((payload) => {
+      pushed.push(payload);
+    });
+
+    try {
+      // A big screen connects, which starts the rotation and computes the
+      // category's first snapshot.
+      await bigScreenService.registerConnection(ctx.competitionId);
+      await sleep(HOOK_SETTLE_MS);
+      expect(pushed.length).toBeGreaterThanOrEqual(1);
+
+      const before = await prisma.rankingSnapshot.findFirst({
+        where: { competitionId: ctx.competitionId, categoryId: ctx.categoryId, scope: "INDIVIDUAL" },
+      });
+      expect(before).not.toBeNull();
+
+      // Drive the exact call the composition root's hook makes on every recompute,
+      // plus the read the tick it triggers performs. Nothing has changed in the
+      // results, so neither call may rewrite anything.
+      const pushesBefore = pushed.length;
+      for (let i = 0; i < 5; i += 1) {
+        await bigScreenService.pushCurrentForUpdate(ctx.competitionId, ctx.categoryId);
+        await rankingService.getCategoryRanking(ctx.competitionId, ctx.categoryId);
+      }
+      await sleep(HOOK_SETTLE_MS);
+
+      // The reads still serve the ranking.
+      const read = await rankingService.getCategoryRanking(ctx.competitionId, ctx.categoryId);
+      expect(read).not.toBeNull();
+      expect(read!.rows).toHaveLength(1);
+
+      // The decisive assertion: still exactly one current snapshot, and the *same*
+      // row — same id, same `computedAt`. Before the fix every recompute ran
+      // `replaceCurrentSnapshot` (DELETE + INSERT), which both churned a new row and
+      // re-emitted the hook that called it, so the id changed under the reader's feet
+      // ~323 times a second. A rewrite here means the loop is back.
+      const after = await prisma.rankingSnapshot.findMany({
+        where: { competitionId: ctx.competitionId, categoryId: ctx.categoryId, scope: "INDIVIDUAL" },
+      });
+      expect(after).toHaveLength(1);
+      expect(after[0]!.id).toBe(before!.id);
+      expect(after[0]!.computedAt.getTime()).toBe(before!.computedAt.getTime());
+
+      // Each of the five explicit calls pushes its own screen payload at most once,
+      // and the reads that changed nothing push none of their own.
+      expect(pushed.length - pushesBefore).toBeLessThanOrEqual(5);
+    } finally {
+      bigScreenService.unregisterConnection(ctx.competitionId);
+      bigScreenService.installBigScreenPushHook(() => undefined);
+    }
+  }, 20000);
+
+  it("a result that really moves the leaderboard still writes and pushes (U-58 freshness kept)", async () => {
+    const ctx = await seedCompetition(`StillFresh ${suffix}`);
+    const playerLogin = await loginPlayer(users.playerE, ctx.participantId);
+
+    const pushed: { categoryId: string; isFinal: boolean; rows: { score: number }[] }[] = [];
+    bigScreenService.installBigScreenPushHook((payload) => {
+      pushed.push(payload);
+    });
+
+    try {
+      await bigScreenService.registerConnection(ctx.competitionId);
+      const pushesBeforeSubmit = pushed.length;
+
+      await prisma.round.update({
+        where: { id: ctx.roundId },
+        data: { status: "ACTIVE", startedAt: new Date() },
+      });
+      await request(app)
+        .post(`/api/gameplay/${ctx.roundId}/autosave`)
+        .set("x-session-token", playerLogin.body.token)
+        .set("x-device-id", playerLogin.body.deviceId)
+        .send({ questionId: ctx.questionId, grid: SOLUTION });
+      const submitRes = await request(app)
+        .post(`/api/gameplay/${ctx.roundId}/submit`)
+        .set("x-session-token", playerLogin.body.token)
+        .set("x-device-id", playerLogin.body.deviceId);
+      expect(submitRes.status).toBe(200);
+
+      await sleep(HOOK_SETTLE_MS);
+
+      // The change-detection gate must not swallow a real change: the score moved
+      // from 0 to the question's points, so the snapshot was rewritten and pushed.
+      expect(pushed.length).toBeGreaterThan(pushesBeforeSubmit);
+      const latest = pushed[pushed.length - 1]!;
+      expect(latest.categoryId).toBe(ctx.categoryId);
+      expect(latest.rows[0]!.score).toBeGreaterThan(0);
+
+      const snapshot = await prisma.rankingSnapshot.findFirst({
+        where: { competitionId: ctx.competitionId, categoryId: ctx.categoryId, scope: "INDIVIDUAL" },
+      });
+      expect(snapshot).not.toBeNull();
+      expect((snapshot!.payload as { rows: { score: number }[] }).rows[0]!.score).toBeGreaterThan(0);
+    } finally {
+      bigScreenService.unregisterConnection(ctx.competitionId);
+      bigScreenService.installBigScreenPushHook(() => undefined);
+    }
+  }, 20000);
 });

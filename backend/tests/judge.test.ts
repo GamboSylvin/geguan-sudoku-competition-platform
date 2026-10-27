@@ -381,6 +381,111 @@ describe("listing a competition's recorded ranges (report §4c)", () => {
   });
 });
 
+describe("permanent deletion (2026-10-26)", () => {
+  it("reads the judge's ranges before the deletion, naming each competition", async () => {
+    const competition = await makeCompetition(`DestroyRead ${suffix}`);
+    const judgeRes = await authed(request(app).post("/api/judges")).send({
+      name: `Judge Leo ${suffix}`,
+    });
+    createdJudgeIds.push(judgeRes.body.id);
+
+    await authed(
+      request(app).post(`/api/competitions/${competition.id}/judge-assignments`),
+    ).send({ judgeId: judgeRes.body.id, fromParticipantNumber: 3, toParticipantNumber: 9 });
+
+    const res = await authed(request(app).get(`/api/judges/${judgeRes.body.id}/assignments`)).send();
+    expect(res.status).toBe(200);
+    expect(res.body.assignments).toHaveLength(1);
+    expect(res.body.assignments[0].competitionName).toBe(`DestroyRead ${suffix}`);
+    expect(res.body.assignments[0].fromParticipantNumber).toBe(3);
+    expect(res.body.assignments[0].toParticipantNumber).toBe(9);
+  });
+
+  it("destroys the row, its accounts and every range, and reports what went", async () => {
+    const competition = await makeCompetition(`Destroy ${suffix}`);
+    const judgeRes = await authed(request(app).post("/api/judges")).send({
+      name: `Judge Mia ${suffix}`,
+    });
+    // Also pushed into createdJudgeIds: the deletion should make that cleanup a no-op,
+    // and if a regression leaves the row behind the afterAll still removes it rather
+    // than leaking another judge into the shared database.
+    createdJudgeIds.push(judgeRes.body.id);
+
+    await authed(
+      request(app).post(`/api/competitions/${competition.id}/judge-assignments`),
+    ).send({ judgeId: judgeRes.body.id, fromParticipantNumber: 1, toParticipantNumber: 30 });
+
+    const destroyed = await authed(
+      request(app).delete(`/api/judges/${judgeRes.body.id}/permanent`),
+    ).send();
+    expect(destroyed.status).toBe(200);
+    expect(destroyed.body.id).toBe(judgeRes.body.id);
+    expect(destroyed.body.name).toBe(`Judge Mia ${suffix}`);
+    expect(destroyed.body.assignmentsDeleted).toBe(1);
+    expect(destroyed.body.accountsDeleted).toBe(1);
+    expect(destroyed.body.competitions).toEqual([
+      {
+        competitionId: competition.id,
+        competitionName: `Destroy ${suffix}`,
+        fromParticipantNumber: 1,
+        toParticipantNumber: 30,
+      },
+    ]);
+
+    // Nothing survives: not the row, not the account, not the range.
+    expect(await prisma.judge.findUnique({ where: { id: judgeRes.body.id } })).toBeNull();
+    expect(
+      await prisma.account.count({ where: { username: judgeRes.body.username } }),
+    ).toBe(0);
+    expect(
+      await prisma.competitionJudgeAssignment.count({ where: { judgeId: judgeRes.body.id } }),
+    ).toBe(0);
+  });
+
+  it("is not blocked by ROL-010, which guards the recoverable deactivation only", async () => {
+    // The deactivation of a judge assigned to a live competition is refused; the
+    // permanent deletion of the same judge is not — the guard protects supervision
+    // against a silent loss, and the interface warns about this one instead.
+    const competition = await makeCompetition(`DestroyLive ${suffix}`);
+    const judgeRes = await authed(request(app).post("/api/judges")).send({
+      name: `Judge Ned ${suffix}`,
+    });
+    createdJudgeIds.push(judgeRes.body.id);
+
+    await authed(
+      request(app).post(`/api/competitions/${competition.id}/judge-assignments`),
+    ).send({ judgeId: judgeRes.body.id, fromParticipantNumber: 1, toParticipantNumber: 10 });
+
+    const deactivated = await authed(
+      request(app).delete(`/api/judges/${judgeRes.body.id}`),
+    ).send();
+    expect(deactivated.status).toBe(409);
+    expect(deactivated.body.error.code).toBe("judge.hasActiveAssignment");
+
+    const destroyed = await authed(
+      request(app).delete(`/api/judges/${judgeRes.body.id}/permanent`),
+    ).send();
+    expect(destroyed.status).toBe(200);
+  });
+
+  it("404s on a judge that does not exist, and refuses a judge or an anonymous caller", async () => {
+    const missing = await authed(
+      request(app).delete("/api/judges/00000000-0000-4000-8000-000000000000/permanent"),
+    ).send();
+    expect(missing.status).toBe(404);
+    expect(missing.body.error.code).toBe("judge.notFound");
+
+    const asJudge = await request(app)
+      .delete(`/api/judges/anything/permanent`)
+      .set("x-session-token", judgeToken)
+      .set("x-device-id", judgeDevice);
+    expect(asJudge.status).toBe(403);
+
+    const anon = await request(app).get("/api/judges/anything/assignments");
+    expect(anon.status).toBe(401);
+  });
+});
+
 describe("controller-only access (AC 5)", () => {
   it("refuses a judge session on the judge-management endpoints", async () => {
     const createRes = await request(app)

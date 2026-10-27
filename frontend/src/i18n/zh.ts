@@ -136,6 +136,36 @@ export const zh: MessageCatalogue = {
     columnRecordedBy: "记录人",
     columnRecordedAt: "记录时间",
     judgeInactiveHint: "已停用",
+    // 2026-10-26：真正的永久删除，与停用并列。它不受 ROL-010 拦截——那道守卫保护的
+    // 是可恢复的操作——所以保护改由界面承担：先列出将被销毁的每场比赛与每个范围，
+    // 再要求明确确认。
+    destroy: "删除",
+    destroyTitle: "永久删除该裁判?",
+    destroyWarning: "此操作将销毁该裁判，无法撤销。以下内容将被删除：",
+    destroyListRow: "裁判记录“{name}”",
+    destroyListAccounts: "其登录账号及账号下登记的全部设备——该裁判将无法再登录",
+    destroyListRanges: "其持有的全部监管范围，涉及的比赛列在下方",
+    destroyListNoRanges: "该裁判尚未在任何比赛上持有监管范围。",
+    destroyRangesTitle: "将被删除的范围：",
+    destroyRangeRow: "{competition}——参赛号 #{from}–#{to}",
+    destroyHintLive:
+      "若比赛仍在进行中，删除其范围会使这些选手失去监管。请先重新分配范围，或改用停用。",
+    destroyConfirm: "永久删除",
+    destroying: "删除中…",
+    destroyCancel: "返回",
+    destroyed: "裁判“{name}”已被永久删除。",
+    destroyFailed: "无法删除该裁判，请重试。",
+    // 2026-10-26：名单一度增长到数百行且无法查找。搜索、筛选、可见计数与分页——
+    // 纯 React 实现，未引入新依赖。
+    searchPlaceholder: "按姓名搜索",
+    filterAll: "全部",
+    filterActive: "启用",
+    filterInactive: "已停用",
+    listCount: "共 {total} 名裁判，显示 {shown} 名",
+    noMatch: "没有匹配的裁判。",
+    previousPage: "上一页",
+    nextPage: "下一页",
+    pageOf: "第 {page} / {pages} 页",
     saveAssignment: "保存分配",
     unassign: "取消分配",
     assignedTo: "已分配到",

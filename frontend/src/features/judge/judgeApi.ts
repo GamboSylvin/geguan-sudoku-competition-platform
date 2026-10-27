@@ -221,6 +221,54 @@ export function restartStudent(participantId: string): Promise<RestartStudentRes
   );
 }
 
+/**
+ * One row of the confirmation dialog for a permanent deletion: the range the judge holds
+ * and the competition it is on, so the dialog can name what is about to be destroyed.
+ */
+export interface JudgeAssignmentWithNameView extends JudgeAssignmentView {
+  competitionName: string;
+}
+
+/**
+ * What a permanent deletion destroyed. The server answers with this rather than a bare
+ * 204 so the screen can report the consequences of an operation that cannot be undone.
+ */
+export interface DestroyedJudgeView {
+  id: string;
+  name: string;
+  competitions: {
+    competitionId: string;
+    competitionName: string;
+    fromParticipantNumber: number;
+    toParticipantNumber: number;
+  }[];
+  assignmentsDeleted: number;
+  accountsDeleted: number;
+}
+
+/** The judge's own ranges, read before asking for a permanent deletion. */
+export function listJudgeAssignmentsForController(
+  id: string,
+): Promise<{ assignments: JudgeAssignmentWithNameView[] }> {
+  return request<{ assignments: JudgeAssignmentWithNameView[] }>(
+    `/api/judges/${encodeURIComponent(id)}/assignments`,
+    { method: "GET" },
+  );
+}
+
+/**
+ * Permanently destroy a judge: its row, its login accounts and every range it holds on
+ * any competition. Not guarded by ROL-010 — that guard protects the recoverable
+ * deactivation. This is the irreversible one, so the confirmation happens in the
+ * interface, naming what will go, before this is called.
+ */
+export function destroyJudge(id: string): Promise<DestroyedJudgeView> {
+  return request<DestroyedJudgeView>(
+    `/api/judges/${encodeURIComponent(id)}/permanent`,
+    { method: "DELETE" },
+  );
+}
+
 /** Pull the blocking competition names out of a removal rejection, if present. */
 export function blockingCompetitionsFrom(error: unknown): string[] | null {
   if (

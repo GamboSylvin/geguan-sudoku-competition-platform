@@ -16,7 +16,9 @@
  * time Unit 08 settles one participant's round result. Ranking subscribes, recomputes
  * that participant's category, stores a provisional snapshot, and — once every
  * participant in the category has finished both Individual rounds — stores the final
- * snapshot. A recompute pushes the new ranking to the big screen through the hook.
+ * snapshot. A recompute that **changes** the ranking pushes it to the big screen
+ * through the hook; one that recomputes the same rows neither writes nor pushes
+ * (I-55 — see `recomputeCategoryRanking`).
  */
 import { logger } from "../../infra";
 import * as repository from "./ranking.repository";
@@ -139,10 +141,88 @@ function buildRows(
   return sorted;
 }
 
+// ---------------------------------------------------------------------------
+// Change detection (I-55 / anomaly A3, 2026-10-26)
+// ---------------------------------------------------------------------------
+
+/**
+ * Read a stored snapshot payload back as ranking rows, or null when it is absent
+ * or not in the shape this module writes. Never throws: an unreadable snapshot is
+ * treated as "nothing stored", which makes the next recompute write and push —
+ * the safe direction, since a spurious push is cheap and a missing one is not.
+ */
+function parseStoredRows(payload: unknown): RankingRow[] | null {
+  if (typeof payload !== "object" || payload === null) return null;
+  const rows = (payload as { rows?: unknown }).rows;
+  if (!Array.isArray(rows)) return null;
+  const parsed: RankingRow[] = [];
+  for (const row of rows) {
+    if (typeof row !== "object" || row === null) return null;
+    const candidate = row as Record<string, unknown>;
+    if (
+      typeof candidate.rank !== "number" ||
+      typeof candidate.participantId !== "string" ||
+      typeof candidate.participantName !== "string" ||
+      typeof candidate.score !== "number" ||
+      typeof candidate.completionTimeSeconds !== "number"
+    ) {
+      return null;
+    }
+    parsed.push({
+      rank: candidate.rank,
+      participantId: candidate.participantId,
+      participantName: candidate.participantName,
+      score: candidate.score,
+      completionTimeSeconds: candidate.completionTimeSeconds,
+    });
+  }
+  return parsed;
+}
+
+/**
+ * Whether a recompute produced the same ranking the snapshot already holds:
+ * same finality, same rows, same order, same four values per row.
+ *
+ * Compared field by field rather than by serialising both sides, because Postgres
+ * stores `payload` as `jsonb`, which does not preserve key order — a round-tripped
+ * row can hold its keys in a different order from the freshly built one and still
+ * be the same row.
+ */
+function sameRanking(
+  isFinal: boolean,
+  rows: RankingRow[],
+  stored: { isFinal: boolean; rows: RankingRow[] } | null,
+): boolean {
+  if (stored === null) return false;
+  if (stored.isFinal !== isFinal) return false;
+  if (stored.rows.length !== rows.length) return false;
+  return rows.every((row, index) => {
+    const other = stored.rows[index]!;
+    return (
+      other.rank === row.rank &&
+      other.participantId === row.participantId &&
+      other.participantName === row.participantName &&
+      other.score === row.score &&
+      other.completionTimeSeconds === row.completionTimeSeconds
+    );
+  });
+}
+
 /**
  * Recompute one category's Individual ranking from the durable results, store the
  * snapshot, and push the update. This is the single path both the live trigger and
  * the controller read use, so the two never diverge.
+ *
+ * **The store and the push are skipped when nothing changed** (I-55 / anomaly A3).
+ * This path is recompute-on-read, and the composition root wires the update hook to
+ * the big screen, whose out-of-cycle push reads the ranking back — so an
+ * unconditional push closed a cycle with no exit: hook → push → tick → recompute →
+ * snapshot write → hook, measured at ~323 write transactions per second against a
+ * connected big screen, with no client ever asking for a ranking. Gating on an
+ * actual change breaks the cycle at its source while keeping both properties the
+ * design relies on: recompute-on-read (so the controller's view and the screen
+ * cannot diverge) and U-58's freshness (a result that does move the leaderboard
+ * still writes and pushes immediately).
  *
  * Returns the recomputed ranking, or null when the competition has no Individual
  * stage (a defensive no-op — every competition created by Unit 03 has one).
@@ -178,28 +258,39 @@ async function recomputeCategoryRanking(
       (p) => (finalizedRoundsPerParticipant.get(p.id)?.size ?? 0) >= roundCount,
     );
 
-  const payload: RankingSnapshotPayload = {
-    categoryId,
-    scope: "INDIVIDUAL",
-    isFinal,
-    rows,
-  };
-  await repository.replaceCurrentSnapshot({
-    competitionId,
-    stageId: stage.id,
-    categoryId,
-    isFinal,
-    payload,
-  });
+  // What the snapshot already holds, read *before* it is replaced. This is the
+  // change detector's only input; a null (nothing computed yet, or an unreadable
+  // payload) means "changed" and the write proceeds.
+  const existing = await repository.findCurrentSnapshot(competitionId, stage.id, categoryId);
+  const storedRows = existing ? parseStoredRows(existing.payload) : null;
+  const stored =
+    existing && storedRows !== null ? { isFinal: existing.isFinal, rows: storedRows } : null;
+  const unchanged = sameRanking(isFinal, rows, stored);
 
-  const update: RankingUpdatePayload = {
-    competitionId,
-    categoryId,
-    scope: "INDIVIDUAL",
-    isFinal,
-    rows,
-  };
-  rankingUpdateHook?.(update);
+  if (!unchanged) {
+    const payload: RankingSnapshotPayload = {
+      categoryId,
+      scope: "INDIVIDUAL",
+      isFinal,
+      rows,
+    };
+    await repository.replaceCurrentSnapshot({
+      competitionId,
+      stageId: stage.id,
+      categoryId,
+      isFinal,
+      payload,
+    });
+
+    const update: RankingUpdatePayload = {
+      competitionId,
+      categoryId,
+      scope: "INDIVIDUAL",
+      isFinal,
+      rows,
+    };
+    rankingUpdateHook?.(update);
+  }
 
   return { categoryId, isFinal, rows };
 }
